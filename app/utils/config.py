@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     GITHUB_CLIENT_ID: str
     GITHUB_CLIENT_SECRET: str
+    GITHUB_WEBHOOK_SECRET: str
 
     FRONTEND_URL: str
 
