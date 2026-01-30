@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.get("/ping")
 def ping():
-    return {"status": "ok", "message": "pong"}
+    return {"message": "pong :)"}
 
 @router.post("/signup", response_model=schemas.Message)
 def create_user(
