@@ -1,9 +1,8 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, Response, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db import connection
+from app.deps import get_db_connection
 from app import schemas
 from app.models.user import User
 from app.utils import auth_utils
@@ -14,13 +13,13 @@ router = APIRouter()
 @router.post("/signup", response_model=schemas.Message)
 def create_user(
     user_in: schemas.UserCreate,
-    db: Session = Depends(connection.get_db)
+    db: Session = Depends(get_db_connection)
 ):
     user = db.query(User).filter(User.email == user_in.email).first()
     if user:
-        return JSONResponse(
+        raise HTTPException(
             status_code=400,
-            content={"message": "User with this email already exists."},
+            detail="User with this email already exists.",
         )
     
     user = User(
@@ -37,13 +36,13 @@ def create_user(
 def login(
     response: Response,
     user_in: schemas.UserLogin,
-    db: Session = Depends(connection.get_db)
+    db: Session = Depends(get_db_connection)
 ):
     user = db.query(User).filter(User.email == user_in.email).first()
     if not user or not auth_utils.verify_hash(user_in.password, user.password_hash):
-        return JSONResponse(
-            status_code=400,
-            content={"message": "Incorrect credentials."}
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect credentials."
         )
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -77,7 +76,7 @@ def login(
 def logout(
     response: Response,
     request: Request,
-    db: Session = Depends(connection.get_db)
+    db: Session = Depends(get_db_connection)
 ):
     user_id = None
     
