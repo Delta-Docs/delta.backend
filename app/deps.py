@@ -1,7 +1,9 @@
 from typing import Generator
-from fastapi import Depends, HTTPException, Request
+from datetime import timedelta
+from fastapi import Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 from app.utils import auth_utils
+from app.utils.config import settings
 from app.models.user import User
 from app.db.session import SessionLocal
 
@@ -14,13 +16,23 @@ def get_db_connection() -> Generator:
         db.close()
 
 
-def get_current_user(request: Request, db: Session = Depends(get_db_connection)):
-    token = request.cookies.get("access_token")
-    if not token:
+def get_current_user(request: Request, response: Response, db: Session = Depends(get_db_connection)):
+    access_token = request.cookies.get("access_token")
+    
+    if access_token:
+        payload = auth_utils.verify_token(access_token)
+        if payload and payload.get("type") == "access":
+            user_id = payload.get("sub")
+            user = db.query(User).filter(User.id == user_id).first()
+            if user:
+                return user
+
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
         raise HTTPException(status_code=401, detail="Unauthorized")
     
-    payload = auth_utils.verify_token(token)
-    if not payload or payload.get("type") != "access":
+    payload = auth_utils.verify_token(refresh_token)
+    if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Unauthorized")
         
     user_id = payload.get("sub")
@@ -28,4 +40,19 @@ def get_current_user(request: Request, db: Session = Depends(get_db_connection))
     
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+
+    if not user.current_refresh_token_hash or not auth_utils.verify_hash(refresh_token, user.current_refresh_token_hash):
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    new_access_token = auth_utils.create_access_token(subject=user.id, expires_delta=access_token_expires)
+    
+    response.set_cookie(
+        key="access_token",
+        value=new_access_token,
+        httponly=True,
+        max_age=int(access_token_expires.total_seconds()),
+        expires=int(access_token_expires.total_seconds()),
+    )
+
     return user
