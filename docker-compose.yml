@@ -10,7 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - delta_postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  delta_postgres_data:
+  postgres_data:
