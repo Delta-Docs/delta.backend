@@ -1,12 +1,15 @@
+import httpx
 from datetime import timedelta
+# from fastapi.responses import RedirectResponse
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.orm import Session
 
-from app.deps import get_db_connection
 from app import schemas
-from app.models.user import User
 from app.utils import auth_utils
+from app.models.user import User
 from app.utils.config import settings
+from app.models.installation import Installation
+from app.deps import get_db_connection, get_current_user
 
 router = APIRouter()
 
@@ -103,3 +106,72 @@ def logout(
     response.delete_cookie(key="refresh_token")
     
     return {"message": "Logout successful"}
+
+@router.get("/github/callback")
+async def github_callback(
+    request: Request,
+    db: Session = Depends(get_db_connection),
+    current_user: User = Depends(get_current_user)
+):
+    code = request.query_params.get("code")
+    installation_id = request.query_params.get("installation_id")
+
+    GITHUB_CLIENT_ID = settings.GITHUB_CLIENT_ID
+    GITHUB_CLIENT_SECRET = settings.GITHUB_CLIENT_SECRET
+
+    if not code:
+        raise HTTPException(status_code=400, detail="Authorization code missing")
+
+    async with httpx.AsyncClient() as client:
+        token_response = await client.post(
+            "https://github.com/login/oauth/access_token",
+            headers={"Accept": "application/json"},
+            data={
+                "client_id": GITHUB_CLIENT_ID,
+                "client_secret": GITHUB_CLIENT_SECRET,
+                "code": code,
+            },
+        )
+        token_data = token_response.json()
+        
+        if "error" in token_data:
+            error_code = token_data.get("error")
+            description = token_data.get("error_description", "No description provided")
+            raise HTTPException(status_code=400, detail=f"GitHub Error: {error_code} - {description}")
+        
+        access_token = token_data["access_token"]
+
+        user_response = await client.get(
+            "https://api.github.com/user",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        github_user_data = user_response.json()
+
+    current_user.github_user_id = github_user_data["id"]
+    current_user.github_username = github_user_data["login"]
+    
+    if installation_id:
+        install_id_int = int(installation_id)
+        
+        existing_install = db.query(Installation).filter(
+            Installation.installation_id == install_id_int
+        ).first()
+
+        if existing_install:
+            existing_install.user_id = current_user.id
+        else:
+            new_install = Installation(
+                installation_id=install_id_int,
+                user_id=current_user.id,
+                account_name=github_user_data["login"], 
+                account_type="User" 
+            )
+            db.add(new_install)
+
+    db.commit()
+
+    return {
+        "status": "success", 
+        "message": "GitHub Account Linked & App Installed!"
+    }
+    # return RedirectResponse(url=f"{FRONTEND_URL}?status=github_linked")

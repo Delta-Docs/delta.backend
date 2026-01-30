@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_ID: str
     GITHUB_CLIENT_SECRET: str
 
+    FRONTEND_URL: str
+
     class Config:
         case_sensitive = True
         env_file = ".env"
