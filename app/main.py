@@ -1,10 +1,10 @@
 from fastapi import FastAPI
-from app.core.config import settings
-from app.api import endpoints
+from app.api import api_router
+from app.utils.config import settings
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
-app.include_router(endpoints.router)
+app.include_router(api_router, prefix="/api")
 
 @app.get("/")
 def read_root():

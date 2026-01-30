@@ -9,6 +9,11 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     SQLALCHEMY_DATABASE_URI: str | None = None
 
+    SECRET_KEY: str
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
     class Config:
         case_sensitive = True
         env_file = ".env"
