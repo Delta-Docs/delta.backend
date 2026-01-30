@@ -1,5 +1,5 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -44,7 +44,7 @@ def login(
     db: Session = Depends(deps.get_db)
 ):
     user = db.query(User).filter(User.email == user_in.email).first()
-    if not user or not utils.verify_password(user_in.password, user.password_hash):
+    if not user or not utils.verify_hash(user_in.password, user.password_hash):
         return JSONResponse(
             status_code=400,
             content={"message": "Incorrect credentials."}
@@ -76,3 +76,35 @@ def login(
     )
     
     return {"message": "Login successful"}
+
+@router.post("/logout", response_model=schemas.Message)
+def logout(
+    response: Response,
+    request: Request,
+    db: Session = Depends(deps.get_db)
+):
+    user_id = None
+    
+    access_token = request.cookies.get("access_token")
+    if access_token:
+        payload = utils.verify_token(access_token)
+        if payload:
+            user_id = payload.get("sub")
+            
+    if not user_id:
+        refresh_token = request.cookies.get("refresh_token")
+        if refresh_token:
+            payload = utils.verify_token(refresh_token)
+            if payload:
+                user_id = payload.get("sub")
+    
+    if user_id:
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            user.current_refresh_token_hash = None
+            db.commit()
+            
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
+    
+    return {"message": "Logout successful"}
