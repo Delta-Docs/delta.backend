@@ -12,5 +12,20 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  drizzle-gate:
+    image: ghcr.io/drizzle-team/gateway:latest
+    container_name: delta-drizzle-gateway
+    environment:
+      DATABASE_URL: postgresql://postgres:1234@db:5432/postgres
+      STORE_PATH: /app
+    restart: on-failure
+    depends_on:
+      - db
+    ports:
+      - "4983:4983"
+    volumes:
+      - drizzle_gateway_data:/app
+
 volumes:
   postgres_data:
+  drizzle_gateway_data:
