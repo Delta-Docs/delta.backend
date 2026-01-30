@@ -11,10 +11,6 @@ from app.utils.config import settings
 
 router = APIRouter()
 
-@router.get("/ping")
-def ping():
-    return {"message": "pong :)"}
-
 @router.post("/signup", response_model=schemas.Message)
 def create_user(
     user_in: schemas.UserCreate,
