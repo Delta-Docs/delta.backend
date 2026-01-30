@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.core.config import settings
+from app.utils.config import settings
 from app.api import endpoints
 
 app = FastAPI(title=settings.PROJECT_NAME)

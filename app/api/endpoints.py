@@ -3,11 +3,11 @@ from fastapi import APIRouter, Depends, Response, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from app.api import deps
+from app.db import connection
 from app import schemas
 from app.models.user import User
-from app.core import utils
-from app.core.config import settings
+from app.utils import auth_utils
+from app.utils.config import settings
 
 router = APIRouter()
 
@@ -18,7 +18,7 @@ def ping():
 @router.post("/signup", response_model=schemas.Message)
 def create_user(
     user_in: schemas.UserCreate,
-    db: Session = Depends(deps.get_db)
+    db: Session = Depends(connection.get_db)
 ):
     user = db.query(User).filter(User.email == user_in.email).first()
     if user:
@@ -30,7 +30,7 @@ def create_user(
     user = User(
         email=user_in.email,
         full_name=user_in.full_name,
-        password_hash=utils.get_hash(user_in.password),
+        password_hash=auth_utils.get_hash(user_in.password),
     )
     
     db.add(user)
@@ -41,22 +41,22 @@ def create_user(
 def login(
     response: Response,
     user_in: schemas.UserLogin,
-    db: Session = Depends(deps.get_db)
+    db: Session = Depends(connection.get_db)
 ):
     user = db.query(User).filter(User.email == user_in.email).first()
-    if not user or not utils.verify_hash(user_in.password, user.password_hash):
+    if not user or not auth_utils.verify_hash(user_in.password, user.password_hash):
         return JSONResponse(
             status_code=400,
             content={"message": "Incorrect credentials."}
         )
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = utils.create_access_token(user.id, expires_delta=access_token_expires)
+    access_token = auth_utils.create_access_token(user.id, expires_delta=access_token_expires)
     
     refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    refresh_token = utils.create_refresh_token(user.id, expires_delta=refresh_token_expires)
+    refresh_token = auth_utils.create_refresh_token(user.id, expires_delta=refresh_token_expires)
     
-    user.current_refresh_token_hash = utils.get_hash(refresh_token)
+    user.current_refresh_token_hash = auth_utils.get_hash(refresh_token)
     db.commit()
     
     response.set_cookie(
@@ -81,20 +81,20 @@ def login(
 def logout(
     response: Response,
     request: Request,
-    db: Session = Depends(deps.get_db)
+    db: Session = Depends(connection.get_db)
 ):
     user_id = None
     
     access_token = request.cookies.get("access_token")
     if access_token:
-        payload = utils.verify_token(access_token)
+        payload = auth_utils.verify_token(access_token)
         if payload:
             user_id = payload.get("sub")
             
     if not user_id:
         refresh_token = request.cookies.get("refresh_token")
         if refresh_token:
-            payload = utils.verify_token(refresh_token)
+            payload = auth_utils.verify_token(refresh_token)
             if payload:
                 user_id = payload.get("sub")
     
