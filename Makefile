@@ -31,13 +31,16 @@ migrate:
 	@if [ -z "$(msg)" ]; then echo "Error: Provide a message using msg=\"...\""; exit 1; fi
 	alembic revision --autogenerate -m "$(msg)"
 
-upgrade:
+up:
 	alembic upgrade head
 
-upgrade-one:
+up-one:
 	alembic upgrade +1
 
-downgrade:
+down:
+	alembic downgrade base
+
+down-one:
 	alembic downgrade -1
 
 history:
