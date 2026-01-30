@@ -7,3 +7,4 @@ alembic
 psycopg2-binary
 email-validator
 bcrypt
+pyseto

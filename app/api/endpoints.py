@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import timedelta
+from fastapi import APIRouter, Depends, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -6,6 +7,7 @@ from app.api import deps
 from app import schemas
 from app.models.user import User
 from app.core import utils
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -34,3 +36,40 @@ def create_user(
     db.add(user)
     db.commit()
     return {"message": "User created successfully"}
+
+@router.post("/login", response_model=schemas.Msg)
+def login(
+    response: Response,
+    user_in: schemas.UserLogin,
+    db: Session = Depends(deps.get_db)
+):
+    user = db.query(User).filter(User.email == user_in.email).first()
+    if not user or not utils.verify_password(user_in.password, user.password_hash):
+        return JSONResponse(
+            status_code=400,
+            content={"message": "Incorrect credentials."}
+        )
+    
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = utils.create_access_token(user.id, expires_delta=access_token_expires)
+    
+    refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    refresh_token = utils.create_refresh_token(user.id, expires_delta=refresh_token_expires)
+    
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {access_token}",
+        httponly=True,
+        max_age=int(access_token_expires.total_seconds()),
+        expires=int(access_token_expires.total_seconds()),
+    )
+    
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        max_age=int(refresh_token_expires.total_seconds()),
+        expires=int(refresh_token_expires.total_seconds()),
+    )
+    
+    return {"messsage": "Login successful"}
