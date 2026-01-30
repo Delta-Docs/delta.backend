@@ -6,13 +6,13 @@ from typing import Any, Optional
 from datetime import datetime, timedelta, timezone
 from app.core.config import settings
 
-def get_password_hash(password: str) -> str:
-    pre_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+def get_hash(text: str) -> str:
+    pre_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
     return bcrypt.hashpw(pre_hash.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    pre_hash = hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
-    return bcrypt.checkpw(pre_hash.encode('utf-8'), hashed_password.encode('utf-8'))
+def verify_hash(plain_text: str, hashed_text: str) -> bool:
+    pre_hash = hashlib.sha256(plain_text.encode("utf-8")).hexdigest()
+    return bcrypt.checkpw(pre_hash.encode('utf-8'), hashed_text.encode('utf-8'))
 
 def _get_paseto_key() -> Key:
     key_material = hashlib.sha256(settings.SECRET_KEY.encode('utf-8')).digest()

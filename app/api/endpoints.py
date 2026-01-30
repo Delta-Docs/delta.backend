@@ -30,14 +30,14 @@ def create_user(
     user = User(
         email=user_in.email,
         full_name=user_in.full_name,
-        password_hash=utils.get_password_hash(user_in.password),
+        password_hash=utils.get_hash(user_in.password),
     )
     
     db.add(user)
     db.commit()
     return {"message": "User created successfully"}
 
-@router.post("/login", response_model=schemas.Msg)
+@router.post("/login", response_model=schemas.Message)
 def login(
     response: Response,
     user_in: schemas.UserLogin,
@@ -56,9 +56,12 @@ def login(
     refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     refresh_token = utils.create_refresh_token(user.id, expires_delta=refresh_token_expires)
     
+    user.current_refresh_token_hash = utils.get_hash(refresh_token)
+    db.commit()
+    
     response.set_cookie(
         key="access_token",
-        value=f"Bearer {access_token}",
+        value=access_token,
         httponly=True,
         max_age=int(access_token_expires.total_seconds()),
         expires=int(access_token_expires.total_seconds()),
@@ -72,4 +75,4 @@ def login(
         expires=int(refresh_token_expires.total_seconds()),
     )
     
-    return {"messsage": "Login successful"}
+    return {"message": "Login successful"}
