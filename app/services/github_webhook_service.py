@@ -13,14 +13,14 @@ def _insert_repositories(db: Session, installation_id: int, repos_list: list, ac
     for repo in repos_list:
         values_list.append({
             "installation_id": installation_id,
-            "full_name": repo["full_name"],
+            "repo_name": repo["full_name"],
             "is_active": True,
-            "avatar_url": account_avatar_url
+            "avatar_url": account_avatar_url 
         })
 
     stmt = insert(Repository).values(values_list)
     stmt = stmt.on_conflict_do_update(
-        index_elements=['installation_id', 'full_name'],
+        index_elements=['installation_id', 'repo_name'],
         set_={"is_active": True, "avatar_url": stmt.excluded.avatar_url}
     )
     db.execute(stmt)
@@ -63,9 +63,9 @@ def _handle_installation_deleted(db: Session, payload: dict):
     inst_id = payload["installation"]["id"]
     db.query(Installation).filter(Installation.installation_id == inst_id).delete(synchronize_session=False)
 
-def _handle_installation_suspend(db: Session, payload: dict, active: bool):
+def _handle_installation_suspend(db: Session, payload: dict, suspended: bool):
     inst_id = payload["installation"]["id"]
-    db.query(Repository).filter(Repository.installation_id == inst_id).update({"is_active": active})
+    db.query(Repository).filter(Repository.installation_id == inst_id).update({"is_suspended": suspended})
 
 def _handle_repos_added(db: Session, payload: dict):
     inst_id = payload["installation"]["id"]
@@ -82,7 +82,7 @@ def _handle_repos_removed(db: Session, payload: dict):
     if repo_full_names:
         db.query(Repository).filter(
             Repository.installation_id == inst_id, 
-            Repository.full_name.in_(repo_full_names)
+            Repository.repo_name.in_(repo_full_names)
         ).delete(synchronize_session=False)
 
 def handle_github_event(db: Session, event_type: str, payload: dict):
@@ -93,9 +93,9 @@ def handle_github_event(db: Session, event_type: str, payload: dict):
         elif action == "deleted":
             _handle_installation_deleted(db, payload)
         elif action == "suspend":
-            _handle_installation_suspend(db, payload, active=False)
+            _handle_installation_suspend(db, payload, suspended=True)
         elif action == "unsuspend":
-            _handle_installation_suspend(db, payload, active=True)
+            _handle_installation_suspend(db, payload, suspended=False)
     
     elif event_type == "installation_repositories":
         action = payload.get("action")
