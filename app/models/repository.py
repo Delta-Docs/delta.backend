@@ -8,8 +8,9 @@ class Repository(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     installation_id = Column(BigInteger, ForeignKey("installations.installation_id", ondelete="CASCADE"))
-    full_name = Column(String, nullable=False)
+    repo_name = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+    is_suspended = Column(Boolean, default=False)
     avatar_url = Column(String)
     
     docs_root_path = Column(String, default='./docs')
@@ -24,7 +25,7 @@ class Repository(Base):
     installation = relationship("Installation", primaryjoin="Repository.installation_id==Installation.installation_id", foreign_keys=[installation_id])
 
     __table_args__ = (
-        UniqueConstraint('installation_id', 'full_name'),
+        UniqueConstraint('installation_id', 'repo_name'),
     )
 
 class DocCoverageMap(Base):
