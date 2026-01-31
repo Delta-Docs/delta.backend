@@ -4,7 +4,7 @@ import hashlib
 from pyseto import Key, Paseto
 from typing import Any, Optional
 from datetime import datetime, timedelta, timezone
-from app.utils.config import settings
+from app.core.config import settings
 
 def get_hash(text: str) -> str:
     pre_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()

@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.orm import Session
 
 from app import schemas
-from app.utils import auth_utils
+from app.core import security
 from app.models.user import User
-from app.utils.config import settings
+from app.core.config import settings
 from app.models.installation import Installation
 from app.deps import get_db_connection, get_current_user
 
@@ -28,7 +28,7 @@ def create_user(
     user = User(
         email=user_in.email,
         full_name=user_in.full_name,
-        password_hash=auth_utils.get_hash(user_in.password),
+        password_hash=security.get_hash(user_in.password),
     )
     
     db.add(user)
@@ -42,19 +42,19 @@ def login(
     db: Session = Depends(get_db_connection)
 ):
     user = db.query(User).filter(User.email == user_in.email).first()
-    if not user or not auth_utils.verify_hash(user_in.password, user.password_hash):
+    if not user or not security.verify_hash(user_in.password, user.password_hash):
         raise HTTPException(
             status_code=401,
             detail="Incorrect credentials."
         )
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = auth_utils.create_access_token(user.id, expires_delta=access_token_expires)
+    access_token = security.create_access_token(user.id, expires_delta=access_token_expires)
     
     refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    refresh_token = auth_utils.create_refresh_token(user.id, expires_delta=refresh_token_expires)
+    refresh_token = security.create_refresh_token(user.id, expires_delta=refresh_token_expires)
     
-    user.current_refresh_token_hash = auth_utils.get_hash(refresh_token)
+    user.current_refresh_token_hash = security.get_hash(refresh_token)
     db.commit()
     
     response.set_cookie(
@@ -85,14 +85,14 @@ def logout(
     
     access_token = request.cookies.get("access_token")
     if access_token:
-        payload = auth_utils.verify_token(access_token)
+        payload = security.verify_token(access_token)
         if payload:
             user_id = payload.get("sub")
             
     if not user_id:
         refresh_token = request.cookies.get("refresh_token")
         if refresh_token:
-            payload = auth_utils.verify_token(refresh_token)
+            payload = security.verify_token(refresh_token)
             if payload:
                 user_id = payload.get("sub")
     

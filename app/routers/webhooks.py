@@ -1,6 +1,6 @@
 import hmac
 import hashlib
-from app.utils.config import settings
+from app.core.config import settings
 from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.orm import Session
 

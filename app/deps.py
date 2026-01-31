@@ -2,8 +2,8 @@ from typing import Generator
 from datetime import timedelta
 from fastapi import Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
-from app.utils import auth_utils
-from app.utils.config import settings
+from app.core import security
+from app.core.config import settings
 from app.models.user import User
 from app.db.session import SessionLocal
 
@@ -20,7 +20,7 @@ def get_current_user(request: Request, response: Response, db: Session = Depends
     access_token = request.cookies.get("access_token")
     
     if access_token:
-        payload = auth_utils.verify_token(access_token)
+        payload = security.verify_token(access_token)
         if payload and payload.get("type") == "access":
             user_id = payload.get("sub")
             user = db.query(User).filter(User.id == user_id).first()
@@ -31,7 +31,7 @@ def get_current_user(request: Request, response: Response, db: Session = Depends
     if not refresh_token:
         raise HTTPException(status_code=401, detail="Unauthorized")
     
-    payload = auth_utils.verify_token(refresh_token)
+    payload = security.verify_token(refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Unauthorized")
         
@@ -41,11 +41,11 @@ def get_current_user(request: Request, response: Response, db: Session = Depends
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
-    if not user.current_refresh_token_hash or not auth_utils.verify_hash(refresh_token, user.current_refresh_token_hash):
+    if not user.current_refresh_token_hash or not security.verify_hash(refresh_token, user.current_refresh_token_hash):
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    new_access_token = auth_utils.create_access_token(subject=user.id, expires_delta=access_token_expires)
+    new_access_token = security.create_access_token(subject=user.id, expires_delta=access_token_expires)
     
     response.set_cookie(
         key="access_token",
