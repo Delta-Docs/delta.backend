@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    GITHUB_CLIENT_ID: str
+    GITHUB_CLIENT_SECRET: str
+    GITHUB_WEBHOOK_SECRET: str
+
+    FRONTEND_URL: str
+
     class Config:
         case_sensitive = True
         env_file = ".env"

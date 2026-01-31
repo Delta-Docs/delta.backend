@@ -11,7 +11,7 @@ class User(Base):
     password_hash = Column(String)
     
     github_user_id = Column(Integer, unique=True)
-    avatar_url = Column(String)
+    github_username = Column(String)
     
     current_refresh_token_hash = Column(String)
     
