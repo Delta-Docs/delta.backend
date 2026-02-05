@@ -6,6 +6,6 @@ app = FastAPI(title=settings.PROJECT_NAME)
 
 app.include_router(api_router, prefix="/api")
 
-@app.get("/")
+@app.get("/api")
 def read_root():
-    return {"message": "Hello from Delta Backend :)"}
+    return {"message": "Delta is up and running... :)"}
