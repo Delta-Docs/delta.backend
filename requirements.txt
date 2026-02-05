@@ -9,3 +9,5 @@ email-validator
 bcrypt
 pyseto
 httpx
+pytest
+pytest-asyncio

@@ -1,8 +1,8 @@
-"""Initial schema
+"""Initial Migration
 
-Revision ID: 9548114dcc63
+Revision ID: 645142014e4c
 Revises: 
-Create Date: 2026-01-30 09:55:44.278450
+Create Date: 2026-02-05 22:15:00.957304
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '9548114dcc63'
+revision = '645142014e4c'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -24,7 +24,7 @@ def upgrade() -> None:
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('password_hash', sa.String(), nullable=True),
     sa.Column('github_user_id', sa.Integer(), nullable=True),
-    sa.Column('avatar_url', sa.String(), nullable=True),
+    sa.Column('github_username', sa.String(), nullable=True),
     sa.Column('current_refresh_token_hash', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
@@ -47,8 +47,10 @@ def upgrade() -> None:
     op.create_table('repositories',
     sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
     sa.Column('installation_id', sa.BigInteger(), nullable=True),
-    sa.Column('full_name', sa.String(), nullable=False),
+    sa.Column('repo_name', sa.String(), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('is_suspended', sa.Boolean(), nullable=True),
+    sa.Column('avatar_url', sa.String(), nullable=True),
     sa.Column('docs_root_path', sa.String(), nullable=True),
     sa.Column('target_branch', sa.String(), nullable=True),
     sa.Column('drift_sensitivity', sa.Float(), nullable=True),
@@ -56,9 +58,9 @@ def upgrade() -> None:
     sa.Column('file_ignore_patterns', postgresql.ARRAY(sa.String()), nullable=True),
     sa.Column('last_synced_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.ForeignKeyConstraint(['installation_id'], ['installations.installation_id'], ),
+    sa.ForeignKeyConstraint(['installation_id'], ['installations.installation_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('installation_id', 'full_name')
+    sa.UniqueConstraint('installation_id', 'repo_name')
     )
     op.create_table('doc_coverage_map',
     sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),

@@ -1,5 +1,6 @@
 help:
 	@echo "Available commands:"
+	@echo "  setup         Create venv, install deps, start docker, run migrations"
 	@echo "  install       Install dependencies"
 	@echo "  run           Run the production server"
 	@echo "  dev           Run the development server with reload"
@@ -13,14 +14,24 @@ help:
 	@echo "  history       Show migration history"
 	@echo "  clean         Remove cache files"
 
-install:
-	pip install -r requirements.txt
+VENV := .venv
+BIN := $(VENV)/bin
+ 
+setup:
+	python3 -m venv $(VENV)
+	$(BIN)/pip install -r requirements.txt
+	make docker-up
+	sleep 3
+	make up
 
+install:
+	$(BIN)/pip install -r requirements.txt
+	
 run:
-	uvicorn app.main:app --host 0.0.0.0 --port 8000
+	$(BIN)/uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 dev:
-	uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	$(BIN)/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 docker-up:
 	docker compose up -d
@@ -30,22 +41,22 @@ docker-down:
 
 migrate:
 	@if [ -z "$(msg)" ]; then echo "Error: Provide a message using msg=\"...\""; exit 1; fi
-	alembic revision --autogenerate -m "$(msg)"
+	$(BIN)/alembic revision --autogenerate -m "$(msg)"
 
 up:
-	alembic upgrade head
+	$(BIN)/alembic upgrade head
 
 up-one:
-	alembic upgrade +1
+	$(BIN)/alembic upgrade +1
 
 down:
-	alembic downgrade base
+	$(BIN)/alembic downgrade base
 
 down-one:
-	alembic downgrade -1
+	$(BIN)/alembic downgrade -1
 
 history:
-	alembic history
+	$(BIN)/alembic history
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
