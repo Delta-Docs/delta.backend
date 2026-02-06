@@ -11,3 +11,4 @@ pyseto
 httpx
 pytest
 pytest-asyncio
+pyjwt
