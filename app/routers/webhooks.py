@@ -34,7 +34,7 @@ async def github_webhook_handler(request: Request, db: Session = Depends(get_db_
     event_type = request.headers.get("X-GitHub-Event")
     
     try:
-        handle_github_event(db, event_type, payload)
+        await handle_github_event(db, event_type, payload)
     except Exception as e:
         return {"status": "error", "message": str(e)}
         
