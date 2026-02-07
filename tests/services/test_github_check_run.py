@@ -36,7 +36,7 @@ async def test_create_check_run_success():
             args, kwargs = mock_client.post.call_args
             assert args[0] == f"https://api.github.com/repos/{repo_full_name}/check-runs"
             payload = kwargs["json"]
-            assert payload["name"] == "Delta Docs Run"
+            assert payload["name"] == "Delta Docs"
             assert payload["head_sha"] == head_sha
             assert payload["status"] == "queued"
 

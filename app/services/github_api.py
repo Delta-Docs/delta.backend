@@ -75,13 +75,13 @@ async def create_github_check_run(db: Session, drift_event_id, repo_full_name: s
                     "Accept": "application/vnd.github+json"
                 },
                 json={
-                    "name": "Delta Docs Run",
+                    "name": "Delta Docs",
                     "head_sha": head_sha,
                     "status": "queued",
                     "started_at": datetime.now(timezone.utc).isoformat(),
                     "output": {
-                        "title": "PR Queued",
-                        "summary": "Waiting for worker..."
+                        "title": "PR Analysis Queued",
+                        "summary": "Waiting for a worker to pick up the job..."
                     }
                 }
             )
