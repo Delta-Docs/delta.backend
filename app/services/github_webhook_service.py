@@ -6,6 +6,8 @@ from app.models.installation import Installation
 from app.models.repository import Repository
 from app.models.drift import DriftEvent
 
+from app.services.github_api import create_github_check_run
+
 def _insert_repositories(db: Session, installation_id: int, repos_list: list, account_avatar_url: str = None):
     if not repos_list:
         return
@@ -86,7 +88,7 @@ def _handle_repos_removed(db: Session, payload: dict):
             Repository.repo_name.in_(repo_full_names)
         ).delete(synchronize_session=False)
 
-def _handle_pr_event(db: Session, payload: dict):
+async def _handle_pr_event(db: Session, payload: dict):
     action = payload.get("action")
     if action not in ["opened", "synchronize"]:
         return
@@ -117,9 +119,14 @@ def _handle_pr_event(db: Session, payload: dict):
         agent_logs={}
     )
     db.add(new_event)
-    # TODO: Trigger Background task
+    db.flush()
+    db.refresh(new_event)
+    
+    await create_github_check_run(db, new_event.id, repo_full_name, new_event.head_sha, installation_id)
 
-def handle_github_event(db: Session, event_type: str, payload: dict):
+    # TODO: Add this as a background task
+
+async def handle_github_event(db: Session, event_type: str, payload: dict):
     if event_type == "installation":
         action = payload.get("action")
         if action == "created":
@@ -139,6 +146,6 @@ def handle_github_event(db: Session, event_type: str, payload: dict):
             _handle_repos_removed(db, payload)
 
     elif event_type == "pull_request":
-        _handle_pr_event(db, payload)
+        await _handle_pr_event(db, payload)
     
     db.commit()
