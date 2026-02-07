@@ -56,11 +56,12 @@ async def get_repo_details(installation_id: int, owner: str, repo_name: str):
         data = repo_res.json()
 
         return {
-            "name": data.get("name"),
+            "name": data.get("full_name"),
             "description": data.get("description"),
             "language": data.get("language"),
             "stargazers_count": data.get("stargazers_count"),
-            "forks_count": data.get("forks_count")
+            "forks_count": data.get("forks_count"),
+            "avatar_url": (data.get("owner") or {}).get("avatar_url")
         }
 
 async def create_github_check_run(db: Session, drift_event_id, repo_full_name: str, head_sha: str, installation_id: int):
