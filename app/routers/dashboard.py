@@ -69,11 +69,12 @@ async def get_dashboard_repos(
             results.append(details)
         except Exception:
              results.append({
-                "name": repo_name,
+                "name": repo.repo_name,
                 "description": "Error fetching details",
                 "language": "Unknown",
                 "stargazers_count": 0,
-                "forks_count": 0
+                "forks_count": 0,
+                "avatar_url": None
             })
             
     return results
