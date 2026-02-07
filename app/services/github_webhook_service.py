@@ -4,6 +4,7 @@ from sqlalchemy.dialects.postgresql import insert
 from app.models.user import User
 from app.models.installation import Installation
 from app.models.repository import Repository
+from app.models.drift import DriftEvent
 
 def _insert_repositories(db: Session, installation_id: int, repos_list: list, account_avatar_url: str = None):
     if not repos_list:
@@ -85,6 +86,39 @@ def _handle_repos_removed(db: Session, payload: dict):
             Repository.repo_name.in_(repo_full_names)
         ).delete(synchronize_session=False)
 
+def _handle_pr_event(db: Session, payload: dict):
+    action = payload.get("action")
+    if action not in ["opened", "synchronize"]:
+        return
+
+    installation_id = payload.get("installation", {}).get("id")
+    repo_full_name = payload.get("repository", {}).get("full_name")
+
+    if not installation_id or not repo_full_name:
+        print(f"Warning: Missing installation_id or repo_full_name in payload. Action: {action}")
+        return
+
+    repo = db.query(Repository).filter(
+        Repository.installation_id == installation_id,
+        Repository.repo_name == repo_full_name
+    ).first()
+
+    if not repo:
+        print(f"Warning: Repository not found: {repo_full_name} (inst: {installation_id})")
+        return
+
+    new_event = DriftEvent(
+        repo_id=repo.id,
+        pr_number=payload["number"],
+        base_sha=payload["pull_request"]["base"]["sha"],
+        head_sha=payload["pull_request"]["head"]["sha"],
+        processing_phase="queued",
+        drift_result="pending",
+        agent_logs={}
+    )
+    db.add(new_event)
+    # TODO: Trigger Background task
+
 def handle_github_event(db: Session, event_type: str, payload: dict):
     if event_type == "installation":
         action = payload.get("action")
@@ -103,5 +137,8 @@ def handle_github_event(db: Session, event_type: str, payload: dict):
             _handle_repos_added(db, payload)
         elif action == "removed":
             _handle_repos_removed(db, payload)
+
+    elif event_type == "pull_request":
+        _handle_pr_event(db, payload)
     
     db.commit()
