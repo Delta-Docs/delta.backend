@@ -15,10 +15,10 @@ async def get_installation_access_token(installation_id: int) -> str:
     except FileNotFoundError:
         raise Exception(f"Private Key not found at {settings.GITHUB_PRIVATE_KEY_PATH}")
 
-    # JWT Payload
+    now = int(time.time())
     payload = {
-        "iat": int(time.time()),
-        "exp": int(time.time()) + (10 * 60),
+        "iat": now - 60,
+        "exp": now + (9 * 60),
         "iss": settings.GITHUB_APP_ID
     }
     
