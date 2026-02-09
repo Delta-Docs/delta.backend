@@ -389,7 +389,8 @@ Login with email and password.
 - Sets `access_token` and `refresh_token` cookies
 ```json
 {
-  "message": "Login successful"
+  "email": "user@example.com",
+  "name": "User Name"
 }
 ```
 

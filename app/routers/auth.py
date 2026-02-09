@@ -39,7 +39,7 @@ def create_user(
     return {"message": "User created successfully"}
 
 #Endpoint to Login with email & password
-@router.post("/login", response_model=schemas.Message)
+@router.post("/login", response_model=schemas.UserLoginResponse)
 def login(
     response: Response,
     user_in: schemas.UserLogin,
@@ -82,7 +82,10 @@ def login(
         expires=int(refresh_token_expires.total_seconds()),
     )
     
-    return {"message": "Login successful"}
+    return {
+        "email": user.email,
+        "name": user.full_name
+    }
 
 # Endpoint for the user to Logout
 @router.post("/logout", response_model=schemas.Message)
