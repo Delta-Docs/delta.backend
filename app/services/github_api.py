@@ -61,7 +61,7 @@ async def get_repo_details(installation_id: int, owner: str, repo_name: str):
         data = repo_res.json()
 
         return {
-            "name": data.get("full_name"),
+            "name": data.get("name"),
             "description": data.get("description"),
             "language": data.get("language"),
             "stargazers_count": data.get("stargazers_count"),
