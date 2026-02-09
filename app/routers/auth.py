@@ -107,6 +107,13 @@ def logout(
     
     return {"message": "Logout successful"}
 
+@router.get("/me", response_model=schemas.User)
+def get_current_user_info(
+    current_user: User = Depends(get_current_user)
+):
+    """Get current authenticated user information"""
+    return current_user
+
 @router.get("/github/callback")
 async def github_callback(
     request: Request,
