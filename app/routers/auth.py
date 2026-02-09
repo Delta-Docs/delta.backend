@@ -1,6 +1,6 @@
 import httpx
 from datetime import timedelta
-# from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.orm import Session
 
@@ -191,8 +191,4 @@ async def github_callback(
 
     db.commit()
 
-    return {
-        "status": "success", 
-        "message": "GitHub Account Linked & App Installed!"
-    }
-    # return RedirectResponse(url=f"{FRONTEND_URL}?status=github_linked")
+    return RedirectResponse(url=f"{settings.FRONTEND_URL}/dashboard", status_code=303)
