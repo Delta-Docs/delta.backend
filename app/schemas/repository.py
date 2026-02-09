@@ -8,6 +8,7 @@ class RepositoryBase(BaseModel):
     repo_name: str
 
 
+# Schema for updating repository settings
 class RepositorySettings(BaseModel):
     docs_root_path: Optional[str] = None
     target_branch: Optional[str] = None
@@ -16,16 +17,18 @@ class RepositorySettings(BaseModel):
     file_ignore_patterns: Optional[list[str]] = None
 
 
+# Schema for toggling repo active status
 class RepositoryActivation(BaseModel):
     is_active: bool
 
 
+# Schema for returning full repository data
 class RepositoryResponse(BaseModel):
     id: UUID
     installation_id: int
     repo_name: str
-    is_active: bool
-    is_suspended: bool
+    is_active: bool  # User controlled
+    is_suspended: bool  # System controlled
     avatar_url: Optional[str]
     docs_root_path: Optional[str]
     target_branch: Optional[str]

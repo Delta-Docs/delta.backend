@@ -4,6 +4,7 @@ from app.services.github_api import create_github_check_run
 from app.models.drift import DriftEvent
 from app.services.github_webhook_service import handle_github_event
 
+# Test that check runs are created successfully in GH
 @pytest.mark.asyncio
 async def test_create_check_run_success():
     mock_db = MagicMock()
@@ -15,6 +16,7 @@ async def test_create_check_run_success():
     with patch("app.services.github_api.get_installation_access_token", new_callable=AsyncMock) as mock_get_token:
         mock_get_token.return_value = "mock_token"
         
+        # Mock successful GH response
         mock_response = MagicMock()
         mock_response.status_code = 201
         mock_response.json.return_value = {"id": 987654321}
@@ -30,9 +32,11 @@ async def test_create_check_run_success():
             assert result == 987654321
             mock_client.post.assert_called_once()
             
+            # Verify check run ID is saved to DB in the Drift Event
             mock_db.query.assert_called_with(DriftEvent)
             mock_db.commit.assert_called_once()
             
+            # Verify the GH API call has correct params
             args, kwargs = mock_client.post.call_args
             assert args[0] == f"https://api.github.com/repos/{repo_full_name}/check-runs"
             payload = kwargs["json"]
@@ -40,6 +44,7 @@ async def test_create_check_run_success():
             assert payload["head_sha"] == head_sha
             assert payload["status"] == "queued"
 
+# Test that API failures are handled gracefully
 @pytest.mark.asyncio
 async def test_create_check_run_api_failure():
     mock_db = MagicMock()
@@ -51,6 +56,7 @@ async def test_create_check_run_api_failure():
     with patch("app.services.github_api.get_installation_access_token", new_callable=AsyncMock) as mock_get_token:
         mock_get_token.return_value = "mock_token"
         
+        # Mock GH API error
         mock_response = MagicMock()
         mock_response.status_code = 500
         mock_response.text = "GitHub Server Error"
@@ -63,9 +69,11 @@ async def test_create_check_run_api_failure():
         with patch("httpx.AsyncClient", return_value=mock_client):
             result = await create_github_check_run(mock_db, drift_event_id, repo_full_name, head_sha, installation_id)
             
+            # Should return None and not commit anything
             assert result is None
             mock_db.commit.assert_not_called()
 
+# Test that PR events trigger check run creation
 @pytest.mark.asyncio
 async def test_handle_pr_triggers_check_run():
     mock_db = MagicMock()
@@ -80,6 +88,7 @@ async def test_handle_pr_triggers_check_run():
         }
     }
 
+    # Mock the linked repo lookup
     mock_repo = MagicMock()
     mock_repo.id = "uuid-repo-1"
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
@@ -89,10 +98,12 @@ async def test_handle_pr_triggers_check_run():
         
         await handle_github_event(mock_db, "pull_request", payload)
         
+        # Verify a drift event was created in DB
         mock_db.add.assert_called_once()
         mock_db.flush.assert_called_once()
         mock_db.refresh.assert_called_once()
         
+        # Verify check run is created with correct params
         mock_create_check.assert_called_once()
         args, _ = mock_create_check.call_args
         assert args[0] == mock_db

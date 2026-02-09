@@ -6,12 +6,14 @@ from app.models.installation import Installation
 from app.models.repository import Repository
 from app.models.drift import DriftEvent
 
+# Test fixture for mocking DB session
 @pytest.fixture
 def mock_db_session():
     session = MagicMock()
     session.query.return_value.filter.return_value.first.return_value = None
     return session
 
+# Test that GH app installation creates installation and repo records
 @pytest.mark.asyncio
 async def test_handle_installation_created(mock_db_session):
     payload = {
@@ -34,9 +36,9 @@ async def test_handle_installation_created(mock_db_session):
     }
     
     await github_webhook_service.handle_github_event(mock_db_session, "installation", payload)
-    
     assert mock_db_session.execute.call_count >= 2
 
+# Test that GH app deletion removes installation and cascades
 @pytest.mark.asyncio
 async def test_handle_installation_deleted(mock_db_session):
     payload = {
@@ -50,6 +52,7 @@ async def test_handle_installation_deleted(mock_db_session):
     mock_db_session.query.return_value.filter.assert_called()
     mock_db_session.query.return_value.filter.return_value.delete.assert_called_once()
 
+# Test that GH app suspension marks all linked repos as suspended
 @pytest.mark.asyncio
 async def test_handle_installation_suspend(mock_db_session):
     payload = {
@@ -59,9 +62,11 @@ async def test_handle_installation_suspend(mock_db_session):
     
     await github_webhook_service.handle_github_event(mock_db_session, "installation", payload)
     
+    # Should update all linked repos for that installation to is_suspended=True
     mock_db_session.query.assert_called_with(Repository)
     mock_db_session.query.return_value.filter.return_value.update.assert_called_once_with({"is_suspended": True})
 
+# Test that GH app unsuspension marks all linked repos as active again
 @pytest.mark.asyncio
 async def test_handle_installation_unsuspend(mock_db_session):
     payload = {
@@ -71,9 +76,11 @@ async def test_handle_installation_unsuspend(mock_db_session):
     
     await github_webhook_service.handle_github_event(mock_db_session, "installation", payload)
     
+    # Should update all linked repos for that installation to is_suspended=False
     mock_db_session.query.assert_called_with(Repository)
     mock_db_session.query.return_value.filter.return_value.update.assert_called_once_with({"is_suspended": False})
 
+# Test adding repos to an installation
 @pytest.mark.asyncio
 async def test_handle_repos_added(mock_db_session):
     payload = {
@@ -91,6 +98,7 @@ async def test_handle_repos_added(mock_db_session):
     
     mock_db_session.execute.assert_called_once()
 
+# Test removing repos from an installation
 @pytest.mark.asyncio
 async def test_handle_repos_removed(mock_db_session):
     payload = {
@@ -106,6 +114,7 @@ async def test_handle_repos_removed(mock_db_session):
     mock_db_session.query.assert_called_with(Repository)
     mock_db_session.query.return_value.filter.return_value.delete.assert_called_once()
 
+# Test that PR opened creates a drift event
 @pytest.mark.asyncio
 async def test_handle_pr_opened_success():
     mock_db = MagicMock()
@@ -120,6 +129,7 @@ async def test_handle_pr_opened_success():
         },
     }
     
+    # Mock the repo lookup
     mock_repo = MagicMock()
     mock_repo.id = "uuid-123"
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
@@ -127,6 +137,7 @@ async def test_handle_pr_opened_success():
     with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock) as mock_create_check:
         await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
     
+    # Verify drift event was created with correct data
     mock_db.query.assert_called()
     mock_db.add.assert_called_once()
     args, _ = mock_db.add.call_args
@@ -138,6 +149,7 @@ async def test_handle_pr_opened_success():
     assert event.head_sha == "head456"
     assert event.processing_phase == "queued"
 
+# Test that non relevant PR actions (like closing, assigning, etc.) are ignored
 @pytest.mark.asyncio
 async def test_handle_pr_ignored_action():
     mock_db = MagicMock()
@@ -145,8 +157,10 @@ async def test_handle_pr_ignored_action():
     
     await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
     
+    # Shouldn't add any records
     mock_db.add.assert_not_called()
 
+# Test that PRs for unknown repos are handled gracefully
 @pytest.mark.asyncio
 async def test_repo_not_found_for_pr():
     mock_db = MagicMock()
@@ -156,8 +170,10 @@ async def test_repo_not_found_for_pr():
         "repository": {"full_name": "unknown/repo"}
     }
     
+    # Mock no repo found
     mock_db.query.return_value.filter.return_value.first.return_value = None
     
     await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
     
+    # Should not create a drift event if the repo doesn't exist
     mock_db.add.assert_not_called()

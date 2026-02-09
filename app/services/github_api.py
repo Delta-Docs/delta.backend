@@ -7,7 +7,9 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.models.drift import DriftEvent
 
+# Get GitHub installation Access Token with Signed JWT for API calls
 async def get_installation_access_token(installation_id: int) -> str:
+    # Load the Private Key from file
     try:
         key_path = Path(settings.GITHUB_PRIVATE_KEY_PATH)
         with open(key_path, 'rb') as f:
@@ -15,15 +17,17 @@ async def get_installation_access_token(installation_id: int) -> str:
     except FileNotFoundError:
         raise Exception(f"Private Key not found at {settings.GITHUB_PRIVATE_KEY_PATH}")
 
+    # Create JWT and sign to authenticate as GitHub app
     now = int(time.time())
     payload = {
-        "iat": now - 60,
-        "exp": now + (9 * 60),
+        "iat": now - 60,  # Issued 60s in the past to account for clock skew
+        "exp": now + (9 * 60),  # Expires in 9 minutes
         "iss": settings.GITHUB_APP_ID
     }
     
     encoded_jwt = jwt.encode(payload, private_key, algorithm="RS256")
 
+    # Exchange the JWT for an installation token
     async with httpx.AsyncClient() as client:
         token_res = await client.post(
             f"https://api.github.com/app/installations/{installation_id}/access_tokens",
@@ -38,6 +42,7 @@ async def get_installation_access_token(installation_id: int) -> str:
             
         return token_res.json()["token"]
 
+# Fetches repository details from GitHub API
 async def get_repo_details(installation_id: int, owner: str, repo_name: str):
     access_token = await get_installation_access_token(installation_id)
 
@@ -64,6 +69,7 @@ async def get_repo_details(installation_id: int, owner: str, repo_name: str):
             "avatar_url": (data.get("owner") or {}).get("avatar_url")
         }
 
+# Creates a GitHub Check Run for a PR
 async def create_github_check_run(db: Session, drift_event_id, repo_full_name: str, head_sha: str, installation_id: int):
     try:
         access_token = await get_installation_access_token(installation_id)
@@ -78,7 +84,7 @@ async def create_github_check_run(db: Session, drift_event_id, repo_full_name: s
                 json={
                     "name": "Delta Docs",
                     "head_sha": head_sha,
-                    "status": "queued",
+                    "status": "queued",  # Initial Status
                     "started_at": datetime.now(timezone.utc).isoformat(),
                     "output": {
                         "title": "PR Analysis Queued",
@@ -94,6 +100,7 @@ async def create_github_check_run(db: Session, drift_event_id, repo_full_name: s
             data = res.json()
             check_run_id = data.get("id")
             
+            # Store check run ID so that status can be updated at different stages
             db.query(DriftEvent).filter(DriftEvent.id == drift_event_id).update({"check_run_id": check_run_id})
             db.commit()
             

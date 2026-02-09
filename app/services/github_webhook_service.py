@@ -8,6 +8,7 @@ from app.models.drift import DriftEvent
 
 from app.services.github_api import create_github_check_run
 
+# Upsert repositorites (Insert if they don't exist or update existing repos)
 def _insert_repositories(db: Session, installation_id: int, repos_list: list, account_avatar_url: str = None):
     if not repos_list:
         return
@@ -21,6 +22,7 @@ def _insert_repositories(db: Session, installation_id: int, repos_list: list, ac
             "avatar_url": account_avatar_url 
         })
 
+    # Insert or update on conflict
     stmt = insert(Repository).values(values_list)
     stmt = stmt.on_conflict_do_update(
         index_elements=['installation_id', 'repo_name'],
@@ -28,11 +30,13 @@ def _insert_repositories(db: Session, installation_id: int, repos_list: list, ac
     )
     db.execute(stmt)
 
+# Handle when GH app is first installed on a GitHub account
 def _handle_installation_created(db: Session, payload: dict):
     installation = payload["installation"]
     account = installation["account"]
     sender = payload["sender"]
     
+    # Link installation to an existing user
     user = db.query(User).filter(User.github_user_id == sender["id"]).first()
     user_id = user.id if user else None
 
@@ -44,6 +48,7 @@ def _handle_installation_created(db: Session, payload: dict):
     if user_id:
         values["user_id"] = user_id
         
+    # Upsert the installation
     stmt = insert(Installation).values(**values)
     
     update_dict = {
@@ -62,20 +67,25 @@ def _handle_installation_created(db: Session, payload: dict):
     if payload.get("repositories"):
         _insert_repositories(db, installation["id"], payload["repositories"], account.get("avatar_url"))
 
+# Handle when GH app is uninstalled
 def _handle_installation_deleted(db: Session, payload: dict):
     inst_id = payload["installation"]["id"]
-    db.query(Installation).filter(Installation.installation_id == inst_id).delete(synchronize_session=False)
+    db.query(Installation).filter(Installation.installation_id == inst_id).delete(synchronize_session=False) # Cascade Delete
 
+# Handle when installation is suspended or unsuspended
 def _handle_installation_suspend(db: Session, payload: dict, suspended: bool):
     inst_id = payload["installation"]["id"]
+    # Mark all repos as suspended/unsuspended
     db.query(Repository).filter(Repository.installation_id == inst_id).update({"is_suspended": suspended})
 
+# Handle when repos are added to an existing installation
 def _handle_repos_added(db: Session, payload: dict):
     inst_id = payload["installation"]["id"]
     repos = payload["repositories_added"]
     account_avatar_url = payload["installation"]["account"].get("avatar_url")
     _insert_repositories(db, inst_id, repos, account_avatar_url)
 
+# Handle when repos are removed from an existing installation
 def _handle_repos_removed(db: Session, payload: dict):
     inst_id = payload["installation"]["id"]
     repos = payload["repositories_removed"]
@@ -88,6 +98,7 @@ def _handle_repos_removed(db: Session, payload: dict):
             Repository.repo_name.in_(repo_full_names)
         ).delete(synchronize_session=False)
 
+# Handle PR webhook event (Opened or Updated)
 async def _handle_pr_event(db: Session, payload: dict):
     action = payload.get("action")
     if action not in ["opened", "synchronize"]:
@@ -109,6 +120,7 @@ async def _handle_pr_event(db: Session, payload: dict):
         print(f"Warning: Repository not found: {repo_full_name} (inst: {installation_id})")
         return
 
+    # Create a drift event for the PR
     new_event = DriftEvent(
         repo_id=repo.id,
         pr_number=payload["number"],
@@ -122,11 +134,14 @@ async def _handle_pr_event(db: Session, payload: dict):
     db.flush()
     db.refresh(new_event)
     
+    # Create a GH check run to show status in PR
     await create_github_check_run(db, new_event.id, repo_full_name, new_event.head_sha, installation_id)
 
     # TODO: Add this as a background task
 
+# Main Router to handle different types of GH webhook events
 async def handle_github_event(db: Session, event_type: str, payload: dict):
+    # Installation lifecycle events
     if event_type == "installation":
         action = payload.get("action")
         if action == "created":
@@ -138,6 +153,7 @@ async def handle_github_event(db: Session, event_type: str, payload: dict):
         elif action == "unsuspend":
             _handle_installation_suspend(db, payload, suspended=False)
     
+    # Repo selection changes
     elif event_type == "installation_repositories":
         action = payload.get("action")
         if action == "added":
@@ -145,6 +161,7 @@ async def handle_github_event(db: Session, event_type: str, payload: dict):
         elif action == "removed":
             _handle_repos_removed(db, payload)
 
+    # PR Events
     elif event_type == "pull_request":
         await _handle_pr_event(db, payload)
     
