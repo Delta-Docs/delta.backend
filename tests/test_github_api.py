@@ -74,7 +74,7 @@ async def test_get_repo_details_success():
             mock_repo_response = MagicMock()
             mock_repo_response.status_code = 200
             mock_repo_response.json.return_value = {
-                "name": "repo-name",
+                "full_name": "repo-name",
                 "description": "description",
                 "language": "python",
                 "stargazers_count": 10,
