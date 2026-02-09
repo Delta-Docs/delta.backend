@@ -25,7 +25,6 @@ class RepositoryActivation(BaseModel):
 # Schema for returning full repository data
 class RepositoryResponse(BaseModel):
     id: UUID
-    installation_id: int
     repo_name: str
     is_active: bool  # User controlled
     is_suspended: bool  # System controlled
@@ -36,7 +35,6 @@ class RepositoryResponse(BaseModel):
     style_preference: Optional[str]
     file_ignore_patterns: Optional[list[str]]
     last_synced_at: Optional[datetime]
-    created_at: datetime
     
     class Config:
         from_attributes = True
