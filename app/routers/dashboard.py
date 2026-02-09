@@ -52,12 +52,48 @@ async def get_dashboard_repos(
     db: Session = Depends(get_db_connection),
     current_user: User = Depends(get_current_user)
 ):
+    # First, sync repositories from GitHub API for all user installations
+    user_installations = (
+        db.query(Installation)
+        .filter(Installation.user_id == current_user.id)
+        .all()
+    )
+    
+    for installation in user_installations:
+        try:
+            # Fetch repos from GitHub API
+            from app.services.github_api import get_installation_repos
+            github_repos = await get_installation_repos(installation.installation_id)
+            
+            # Sync to database
+            from sqlalchemy.dialects.postgresql import insert
+            if github_repos:
+                values_list = []
+                for repo in github_repos:
+                    values_list.append({
+                        "installation_id": installation.installation_id,
+                        "repo_name": repo["full_name"],
+                        "is_active": True,
+                        "avatar_url": repo.get("owner", {}).get("avatar_url")
+                    })
+                
+                stmt = insert(Repository).values(values_list)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=['installation_id', 'repo_name'],
+                    set_={"is_active": True, "avatar_url": stmt.excluded.avatar_url}
+                )
+                db.execute(stmt)
+                db.commit()
+        except Exception:
+            # Silently continue if sync fails for an installation
+            continue
+    
+    # Now fetch from database
     recent_repos = (
         db.query(Repository)
         .join(Installation, Repository.installation_id == Installation.installation_id)
         .filter(Installation.user_id == current_user.id)
         .order_by(Repository.created_at.desc())
-        .limit(5)
         .all()
     )
     
