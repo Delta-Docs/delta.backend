@@ -64,6 +64,25 @@ async def get_repo_details(installation_id: int, owner: str, repo_name: str):
             "avatar_url": (data.get("owner") or {}).get("avatar_url")
         }
 
+async def get_installation_repos(installation_id: int):
+    """Fetch all repositories for a given installation from GitHub API."""
+    access_token = await get_installation_access_token(installation_id)
+
+    async with httpx.AsyncClient() as client:
+        repos_res = await client.get(
+            f"https://api.github.com/installation/repositories",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Accept": "application/vnd.github+json"
+            }
+        )
+
+        if repos_res.status_code != 200:
+            raise Exception(f"GitHub API Error: {repos_res.text}")
+
+        data = repos_res.json()
+        return data.get("repositories", [])
+
 async def create_github_check_run(db: Session, drift_event_id, repo_full_name: str, head_sha: str, installation_id: int):
     try:
         access_token = await get_installation_access_token(installation_id)
