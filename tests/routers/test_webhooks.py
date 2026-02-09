@@ -7,11 +7,13 @@ from app.core.config import settings
 from app.routers.webhooks import validate_github_signature
 from fastapi import Request
 
+# Test that valid GH signatures pass validation
 @pytest.mark.asyncio
 async def test_validate_github_signature_valid():
     payload = {"test": "data"}
     body = json.dumps(payload).encode()
     
+    # Generate a valid signature using GH webhook secret
     signature = "sha256=" + hmac.new(
         settings.GITHUB_WEBHOOK_SECRET.encode(),
         body,
@@ -25,6 +27,7 @@ async def test_validate_github_signature_valid():
     result = await validate_github_signature(mock_request)
     assert result is True
 
+# Test that requests without signature are rejected
 @pytest.mark.asyncio
 async def test_validate_github_signature_missing():
     mock_request = MagicMock(spec=Request)
@@ -35,6 +38,7 @@ async def test_validate_github_signature_missing():
     assert exc_info.value.status_code == 403
     assert exc_info.value.detail == "Missing signature"
 
+# Test that requests with invalid signatures are rejected
 @pytest.mark.asyncio
 async def test_validate_github_signature_invalid():
     body = json.dumps({"test": "data"}).encode()

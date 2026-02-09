@@ -11,6 +11,7 @@ from app.schemas.repository import RepositorySettings, RepositoryActivation, Rep
 router = APIRouter()
 
 
+# Endpoint to get all linked repos for the current user
 @router.get("/", response_model=list[RepositoryResponse])
 def get_repos(
     db: Session = Depends(get_db_connection),
@@ -25,6 +26,7 @@ def get_repos(
     return repos
 
 
+# Endpoint to Update repo settings like docs path, drift sensitivity, etc
 @router.put("/{repo_id}/settings", response_model=RepositoryResponse)
 def update_repo_settings(
     repo_id: UUID,
@@ -32,6 +34,7 @@ def update_repo_settings(
     db: Session = Depends(get_db_connection),
     current_user: User = Depends(get_current_user)
 ):
+    # Making sure user actually owns this repo
     repo = (
         db.query(Repository)
         .join(Installation, Repository.installation_id == Installation.installation_id)
@@ -42,6 +45,7 @@ def update_repo_settings(
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
     
+    # Update only the fields that were received
     update_data = settings.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         if value is not None:
@@ -52,6 +56,7 @@ def update_repo_settings(
     return repo
 
 
+# Endpoint to toggle repo active status
 @router.patch("/{repo_id}/activate", response_model=RepositoryResponse)
 def toggle_repo_activation(
     repo_id: UUID,
@@ -59,6 +64,7 @@ def toggle_repo_activation(
     db: Session = Depends(get_db_connection),
     current_user: User = Depends(get_current_user)
 ):
+    # Making sure user owns this repo
     repo = (
         db.query(Repository)
         .join(Installation, Repository.installation_id == Installation.installation_id)
