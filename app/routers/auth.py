@@ -1,6 +1,6 @@
 import httpx
 from datetime import timedelta
-# from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.orm import Session
 
@@ -39,7 +39,7 @@ def create_user(
     return {"message": "User created successfully"}
 
 #Endpoint to Login with email & password
-@router.post("/login", response_model=schemas.Message)
+@router.post("/login", response_model=schemas.UserLoginResponse)
 def login(
     response: Response,
     user_in: schemas.UserLogin,
@@ -82,7 +82,10 @@ def login(
         expires=int(refresh_token_expires.total_seconds()),
     )
     
-    return {"message": "Login successful"}
+    return {
+        "email": user.email,
+        "name": user.full_name
+    }
 
 # Endpoint for the user to Logout
 @router.post("/logout", response_model=schemas.Message)
@@ -188,8 +191,4 @@ async def github_callback(
 
     db.commit()
 
-    return {
-        "status": "success", 
-        "message": "GitHub Account Linked & App Installed!"
-    }
-    # return RedirectResponse(url=f"{FRONTEND_URL}?status=github_linked")
+    return RedirectResponse(url=f"{settings.FRONTEND_URL}/dashboard", status_code=303)

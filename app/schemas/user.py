@@ -24,3 +24,8 @@ class User(UserBase):
     
     class Config:
         from_attributes = True  # Allow creation by ORM models
+
+# Schema for login response
+class UserLoginResponse(BaseModel):
+    email: EmailStr
+    name: str
