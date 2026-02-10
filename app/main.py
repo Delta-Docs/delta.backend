@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import api_router
 from app.core.config import settings
 
-# iIitialize FastAPI App
+# Initialize FastAPI App
 app = FastAPI(title=settings.PROJECT_NAME)
 
 # Setup CORS to allow frontend to hit endpoints

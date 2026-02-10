@@ -23,6 +23,9 @@ class Settings(BaseSettings):
 
     FRONTEND_URL: str
 
+    # Redis URL for RQ
+    REDIS_URL: str = "redis://localhost:6379/0"
+
     model_config = ConfigDict(
         case_sensitive=True,
         env_file=".env",
