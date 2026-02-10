@@ -109,3 +109,49 @@ async def create_github_check_run(db: Session, drift_event_id, repo_full_name: s
     except Exception as e:
         print(f"Exception in create_github_check_run: {str(e)}")
         return None
+
+
+async def update_github_check_run(
+    repo_full_name: str,
+    check_run_id: int,
+    installation_id: int,
+    status: str,
+    conclusion: str = None,
+    title: str = None,
+    summary: str = None
+):
+    try:
+        access_token = await get_installation_access_token(installation_id)
+        
+        payload = { "status": status }
+        
+        if status == "completed" and conclusion:
+            payload["conclusion"] = conclusion
+            payload["completed_at"] = datetime.now(timezone.utc).isoformat()
+        
+        if title or summary:
+            payload["output"] = {}
+            if title:
+                payload["output"]["title"] = title
+            if summary:
+                payload["output"]["summary"] = summary
+        
+        async with httpx.AsyncClient() as client:
+            res = await client.patch(
+                f"https://api.github.com/repos/{repo_full_name}/check-runs/{check_run_id}",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json"
+                },
+                json=payload
+            )
+            
+            if res.status_code != 200:
+                print(f"Error updating check run: {res.text}")
+                return False
+                
+            return True
+
+    except Exception as e:
+        print(f"Exception in update_github_check_run: {str(e)}")
+        return False

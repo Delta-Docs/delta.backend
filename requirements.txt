@@ -12,3 +12,5 @@ httpx
 pytest
 pytest-asyncio
 pyjwt
+redis
+rq
