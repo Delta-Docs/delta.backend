@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     # Auth Config
     SECRET_KEY: str
     ALGORITHM: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    REFRESH_TOKEN_EXPIRE_DAYS: int
 
     # Github App Credentials
     GITHUB_APP_ID: str
@@ -21,10 +21,11 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str
     GITHUB_WEBHOOK_SECRET: str
 
-    FRONTEND_URL: str
+    # RQ Config
+    REDIS_URL: str
+    NUM_WORKERS: int
 
-    # Redis URL for RQ
-    REDIS_URL: str = "redis://localhost:6379/0"
+    FRONTEND_URL: str
 
     model_config = ConfigDict(
         case_sensitive=True,
