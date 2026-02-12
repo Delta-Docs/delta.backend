@@ -28,7 +28,7 @@ def sample_task(drift_event_id: str):
         installation_id = drift_event.repository.installation_id
         check_run_id = drift_event.check_run_id
 
-        drift_event.processing_phase = "analysing"
+        drift_event.processing_phase = "analyzing"
         session.commit()
 
         if check_run_id:
@@ -37,7 +37,7 @@ def sample_task(drift_event_id: str):
                 check_run_id=check_run_id,
                 installation_id=installation_id,
                 status="in_progress",
-                title="Analysing Changes",
+                title="Analyzing Changes",
                 summary="Running drift analysis on your documentation..."
             ))
 
