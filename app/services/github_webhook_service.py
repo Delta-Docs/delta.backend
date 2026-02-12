@@ -7,7 +7,7 @@ from app.models.repository import Repository
 from app.models.drift import DriftEvent
 
 from app.services.github_api import create_github_check_run, get_installation_access_token
-from app.services.git_service import clone_repository, remove_cloned_repository
+from app.services.git_service import clone_repository, remove_cloned_repository, pull_branches
 from app.core.queue import task_queue
 from app.services.drift_analysis import sample_task
 
@@ -145,6 +145,21 @@ async def _handle_pr_event(db: Session, payload: dict):
     if not repo:
         print(f"Warning: Repository not found: {repo_full_name} (inst: {installation_id})")
         return
+
+    base_branch = payload["pull_request"]["base"]["ref"]
+    head_branch = payload["pull_request"]["head"]["ref"]
+    
+    if base_branch == repo.target_branch:
+        try:
+            access_token = await get_installation_access_token(installation_id)
+            branches_to_pull = [base_branch]
+            
+            if not payload["pull_request"]["head"].get("repo", {}).get("fork"):
+                branches_to_pull.append(head_branch)
+            
+            await pull_branches(repo_full_name, access_token, branches_to_pull)
+        except Exception as e:
+            print(f"Error pulling branches for {repo_full_name}: {str(e)}")
 
     # Create a drift event for the PR
     new_event = DriftEvent(
