@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     NUM_WORKERS: int
 
     FRONTEND_URL: str
+    
+    # Repos Storage Path
+    REPOS_BASE_PATH: str
 
     model_config = ConfigDict(
         case_sensitive=True,
