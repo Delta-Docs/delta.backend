@@ -1,20 +1,29 @@
 # delta.backend [WIP]
 
+
 ## Table of Contents
 - [Overview](#overview)
 - [Getting Started](#getting-started)
 - [Architecture](#architecture)
+   - [The Web Dashboard](#the-web-dashboard)
+   - [The GitHub App](#the-github-app)
+   - [GitHub Webhook Events](#github-webhook-events)
+   - [Redis Queue and RQ Workers](#redis-queue-and-rq-workers)
+   - [Multi Agent Workflow](#multi-agent-workflow)
 - [Project Structure](#project-structure)
-- [Database](#database)
-- [API Endpoints](#api-endpoints)
-- [Authentication](#authentication)
 - [Testing](#testing)
 - [LICENSE](#license)
+- [Team](#team)
+
+
+> **More documentation available at [docs/](docs/). See:**
+> - [API Documentation](docs/API_DOCUMENTATON.md)
+> - [Auth Documentation](docs/AUTH_DOCUMENTATION.md)
+> - [Database Documentation](docs/DB_DOCUMENTATION.md)
 
 ## Overview
 
-Delta is a continuous documentation platform that treats documentation as a living part of your codebase, automatically detecting and preventing drift. By integrating directly with your CI/CD pipeline, it analyses every Pull Request to ensure your general documentation, API references, and guides remain perfectly synchronised with your evolving code - effectively linting your documentation.
-
+Delta is a continuous documentation platform that treats documentation as a living part of your codebase, automatically detecting and preventing drift. By integrating directly with your CI/CD pipeline, it analyses every Pull Request to ensure documentation, whether it be API references, setup guides, etc. remain perfectly synchronised with your evolving code - effectively linting your documentation.
 
 
 ## Getting Started
@@ -23,7 +32,7 @@ Delta is a continuous documentation platform that treats documentation as a livi
 
 - Python 3.10+
 - Docker
-- PostgreSQL 18 (via Docker)
+- Git
 - GitHub App Credentials
 
 ### Initial Setup
@@ -42,20 +51,28 @@ Delta is a continuous documentation platform that treats documentation as a livi
 3. **Configure environment variables** (`.env`)
    ```env
    # Database
-   POSTGRES_CONNECTION_URL="YOUR_POSTGRES_CONNECTION_URL"
-   
+   POSTGRES_CONNECTION_URL="postgresql://postgres:1234@localhost/postgres"
+
    # Auth
    SECRET_KEY="YOUR_SECRET_KEY"
    ALGORITHM="ALGORITHM_USED"
+   ACCESS_TOKEN_EXPIRE_MINUTES=60
+   REFRESH_TOKEN_EXPIRE_DAYS=7
 
-   # GitHub App Credentials
+   # GitHub App
    GITHUB_APP_ID="YOUR_GITHUB_APP_ID"
-   GITHUB_PRIVATE_KEY_PATH="keys/PRIVATE_KEY.pem"
+   GITHUB_PRIVATE_KEY_PATH="path/to/private-key.pem"
    GITHUB_CLIENT_ID="YOUR_GITHUB_CLIENT_ID"
    GITHUB_CLIENT_SECRET="YOUR_GITHUB_CLIENT_SECRET"
    GITHUB_WEBHOOK_SECRET="YOUR_GITHUB_WEBHOOK_SECRET"
 
+   # RQ Config
+   REDIS_URL="redis://localhost:6379/0"
+   NUM_WORKERS=2
+
    FRONTEND_URL="http://localhost:5173"
+
+   REPOS_BASE_PATH="/path/to/delta.backend/repos"
    ```
 
 4. **Run setup command**
@@ -64,7 +81,7 @@ Delta is a continuous documentation platform that treats documentation as a livi
    ```
    This will:
    - Create a Python Virtual Environment (at `.venv`)
-   - Install all dependencies
+   - Install all `pip` dependencies
    - Start Docker containers
    - Run database migrations
 
@@ -78,7 +95,7 @@ Delta is a continuous documentation platform that treats documentation as a livi
 ### Quick Commands
 
 ```bash
-# Install dependencies only
+# Install pip dependencies only
 make install
 
 # Start Docker services
@@ -102,9 +119,6 @@ make up
 # Rollback all migrations
 make down
 
-# Show migration history
-make history
-
 # Clean cache files
 make clean
 ```
@@ -116,20 +130,45 @@ make clean
 
 ## Architecture
 
-### A High-Level Architecture
-
 ![Delta Architecture](/images/Delta_Architecure_Diagram.png)
 
-### Process Flow  
+### The Web Dashboard 
 
-1. **Raise PR**: Add code and raise a PR in a linked repository
-2. **GitHub Event**: Webhook endpoint receives the event
-3. **Signature Validation**: HMAC verification using webhook secret
-4. **Event Routing**: Routes to appropriate handler based on webhook event type
-5. **Drift Analysis**: Compares code changes with documentation changes
-6. **Documentation Generartion**: Documentation is updated based on drift findings
-7. **Create PR for Updates**: Creates a PR and awaits review for documentation updates
+It allows the user to interact and set up Delta. It is a React + Vite application that allows the user to:
+ - Sign Up and access Delta
+ - Link new repositories
+ - Manage settings for linked repositories (drift sensitivity, target branch, etc.)
 
+[See delta.frontend code.](https://github.com/Delta-Docs/delta.frontend)
+
+### The GitHub App
+The **heart** of the system. On linking a repository, The **Delta-Docs** GitHub App is automatically installed in the repository. It is responsible for 2 things: 
+- Primarily, it sets up webhooks for the linked repository.
+- All GitHub API calls that access data from a private GitHub repository, require an access token. These access tokens however expire 8 hours after creation (during initial GitHub OAuth). This means we need to renew the access token. Hence, we use the GitHub App's private key to sign a JWT and get a valid access token.
+
+### GitHub Webhook Events
+Delta completely relies on GitHub webhook events to operate. Currently, it is set up to track 3 kinds of webhook events:
+- `installation`: It is received when the user performs some action related to the installation of the GitHub App. It is triggered with the installation (which also includes the linking of at least 1 repository), uninstallation, suspension or unsuspension of the GitHub App.
+- `installation_repository`: It is received when a repository is added or removed from an existing installation.
+- `pull_request`: It is received when a pull request is raised in any of the linked repository.
+
+The `github_webhook_service.py` handles the payload from these types of webhook events and updates the DB and starts workflows accordingly.
+
+### Redis Queue and RQ Workers
+Upon receiving a `pull_request` webhook event, a record in the `DriftEvent` table is created. Every PR raised has to be analysed. Due to the amount of time processing a PR may take and considering the timeout limits of REST APIs, this analysis and workflow has to be done asynchronously. 
+
+This is the reason we use Redis Queue. It is a simple queue implemented with Redis that has multiple consumers (the RQ Worker Pool). It is simple and complex enough for its purpose here at Delta.
+
+When a `DriftEvent` record is created, its ID is enqueued for processing. Any free RQ worker from the worker pool picks up the id and executes the task assigned with it.
+
+### Multi Agent Workflow
+This part of the architecture is still in the design has phase and hasn't really been implemented yet, its a work in progress...
+
+The plan is a 4 agent workflow with `LangGraph` as the orchestrator:
+- **The Scouting Agent:** It has direct access to the cloned repository which it uses to extract code changes, relations and code-doc mappings. It updates the DB with its findings.
+- **The Analyzer Agent:** It takes the code changes and the code-doc mappings that were output from the previous agent and any other input from the codebase to semantically analyse the changes in code and check if these changes are reflected in the documentation. It also updates the DB with its findings.
+- **The Generator Agent:** It receives instructions from the analyzer agent with what parts of the documentation requires updates. Based on the `style_preference` for the repository, it generates updates to the documentation and sends it off to the next agent.
+- **The Reviewer Agent:** It receives the proposed changes from the generator agent and checks it against instructions from the analyzer agent. If any corrections/changes are required it hands back control to the generator agent. Once the proposed updates are approved, its written to the cloned repository, committed via git and a PR is automatically raised (most probably with `gh-cli`) with a request for review.
 
 
 ## Project Structure
@@ -143,8 +182,6 @@ delta.backend/
 │         
 ├── app/                                 # Main application code
 │   ├── core/                            # Core functionality
-│   │   ├── config.py                    # Settings & environment config
-│   │   └── security.py                  # Auth & password hashing
 │   │         
 │   ├── db/                              # Database configuration
 │   │   ├── base.py                      # Import all models
@@ -152,465 +189,28 @@ delta.backend/
 │   │   └── session.py                   # Database session factory
 │   │         
 │   ├── models/                          # SQLAlchemy models (Schema)
-│   │         
 │   ├── routers/                         # API route handlers
-│   │   ├── auth.py                      # Authentication endpoints
-│   │   ├── dashboard.py                 # Dashboard Page endpoints
-│   │   ├── repos.py                     # Repository Page endpoints
-│   │   └── webhooks.py                  # GitHub webhook handler
-│   │         
 │   ├── schemas/                         # Pydantic schemas
-│   │         
 │   ├── services/                        # Business logic
-│   │   ├── github_api.py                # GitHub API integration
-│   │   └── github_webhook_service.py    # Webhook event processing
 │   │         
 │   ├── api.py                           # API router aggregation
 │   ├── deps.py                          # Dependency injection
 │   └── main.py                          # FastAPI application entry point
 │         
-├── bruno/                               # API testing (Bruno client)
-│   ├── auth/                            # Auth endpoint tests
-│   ├── dashboard/                       # Dashboard tests
-│   └── repos/                           # Repository tests
-│         
-├── keys/                                # GitHub App private keys (gitignored)
-│         
-├── tests/                               # Unit tests
-│   ├── core/                            # Core functionality tests
-│   ├── routers/                         # Router tests
-│   └── services/                        # Service tests
+├── bruno/                               # API testing (Bruno client)         
+├── docs/                                # Markdown files for documentation
+├── images/                              # Diagrams that are shown in docs
+├── keys/                                # GitHub App private key (gitignored)
+├── tests/                               # Unit & Integration tests
 │         
 ├── .env                                 # Environment variables (gitignored)
 ├── alembic.ini                          # Alembic configuration
 ├── docker-compose.yml                   # Docker services definition
 ├── Makefile                             # Development commands
 ├── pytest.ini                           # Pytest configuration
-└── requirements.txt                     # Python dependencies
+├── requirements.txt                     # Python dependencies
+└── workers.py                           # Script to run fixed number of RQ workers
 ```
-
-
-
-## Database
-
-### Schema Diagram
-
-![Delta Schema](/images/Delta_Schema_Diagram.png)
-
-### Database Schema
-
-#### Users Table
-```sql
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    full_name VARCHAR,
-    email VARCHAR UNIQUE NOT NULL,
-    password_hash VARCHAR,
-    github_user_id INTEGER UNIQUE,
-    github_username VARCHAR,
-    current_refresh_token_hash VARCHAR,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-#### Installations Table
-```sql
-CREATE TABLE installations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    installation_id BIGINT UNIQUE NOT NULL, 
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    account_name VARCHAR,
-    account_type VARCHAR,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE INDEX idx_installations_user ON installations(user_id);
-```
-
-#### Repositories Table
-```sql
-CREATE TABLE repositories (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    installation_id BIGINT REFERENCES installations(installation_id) ON DELETE CASCADE,
-    repo_name VARCHAR NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    is_suspended BOOLEAN DEFAULT FALSE,
-    avatar_url VARCHAR,
-    docs_root_path VARCHAR DEFAULT './docs',
-    target_branch VARCHAR DEFAULT 'main',
-    drift_sensitivity FLOAT DEFAULT 0.5,
-    style_preference VARCHAR DEFAULT 'professional',
-    file_ignore_patterns VARCHAR[],
-    last_synced_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(installation_id, repo_name)
-);
-```
-
-#### Doc Coverage Map Table
-```sql
-CREATE TABLE doc_coverage_map (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    repo_id UUID REFERENCES repositories(id) ON DELETE CASCADE,
-    code_path VARCHAR NOT NULL,
-    doc_file_path VARCHAR,
-    last_verified_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(repo_id, code_path, doc_file_path)
-);
-
-CREATE INDEX idx_coverage_repo ON doc_coverage_map(repo_id);
-```
-
-#### Drift Events Table
-```sql
-CREATE TABLE drift_events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    repo_id UUID REFERENCES repositories(id) ON DELETE CASCADE,
-    pr_number INTEGER NOT NULL,
-    base_sha VARCHAR NOT NULL,
-    head_sha VARCHAR NOT NULL,
-    check_run_id BIGINT,
-    processing_phase VARCHAR DEFAULT 'queued',
-    drift_result VARCHAR DEFAULT 'pending',
-    overall_drift_score FLOAT,
-    summary VARCHAR,
-    agent_logs JSONB,
-    error_message VARCHAR,
-    started_at TIMESTAMPTZ,
-    completed_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    CONSTRAINT check_processing_phase CHECK (processing_phase IN ('queued', 'scouting', 'analyzing', 'generating', 'verifying', 'completed', 'failed')),
-    CONSTRAINT check_drift_result CHECK (drift_result IN ('pending', 'clean', 'drift_detected', 'missing_docs', 'error'))
-);
-
-CREATE INDEX idx_drift_active_runs ON drift_events (repo_id) 
-WHERE processing_phase NOT IN ('completed', 'failed');
-```
-
-#### Drift Findings Table
-```sql
-CREATE TABLE drift_findings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    drift_event_id UUID REFERENCES drift_events(id) ON DELETE CASCADE,
-    code_path VARCHAR NOT NULL,
-    doc_file_path VARCHAR,
-    change_type VARCHAR,
-    drift_type VARCHAR,
-    drift_score FLOAT,
-    explanation VARCHAR,
-    confidence FLOAT,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    CONSTRAINT check_finding_change_type CHECK (change_type IN ('added', 'modified', 'deleted')),
-    CONSTRAINT check_start_drift_type CHECK (drift_type IN ('outdated_docs', 'missing_docs', 'ambiguous_docs'))
-);
-```
-
-#### Code Changes Table
-```sql
-CREATE TABLE code_changes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    drift_event_id UUID REFERENCES drift_events(id) ON DELETE CASCADE,
-    file_path VARCHAR NOT NULL,
-    change_type VARCHAR,
-    is_code BOOLEAN DEFAULT TRUE,
-    CONSTRAINT check_code_change_type CHECK (change_type IN ('added', 'modified', 'deleted'))
-);
-```
-
-### Database Migrations
-
-Using Alembic for database migrations:
-
-```bash
-# Create a new migration
-make migrate msg="add new column to users"
-
-# Apply all pending migrations
-make up
-
-# Apply one migration
-make up-one
-
-# Rollback to base
-make down
-
-# Rollback one migration
-make down-one
-
-# View migration history
-make history
-```
-
-> **NOTE**: The `make` commands are designed to work only on Linux.  
-> If you are using another OS, please check the Makefile and execute the corresponding commands directly.
-
-
-
-## API Endpoints
-
-### Base URL
-- **Development**: `http://localhost:8000/api`
-- **Production**: `https://production-domain.com/api`
-
-### Authentication Endpoints (`/api/auth`)
-
-#### POST `/auth/signup`
-Create a new user account.
-
-**Request Body:**
-```json
-{
-  "email": "user@example.com",
-  "password": "securepassword_hash",
-  "full_name": "John Doe"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "User created successfully"
-}
-```
-
-#### POST `/auth/login`
-Login with email and password.
-
-**Request Body:**
-```json
-{
-  "email": "user@example.com",
-  "password": "securepassword_hash"
-}
-```
-
-**Response:**
-- Sets `access_token` and `refresh_token` cookies
-```json
-{
-  "email": "user@example.com",
-  "name": "User Name"
-}
-```
-
-#### POST `/auth/logout`
-Logout and invalidate tokens.
-
-**Response:**
-- Deletes `access_token` and `refresh_token` cookies
-```json
-{
-  "message": "Logout successfully"
-}
-```
-
-#### GET `/auth/github/callback`
-GitHub OAuth callback handler.
-
-**Query Params:**
-- `code`: Authorization code from GitHub
-
-
-### Webhook Endpoints (`/api/webhook`)
-
-#### POST `/webhook/github`
-Receives GitHub webhook events.
-
-**Headers:**
-- `X-GitHub-Event`: Event type (e.g., `pull_request`, `push`)
-- `X-Hub-Signature-256`: HMAC signature for verification
-
-**Request Body:**
-GitHub webhook payload (varies by event type)
-
-**Response:**
-```json
-{
-  "status": "Received and Processed Event"
-}
-```
-
-### Repository Endpoints (`/api/repos`)
-
-#### GET `/repos`
-List all repositories for the authenticated user.
-
-**Response:**
-```json
-[
-  {
-    "id": "13b1034a-d60b-4747-a87e-2b696da261db",
-    "repo_name": "owner/repo_name",
-    "is_active": true,
-    "is_suspended": false,
-    "avatar_url": "repo avatar url",
-    "docs_root_path": "./docs",
-    "target_branch": "main",
-    "drift_sensitivity": 0.5,
-    "style_preference": "professional",
-    "file_ignore_patterns": null,
-    "last_synced_at": null,
-  }
-]
-```
-
-#### PUT `/repos/{repo_id}/activate`
-Activate or deactivate drift monitoring for a repository.
-
-**Request Body:**
-```json
-{
-  "is_active": true
-}
-```
-
-**Response:**
-```json
-{
-  "id": "13b1034a-d60b-4747-a87e-2b696da261db",
-  "repo_name": "owner/repo_name",
-  "is_active": true,
-  "is_suspended": false,
-  "avatar_url": "repo avatar url",
-  "docs_root_path": "./docs",
-  "target_branch": "main",
-  "drift_sensitivity": 0.5,
-  "style_preference": "professional",
-  "file_ignore_patterns": null,
-  "last_synced_at": null,
-}
-```
-
-#### PUT `/repos/{repo_id}/settings`
-Update repository configuration.
-
-**Request Body:**
-```json
-{
-  "docs_root_path": "./docs",
-  "target_branch": "main",
-  "drift_sensitivity": 0.7,
-  "style_preference": "technical",
-  "file_ignore_patterns": ["*.test.js", "*.spec.ts"]
-}
-```
-
-**Response:**
-```json
-{
-  "id": "13b1034a-d60b-4747-a87e-2b696da261db",
-  "repo_name": "owner/repo_name",
-  "is_active": true,
-  "is_suspended": false,
-  "avatar_url": "repo avatar url",
-  "docs_root_path": "./docs",
-  "target_branch": "main",
-  "drift_sensitivity": 0.7,
-  "style_preference": "technical",
-  "file_ignore_patterns": ["*.test.js", "*.spec.ts"],
-  "last_synced_at": null,
-}
-```
-
-### Dashboard Endpoints (`/api/dashboard`)
-
-#### GET `/dashboard/stats`
-Get dashboard statistics for the authenticated user.
-
-**Response:**
-```json
-{
-  "installations_count": 2,
-  "repos_linked_count": 10,
-  "drift_events_count": 32,
-  "pr_waiting_count": 4
-}
-```
-
-#### GET `/dashboard/repos`
-Get basic repository information for the 5 most recently linked repositories:
-
-**Response:**
-```json
-[
-  {
-    "name": "repo name",
-    "description": "repo description",
-    "language": "Python",
-    "stargazers_count": 2,
-    "forks_count": 5,
-    "avatar_url": "Avatar URL"
-  }
-]
-```
-
-
-
-## Authentication
-
-### Authentication Strategy
-
-Delta uses a dual-token authentication system:
-
-1. **Access Token**: Short lived PASETO (1 hour) for API requests
-2. **Refresh Token**: Long lived token (7 days) for refreshing access tokens
-
-Both tokens are stored as httponly cookies to prevent XSS attacks.
-
-> **NOTE**: Refreshing of the Access token cookie is handled automatically by the backend when a protected endpoint is accessed.
-
-### Token Structure
-
-**Access Token Payload:**
-```json
-{
-  "sub": "user-uuid",
-  "type": "access",
-  "exp": 1234567890
-}
-```
-
-**Refresh Token Payload:**
-```json
-{
-  "sub": "user-uuid",
-  "type": "refresh",
-  "exp": 1234567890
-}
-```
-
-### Password Hashing
-
-Passwords are first hashed via SHA-256 into a 64-character hexadecimal string before being re-hashed using Bcrypt with automatic salt generation:
-
-```python
-from app.core.security import get_hash, verify_hash
-
-# Hash password
-password_hash = get_hash("user_password_hash")
-
-# Verify password
-is_valid = verify_hash("user_password_hash", password_hash)
-```
-
-> **NOTE**: The password is also hashed in the frontend before it is sent during signup / login to the backend
-
-### Protected Endpoints
-
-Use the `get_current_user` dependency to protect endpoints:
-
-```python
-from app.deps import get_current_user
-from app.models.user import User
-
-@router.get("/protected")
-def protected_endpoint(current_user: User = Depends(get_current_user)):
-    # Endpoint code
-    ...
-
-```
-
 
 
 ## Testing
@@ -628,23 +228,20 @@ pytest -v
 pytest tests/test_dashboard.py
 ```
 
-### Test Structure
-
-```
-tests/
-├── test_dashboard.py        # Dashboard endpoint tests
-├── test_github_api.py       # GitHub API integration tests
-├── core/
-│   └── test_security.py     # Security utility tests
-├── routers/
-│   └── test_webhooks.py     # Webhook handler tests
-└── services/
-    ├── test_github_check_run.py        # Check run tests
-    └── test_github_webhook_service.py  # Webhook service tests
-```
-
-
 
 ## LICENSE
 
 This project is licensed under the [MIT LICENSE](LICENSE).
+
+
+## Team
+
+The people working to make ▲ a possibility:
+
+| Name                   | Roll Number      | GitHub ID                                                   |
+|------------------------|------------------|-------------------------------------------------------------|
+| Adithya Menon R        | CB.SC.U4CSE23506 | [adithya-menon-r](https://github.com/adithya-menon-r)       |
+| Dheeraj KB             | CB.SC.U4CSE23510 | [Dheeraj-74](https://github.com/Dheeraj-74)                 |
+| Midhunan V Prabhaharan | CB.SC.U4CSE23532 | [midhunann](https://github.com/midhunann)                   |
+| Yogini Aishwaryaa      | CB.SC.U4CSE23557 | [yoginiaishwaryaa](https://github.com/yoginiaishwaryaa)     |
+| A Jahnavi              | CB.SC.U4CSE23503 | [jahnavialladasetti](https://github.com/jahnavialladasetti) |
