@@ -10,6 +10,8 @@ class DriftEvent(Base):
     repo_id = Column(UUID(as_uuid=True), ForeignKey("repositories.id", ondelete="CASCADE"))
     
     pr_number = Column(Integer, nullable=False)
+    base_branch = Column(String, nullable=False)
+    head_branch = Column(String, nullable=False)
     base_sha = Column(String, nullable=False)
     head_sha = Column(String, nullable=False)
     check_run_id = Column(BigInteger)

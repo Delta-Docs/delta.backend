@@ -165,6 +165,8 @@ async def _handle_pr_event(db: Session, payload: dict):
     new_event = DriftEvent(
         repo_id=repo.id,
         pr_number=payload["number"],
+        base_branch=base_branch,
+        head_branch=head_branch,
         base_sha=payload["pull_request"]["base"]["sha"],
         head_sha=payload["pull_request"]["head"]["sha"],
         processing_phase="queued",
