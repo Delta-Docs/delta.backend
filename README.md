@@ -130,7 +130,7 @@ make clean
 
 ## Architecture
 
-![Delta Architecture](/images/Delta_Architecure_Diagram.png)
+![Delta Architecture](/images/Delta_Architecture_Diagram.png)
 
 ### The Web Dashboard 
 
