@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.db.base import DriftEvent, CodeChange
 from app.services.github_api import update_github_check_run
+from app.services.git_service import get_local_repo_path
 
 
 # Creates a separate SQLAlchemy session for use in background tasks
@@ -24,9 +25,7 @@ def _extract_and_save_code_changes(session, drift_event):
     head_sha = drift_event.head_sha
     
     # Get the locally cloned repo path
-    owner, repo_name = repo_full_name.split("/")
-    repos_base = Path(settings.REPOS_BASE_PATH)
-    repo_path = repos_base / owner / repo_name
+    repo_path = get_local_repo_path(repo_full_name)
     
     if not repo_path.exists():
         raise Exception(f"Local repository not found at {repo_path}")
