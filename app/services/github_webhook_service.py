@@ -9,7 +9,7 @@ from app.models.drift import DriftEvent
 from app.services.github_api import create_github_check_run, get_installation_access_token
 from app.services.git_service import clone_repository, remove_cloned_repository, pull_branches
 from app.core.queue import task_queue
-from app.services.drift_analysis import sample_task
+from app.services.drift_analysis import run_drift_analysis
 
 # Upsert repositorites (Insert if they don't exist or update existing repos)
 async def _insert_repositories(db: Session, installation_id: int, repos_list: list, account_avatar_url: str = None):
@@ -181,7 +181,7 @@ async def _handle_pr_event(db: Session, payload: dict):
     await create_github_check_run(db, new_event.id, repo_full_name, new_event.head_sha, installation_id)
 
     # Enqueue the drift analysis as a background task
-    task_queue.enqueue(sample_task, str(new_event.id))
+    task_queue.enqueue(run_drift_analysis, str(new_event.id))
 
 # Main Router to handle different types of GH webhook events
 async def handle_github_event(db: Session, event_type: str, payload: dict):

@@ -223,7 +223,7 @@ async def test_pr_opened_enqueues_task():
          patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
          patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock), \
          patch("app.services.github_webhook_service.task_queue") as mock_task_queue, \
-         patch("app.services.github_webhook_service.sample_task") as mock_sample_task:
+         patch("app.services.github_webhook_service.run_drift_analysis") as mock_run_drift_analysis:
         
         mock_get_token.return_value = "test_token"
         
@@ -239,7 +239,7 @@ async def test_pr_opened_enqueues_task():
         # Verify task was enqueued with the drift event ID
         mock_task_queue.enqueue.assert_called_once()
         args, _ = mock_task_queue.enqueue.call_args
-        assert args[0] == mock_sample_task
+        assert args[0] == mock_run_drift_analysis
 
         # The drift event ID is passed as a string
         assert isinstance(args[1], str)
@@ -269,7 +269,7 @@ async def test_pr_synchronize_enqueues_task():
          patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
          patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock), \
          patch("app.services.github_webhook_service.task_queue") as mock_task_queue, \
-         patch("app.services.github_webhook_service.sample_task"):
+         patch("app.services.github_webhook_service.run_drift_analysis"):
         
         mock_get_token.return_value = "test_token"
         
@@ -347,7 +347,7 @@ async def test_drift_event_id_passed_as_string():
          patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
          patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock), \
          patch("app.services.github_webhook_service.task_queue") as mock_task_queue, \
-         patch("app.services.github_webhook_service.sample_task"):
+         patch("app.services.github_webhook_service.run_drift_analysis"):
         
         mock_get_token.return_value = "test_token"
         

@@ -15,9 +15,8 @@ def _create_session():
     Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     return Session()
 
-# Sample task to simulate drift analysis processing
-def sample_task(drift_event_id: str):
-    # NOTE: THIS FUNCTION IS NOT UNIT TESTED. IT IS TEMPORARY AND IS JUST A SIMULATION OF A BACKGROUND TASK.
+# Main task that orchestrates the drift analysis process for a PR
+def run_drift_analysis(drift_event_id: str):
     session = _create_session()
 
     try:
