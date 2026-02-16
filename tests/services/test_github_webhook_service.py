@@ -124,17 +124,21 @@ async def test_handle_pr_opened_success():
         "installation": {"id": 100},
         "repository": {"full_name": "owner/repo"},
         "pull_request": {
-            "base": {"sha": "base123"},
-            "head": {"sha": "head456"}
+            "base": {"sha": "base123", "ref": "main"},
+            "head": {"sha": "head456", "ref": "feature-branch"}
         },
     }
     
     # Mock the repo lookup
     mock_repo = MagicMock()
     mock_repo.id = "uuid-123"
+    mock_repo.target_branch = "main"
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
     
-    with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock) as mock_create_check:
+    with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock) as mock_create_check, \
+         patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
+         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock) as mock_pull:
+        mock_get_token.return_value = "test_token"
         await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
     
     # Verify drift event was created with correct data

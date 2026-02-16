@@ -83,18 +83,22 @@ async def test_handle_pr_triggers_check_run():
         "installation": {"id": 555},
         "repository": {"full_name": "owner/repo"},
         "pull_request": {
-            "base": {"sha": "base_sha"},
-            "head": {"sha": "head_sha"}
+            "base": {"sha": "base_sha", "ref": "main"},
+            "head": {"sha": "head_sha", "ref": "feature-branch"}
         }
     }
 
     # Mock the linked repo lookup
     mock_repo = MagicMock()
     mock_repo.id = "uuid-repo-1"
+    mock_repo.target_branch = "main"
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
     
-    with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock) as mock_create_check:
+    with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock) as mock_create_check, \
+         patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
+         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock) as mock_pull:
         mock_create_check.return_value = 123456789
+        mock_get_token.return_value = "test_token"
         
         await handle_github_event(mock_db, "pull_request", payload)
         
