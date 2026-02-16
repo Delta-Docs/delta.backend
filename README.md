@@ -162,13 +162,13 @@ This is the reason we use Redis Queue. It is a simple queue implemented with Red
 When a `DriftEvent` record is created, its ID is enqueued for processing. Any free RQ worker from the worker pool picks up the id and executes the task assigned with it.
 
 ### Multi Agent Workflow
-This part of the architecture is still in the design has phase and hasn't really been implemented yet, its a work in progress...
+This part of the architecture is still in the design phase and hasn't really been implemented yet, its a work in progress :)
 
 The plan is a 4 agent workflow with `LangGraph` as the orchestrator:
 - **The Scouting Agent:** It has direct access to the cloned repository which it uses to extract code changes, relations and code-doc mappings. It updates the DB with its findings.
 - **The Analyzer Agent:** It takes the code changes and the code-doc mappings that were output from the previous agent and any other input from the codebase to semantically analyse the changes in code and check if these changes are reflected in the documentation. It also updates the DB with its findings.
-- **The Generator Agent:** It receives instructions from the analyzer agent with what parts of the documentation requires updates. Based on the `style_preference` for the repository, it generates updates to the documentation and sends it off to the next agent.
-- **The Reviewer Agent:** It receives the proposed changes from the generator agent and checks it against instructions from the analyzer agent. If any corrections/changes are required it hands back control to the generator agent. Once the proposed updates are approved, its written to the cloned repository, committed via git and a PR is automatically raised (most probably with `gh-cli`) with a request for review.
+- **The Generator Agent:** It receives instructions from the analyzer agent with what parts of the documentation requires updates. Based on the `style_preference` for the repository, it generates updates to the documentation and sends it to the next agent.
+- **The Reviewer Agent:** It receives the proposed changes from the generator agent and checks it against instructions from the analyzer agent. If any corrections/changes are required, the generator agent is instructed to implement the fixes. The updates then go back to the reviewer agent and the cycle continues. Once the proposed updates are approved, it is written to the cloned repository, committed via git and a PR is automatically raised (most probably with `gh-cli`) with a request for review.
 
 
 ## Project Structure
