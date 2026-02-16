@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.routers.webhooks import validate_github_signature
 from fastapi import Request
 
+
 # Test that valid GH signatures pass validation
 @pytest.mark.asyncio
 async def test_validate_github_signature_valid():
@@ -27,6 +28,7 @@ async def test_validate_github_signature_valid():
     result = await validate_github_signature(mock_request)
     assert result is True
 
+
 # Test that requests without signature are rejected
 @pytest.mark.asyncio
 async def test_validate_github_signature_missing():
@@ -37,6 +39,7 @@ async def test_validate_github_signature_missing():
         await validate_github_signature(mock_request)
     assert exc_info.value.status_code == 403
     assert exc_info.value.detail == "Missing signature"
+
 
 # Test that requests with invalid signatures are rejected
 @pytest.mark.asyncio

@@ -13,7 +13,7 @@ class Repository(Base):
     is_suspended = Column(Boolean, default=False)
     avatar_url = Column(String)
     
-    docs_root_path = Column(String, default='./docs')
+    docs_root_path = Column(String, default='/docs')
     target_branch = Column(String, default='main')
     drift_sensitivity = Column(Float, default=0.5)
     style_preference = Column(String, default='professional')

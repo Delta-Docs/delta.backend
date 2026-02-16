@@ -58,6 +58,7 @@ async def get_repo_details(installation_id: int, owner: str, repo_name: str):
         if repo_res.status_code != 200:
             raise Exception(f"GitHub API Error: {repo_res.text}")
 
+        # Fetches details about the repository to display in dashboard
         data = repo_res.json()
 
         return {
@@ -110,7 +111,7 @@ async def create_github_check_run(db: Session, drift_event_id, repo_full_name: s
         print(f"Exception in create_github_check_run: {str(e)}")
         return None
 
-
+# Updates the GitHub Check Run status and output
 async def update_github_check_run(
     repo_full_name: str,
     check_run_id: int,
@@ -123,12 +124,13 @@ async def update_github_check_run(
     try:
         access_token = await get_installation_access_token(installation_id)
         
-        payload = { "status": status }
+        payload = { "status": status } # Setting the status of the check run
         
         if status == "completed" and conclusion:
             payload["conclusion"] = conclusion
             payload["completed_at"] = datetime.now(timezone.utc).isoformat()
         
+        # If title or summary is provided, including it in the output section of the check run
         if title or summary:
             payload["output"] = {}
             if title:

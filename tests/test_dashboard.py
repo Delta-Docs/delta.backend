@@ -7,6 +7,7 @@ from app.models.installation import Installation
 from app.models.repository import Repository
 from app.models.drift import DriftEvent
 
+
 # Test fixtures for mocking user and database
 @pytest.fixture
 def mock_user():
@@ -14,9 +15,11 @@ def mock_user():
     user.id = 1
     return user
 
+
 @pytest.fixture
 def mock_db():
     return MagicMock()
+
 
 # Test that dashboard stats returns correct counts
 def test_get_dashboard_stats(mock_db, mock_user):
@@ -43,6 +46,7 @@ def test_get_dashboard_stats(mock_db, mock_user):
     assert stats["repos_linked_count"] == 12
     assert stats["drift_events_count"] == 3
     assert stats["pr_waiting_count"] == 0
+
 
 # Test that dashboard repos fetches and returns repo details from github
 @pytest.mark.asyncio

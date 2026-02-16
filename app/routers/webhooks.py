@@ -24,6 +24,7 @@ async def validate_github_signature(request: Request):
         hashlib.sha256
     ).hexdigest()
     
+    # Compare the expected and received signatures
     if not hmac.compare_digest(signature, expected_signature):
         raise HTTPException(status_code=403, detail="Invalid signature")
     
