@@ -6,12 +6,14 @@ from app.models.installation import Installation
 from app.models.repository import Repository
 from app.models.drift import DriftEvent
 
+
 # Test fixture for mocking DB session
 @pytest.fixture
 def mock_db_session():
     session = MagicMock()
     session.query.return_value.filter.return_value.first.return_value = None
     return session
+
 
 # Test that GH app installation creates installation and repo records
 @pytest.mark.asyncio
@@ -38,6 +40,7 @@ async def test_handle_installation_created(mock_db_session):
     await github_webhook_service.handle_github_event(mock_db_session, "installation", payload)
     assert mock_db_session.execute.call_count >= 2
 
+
 # Test that GH app deletion removes installation and cascades
 @pytest.mark.asyncio
 async def test_handle_installation_deleted(mock_db_session):
@@ -51,6 +54,7 @@ async def test_handle_installation_deleted(mock_db_session):
     mock_db_session.query.assert_called_with(Installation)
     mock_db_session.query.return_value.filter.assert_called()
     mock_db_session.query.return_value.filter.return_value.delete.assert_called_once()
+
 
 # Test that GH app suspension marks all linked repos as suspended
 @pytest.mark.asyncio
@@ -66,6 +70,7 @@ async def test_handle_installation_suspend(mock_db_session):
     mock_db_session.query.assert_called_with(Repository)
     mock_db_session.query.return_value.filter.return_value.update.assert_called_once_with({"is_suspended": True})
 
+
 # Test that GH app unsuspension marks all linked repos as active again
 @pytest.mark.asyncio
 async def test_handle_installation_unsuspend(mock_db_session):
@@ -79,6 +84,7 @@ async def test_handle_installation_unsuspend(mock_db_session):
     # Should update all linked repos for that installation to is_suspended=False
     mock_db_session.query.assert_called_with(Repository)
     mock_db_session.query.return_value.filter.return_value.update.assert_called_once_with({"is_suspended": False})
+
 
 # Test adding repos to an installation
 @pytest.mark.asyncio
@@ -98,6 +104,7 @@ async def test_handle_repos_added(mock_db_session):
     
     mock_db_session.execute.assert_called_once()
 
+
 # Test removing repos from an installation
 @pytest.mark.asyncio
 async def test_handle_repos_removed(mock_db_session):
@@ -113,6 +120,7 @@ async def test_handle_repos_removed(mock_db_session):
     
     mock_db_session.query.assert_called_with(Repository)
     mock_db_session.query.return_value.filter.return_value.delete.assert_called_once()
+
 
 # Test that PR opened creates a drift event
 @pytest.mark.asyncio
@@ -153,6 +161,7 @@ async def test_handle_pr_opened_success():
     assert event.head_sha == "head456"
     assert event.processing_phase == "queued"
 
+
 # Test that non relevant PR actions (like closing, assigning, etc.) are ignored
 @pytest.mark.asyncio
 async def test_handle_pr_ignored_action():
@@ -163,6 +172,7 @@ async def test_handle_pr_ignored_action():
     
     # Shouldn't add any records
     mock_db.add.assert_not_called()
+
 
 # Test that PRs for unknown repos are handled gracefully
 @pytest.mark.asyncio
@@ -181,3 +191,179 @@ async def test_repo_not_found_for_pr():
     
     # Should not create a drift event if the repo doesn't exist
     mock_db.add.assert_not_called()
+
+
+# Test that task is enqueued when PR is opened
+@pytest.mark.asyncio
+async def test_pr_opened_enqueues_task():
+    mock_db = MagicMock()
+    payload = {
+        "action": "opened",
+        "number": 123,
+        "installation": {"id": 100},
+        "repository": {"full_name": "owner/repo"},
+        "pull_request": {
+            "base": {"sha": "base123", "ref": "main"},
+            "head": {"sha": "head456", "ref": "feature-branch"}
+        },
+    }
+    
+    # Mock the repo lookup
+    mock_repo = MagicMock()
+    mock_repo.id = "uuid-123"
+    mock_repo.target_branch = "main"
+    
+    # Mock the drift event that gets created
+    mock_drift_event = MagicMock()
+    mock_drift_event.id = "drift-event-uuid"
+    
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
+    
+    with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock), \
+         patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
+         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock), \
+         patch("app.services.github_webhook_service.task_queue") as mock_task_queue, \
+         patch("app.services.github_webhook_service.sample_task") as mock_sample_task:
+        
+        mock_get_token.return_value = "test_token"
+        
+        # Setup mock_db.add to capture the drift event
+        def capture_drift_event(obj):
+            if isinstance(obj, DriftEvent):
+                obj.id = "drift-event-uuid"
+        
+        mock_db.add.side_effect = capture_drift_event
+        
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+        
+        # Verify task was enqueued with the drift event ID
+        mock_task_queue.enqueue.assert_called_once()
+        args, _ = mock_task_queue.enqueue.call_args
+        assert args[0] == mock_sample_task
+
+        # The drift event ID is passed as a string
+        assert isinstance(args[1], str)
+
+
+# Test that task is enqueued for PR synchronize action
+@pytest.mark.asyncio
+async def test_pr_synchronize_enqueues_task():
+    mock_db = MagicMock()
+    payload = {
+        "action": "synchronize",
+        "number": 456,
+        "installation": {"id": 200},
+        "repository": {"full_name": "owner/repo2"},
+        "pull_request": {
+            "base": {"sha": "base789", "ref": "develop"},
+            "head": {"sha": "head012", "ref": "fix-branch"}
+        },
+    }
+    
+    mock_repo = MagicMock()
+    mock_repo.id = "uuid-456"
+    mock_repo.target_branch = "develop"
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
+    
+    with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock), \
+         patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
+         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock), \
+         patch("app.services.github_webhook_service.task_queue") as mock_task_queue, \
+         patch("app.services.github_webhook_service.sample_task"):
+        
+        mock_get_token.return_value = "test_token"
+        
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+        
+        # Verify task was enqueued
+        mock_task_queue.enqueue.assert_called_once()
+
+
+# Test that task is not enqueued for unsupported PR actions
+@pytest.mark.asyncio
+async def test_pr_reopened_not_enqueued():
+    mock_db = MagicMock()
+    payload = {
+        "action": "reopened",
+        "number": 789,
+        "installation": {"id": 300},
+        "repository": {"full_name": "owner/repo3"},
+        "pull_request": {
+            "base": {"sha": "base345", "ref": "main"},
+            "head": {"sha": "head678", "ref": "test-branch"}
+        },
+    }
+    
+    with patch("app.services.github_webhook_service.task_queue") as mock_task_queue:
+        
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+        
+        # Verify that the task was not enqueued in this situation
+        mock_task_queue.enqueue.assert_not_called()
+
+
+# Test that task is not enqueued when repo is not found
+@pytest.mark.asyncio
+async def test_pr_no_task_when_repo_not_found():
+    mock_db = MagicMock()
+    payload = {
+        "action": "opened",
+        "installation": {"id": 999},
+        "repository": {"full_name": "unknown/repo"}
+    }
+    
+    # Mock no repo found
+    mock_db.query.return_value.filter.return_value.first.return_value = None
+    
+    with patch("app.services.github_webhook_service.task_queue") as mock_task_queue:
+        
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+        
+        # Verify task was not enqueued
+        mock_task_queue.enqueue.assert_not_called()
+
+
+# Test that drift event ID is passed as string to the task
+@pytest.mark.asyncio
+async def test_drift_event_id_passed_as_string():
+    mock_db = MagicMock()
+    payload = {
+        "action": "opened",
+        "number": 123,
+        "installation": {"id": 100},
+        "repository": {"full_name": "owner/repo"},
+        "pull_request": {
+            "base": {"sha": "base123", "ref": "main"},
+            "head": {"sha": "head456", "ref": "feature-branch"}
+        },
+    }
+    
+    mock_repo = MagicMock()
+    mock_repo.id = "uuid-123"
+    mock_repo.target_branch = "main"
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
+    
+    with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock), \
+         patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
+         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock), \
+         patch("app.services.github_webhook_service.task_queue") as mock_task_queue, \
+         patch("app.services.github_webhook_service.sample_task"):
+        
+        mock_get_token.return_value = "test_token"
+        
+        # Setup mock_db to simulate drift event creation
+        mock_drift_event = MagicMock()
+        mock_drift_event.id = "test-uuid-12345"
+        
+        def add_side_effect(obj):
+            if isinstance(obj, DriftEvent):
+                obj.id = "test-uuid-12345"
+        
+        mock_db.add.side_effect = add_side_effect
+        
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+        
+        # Verify drift event ID is passed as string
+        args, _ = mock_task_queue.enqueue.call_args
+        assert args[1] == "test-uuid-12345"
+        assert isinstance(args[1], str)

@@ -75,6 +75,7 @@ def toggle_repo_activation(
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
     
+    # Update repo active status
     repo.is_active = activation.is_active
     db.commit()
     db.refresh(repo)

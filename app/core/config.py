@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     FRONTEND_URL: str
     
-    # Repos Storage Path
+    # Cloned Repos Storage Path
     REPOS_BASE_PATH: str
 
     model_config = ConfigDict(

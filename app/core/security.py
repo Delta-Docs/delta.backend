@@ -50,8 +50,10 @@ def verify_token(token: str) -> Optional[dict[str, Any]]:
     except Exception:
         return None
 
+# Convenience functions for creating access tokens
 def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
     return create_token(str(subject), expires_delta, "access")
 
+# Convenience functions for creating refresh tokens
 def create_refresh_token(subject: str | Any, expires_delta: timedelta) -> str:
     return create_token(str(subject), expires_delta, "refresh")
