@@ -12,6 +12,7 @@
    - [Multi Agent Workflow](#multi-agent-workflow)
 - [Project Structure](#project-structure)
 - [Testing](#testing)
+- [Contributing](#contributing)
 - [LICENSE](#license)
 - [Team](#team)
 
@@ -208,6 +209,8 @@ delta.backend/
 ├── docker-compose.yml                   # Docker services definition
 ├── Makefile                             # Development commands
 ├── pytest.ini                           # Pytest configuration
+├── pyrefly.toml                         # Pyrefly configuration
+├── ruff.toml                            # Ruff configuration
 ├── requirements.txt                     # Python dependencies
 └── workers.py                           # Script to run fixed number of RQ workers
 ```
@@ -226,6 +229,22 @@ pytest -v
 
 # Run specific test file
 pytest tests/test_dashboard.py
+```
+
+
+## Contributing
+
+Please follow the existing code style and conventions. We follow [Conventional Commits](https://www.conventionalcommits.org/) for our commit messages.
+
+Before submitting a Pull Request, please run the following commands:
+
+```bash
+# Check for linting and type errors
+ruff check .
+pyrefly check .
+
+# Format code
+ruff format .
 ```
 
 
