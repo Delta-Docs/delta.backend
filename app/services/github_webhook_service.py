@@ -193,13 +193,18 @@ async def _handle_pr_event(db: Session, payload: dict):
     db.flush()
     db.refresh(new_event)
 
+    drift_event_id = str(new_event.id)
+
     # Create a GH check run to show status in PR
     await create_github_check_run(
-        db, new_event.id, repo_full_name, new_event.head_sha, installation_id
+        db, drift_event_id, repo_full_name, new_event.head_sha, installation_id
     )
 
     # Enqueue the drift analysis as a background task
-    task_queue.enqueue(run_drift_analysis, str(new_event.id))
+    if drift_event_id and drift_event_id != "None":
+        task_queue.enqueue(run_drift_analysis, drift_event_id)
+    else:
+        print(f"Error: DriftEvent ID is None for PR #{payload['number']} in {repo_full_name}.")
 
 
 # Main Router to handle different types of GH webhook events

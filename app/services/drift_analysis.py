@@ -95,6 +95,10 @@ def _extract_and_save_code_changes(session, drift_event):
 
 # Main task that orchestrates the drift analysis process for a PR
 def run_drift_analysis(drift_event_id: str):
+    if not drift_event_id or drift_event_id == "None":
+        print(f"Error: run_drift_analysis called with invalid drift_event_id: {drift_event_id!r}")
+        return
+
     session = _create_session()
 
     try:
