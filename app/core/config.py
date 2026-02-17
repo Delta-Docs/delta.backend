@@ -1,5 +1,5 @@
-from pydantic import ConfigDict
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 # Settings class that sets values from .env file
 class Settings(BaseSettings):
@@ -26,13 +26,14 @@ class Settings(BaseSettings):
     NUM_WORKERS: int
 
     FRONTEND_URL: str
-    
+
     # Cloned Repos Storage Path
     REPOS_BASE_PATH: str
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         case_sensitive=True,
         env_file=".env",
     )
+
 
 settings = Settings()

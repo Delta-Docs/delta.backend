@@ -35,6 +35,6 @@ class RepositoryResponse(BaseModel):
     style_preference: Optional[str]
     file_ignore_patterns: Optional[list[str]]
     last_synced_at: Optional[datetime]
-    
+
     class Config:
         from_attributes = True

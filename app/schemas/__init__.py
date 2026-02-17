@@ -1,3 +1,12 @@
-from .user import User, UserCreate, UserLogin, UserLoginResponse
-from .message import Message
-from .repository import RepositorySettings, RepositoryActivation, RepositoryResponse
+from .user import (
+    User as User,
+    UserCreate as UserCreate,
+    UserLogin as UserLogin,
+    UserLoginResponse as UserLoginResponse,
+)
+from .message import Message as Message
+from .repository import (
+    RepositorySettings as RepositorySettings,
+    RepositoryActivation as RepositoryActivation,
+    RepositoryResponse as RepositoryResponse,
+)

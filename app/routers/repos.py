@@ -14,8 +14,7 @@ router = APIRouter()
 # Endpoint to get all linked repos for the current user
 @router.get("/", response_model=list[RepositoryResponse])
 def get_repos(
-    db: Session = Depends(get_db_connection),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db_connection), current_user: User = Depends(get_current_user)
 ):
     repos = (
         db.query(Repository)
@@ -32,7 +31,7 @@ def update_repo_settings(
     repo_id: UUID,
     settings: RepositorySettings,
     db: Session = Depends(get_db_connection),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     # Making sure user actually owns this repo
     repo = (
@@ -41,16 +40,16 @@ def update_repo_settings(
         .filter(Repository.id == repo_id, Installation.user_id == current_user.id)
         .first()
     )
-    
+
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
-    
+
     # Update only the fields that were received
     update_data = settings.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         if value is not None:
             setattr(repo, field, value)
-    
+
     db.commit()
     db.refresh(repo)
     return repo
@@ -62,7 +61,7 @@ def toggle_repo_activation(
     repo_id: UUID,
     activation: RepositoryActivation,
     db: Session = Depends(get_db_connection),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     # Making sure user owns this repo
     repo = (
@@ -71,10 +70,10 @@ def toggle_repo_activation(
         .filter(Repository.id == repo_id, Installation.user_id == current_user.id)
         .first()
     )
-    
+
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
-    
+
     # Update repo active status
     repo.is_active = activation.is_active
     db.commit()

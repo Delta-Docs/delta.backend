@@ -20,6 +20,7 @@ app.add_middleware(
 # Set prefix of all routes to be /api
 app.include_router(api_router, prefix="/api")
 
+
 # Basic Health Check Endpoint
 @app.get("/api")
 def read_root():

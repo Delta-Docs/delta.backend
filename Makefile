@@ -13,6 +13,8 @@ help:
 	@echo "  down-one      Downgrade one migration step"
 	@echo "  history       Show migration history"
 	@echo "  clean         Remove cache files"
+	@echo "  lint          Run ruff check and pyrefly check"
+	@echo "  format        Run ruff format"
 
 VENV := .venv
 BIN := $(VENV)/bin
@@ -61,4 +63,12 @@ history:
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
+	rm -rf .ruff_cache
 	find . -type f -name "*.pyc" -delete
+
+lint:
+	-$(BIN)/ruff check .
+	-$(BIN)/pyrefly check .
+
+format:
+	-$(BIN)/ruff format .
