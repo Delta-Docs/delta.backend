@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 # Settings class that sets values from .env file
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Delta Backend"
@@ -25,7 +26,7 @@ class Settings(BaseSettings):
     NUM_WORKERS: int
 
     FRONTEND_URL: str
-    
+
     # Cloned Repos Storage Path
     REPOS_BASE_PATH: str
 
@@ -33,5 +34,6 @@ class Settings(BaseSettings):
         case_sensitive=True,
         env_file=".env",
     )
+
 
 settings = Settings()

@@ -31,17 +31,17 @@ def mock_jwt():
 # Test that we can get an installation token successfully
 @pytest.mark.asyncio
 async def test_get_installation_access_token_success():
-     with patch("app.services.github_api.httpx.AsyncClient") as mock_client:
+    with patch("app.services.github_api.httpx.AsyncClient") as mock_client:
         mock_client_instance = AsyncMock()
         mock_client.return_value.__aenter__.return_value = mock_client_instance
-        
+
         # Mock GH token response
         mock_token_response = MagicMock()
         mock_token_response.status_code = 201
         mock_token_response.json.return_value = {"token": "access_token"}
-        
+
         mock_client_instance.post.return_value = mock_token_response
-        
+
         token = await get_installation_access_token(123)
         assert token == "access_token"
 
@@ -52,14 +52,14 @@ async def test_get_installation_access_token_error():
     with patch("app.services.github_api.httpx.AsyncClient") as mock_client:
         mock_client_instance = AsyncMock()
         mock_client.return_value.__aenter__.return_value = mock_client_instance
-        
+
         # Mock a failed response from GH
         mock_token_response = MagicMock()
         mock_token_response.status_code = 400
         mock_token_response.text = "Bad Request"
-        
+
         mock_client_instance.post.return_value = mock_token_response
-        
+
         # Should raise an exception
         with pytest.raises(Exception) as exc:
             await get_installation_access_token(123)
@@ -69,13 +69,15 @@ async def test_get_installation_access_token_error():
 # Test fetching repo details from GH API
 @pytest.mark.asyncio
 async def test_get_repo_details_success():
-    with patch("app.services.github_api.get_installation_access_token", new_callable=AsyncMock) as mock_get_token:
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
-        
+
         with patch("app.services.github_api.httpx.AsyncClient") as mock_client:
             mock_client_instance = AsyncMock()
             mock_client.return_value.__aenter__.return_value = mock_client_instance
-            
+
             # Mock GH repo API response
             mock_repo_response = MagicMock()
             mock_repo_response.status_code = 200
@@ -84,15 +86,14 @@ async def test_get_repo_details_success():
                 "description": "description",
                 "language": "python",
                 "stargazers_count": 10,
-                "forks_count": 5
+                "forks_count": 5,
             }
-            
+
             mock_client_instance.get.return_value = mock_repo_response
-            
+
             result = await get_repo_details(123, "owner", "repo")
-            
+
             # Verify extraction of the right fields
             assert result["name"] == "repo-name"
             assert result["stargazers_count"] == 10
             mock_get_token.assert_awaited_once_with(123)
-

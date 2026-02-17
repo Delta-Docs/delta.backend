@@ -29,9 +29,10 @@ def test_extract_and_save_code_changes_success():
     mock_result.returncode = 0
     mock_result.stdout = git_diff_output
 
-    with patch("subprocess.run", return_value=mock_result), \
-         patch("app.services.drift_analysis.get_local_repo_path") as mock_path:
-
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
         mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
 
         _extract_and_save_code_changes(session, drift_event)
@@ -58,9 +59,10 @@ def test_extract_and_save_code_changes_is_code_detection():
     mock_result.returncode = 0
     mock_result.stdout = git_diff_output
 
-    with patch("subprocess.run", return_value=mock_result), \
-         patch("app.services.drift_analysis.get_local_repo_path") as mock_path:
-
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
         mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
 
         _extract_and_save_code_changes(session, drift_event)
@@ -85,9 +87,10 @@ def test_extract_and_save_code_changes_empty_diff():
     mock_result.returncode = 0
     mock_result.stdout = ""
 
-    with patch("subprocess.run", return_value=mock_result), \
-         patch("app.services.drift_analysis.get_local_repo_path") as mock_path:
-
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
         mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
 
         _extract_and_save_code_changes(session, drift_event)
@@ -117,9 +120,10 @@ def test_extract_and_save_code_changes_git_diff_failure():
     mock_result.returncode = 1
     mock_result.stderr = "fatal: bad revision"
 
-    with patch("subprocess.run", return_value=mock_result), \
-         patch("app.services.drift_analysis.get_local_repo_path") as mock_path:
-
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
         mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
 
         with pytest.raises(Exception, match="Git diff failed"):
@@ -133,9 +137,10 @@ def test_extract_and_save_code_changes_timeout():
     drift_event = _make_drift_event()
     session = MagicMock()
 
-    with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 60)), \
-         patch("app.services.drift_analysis.get_local_repo_path") as mock_path:
-
+    with (
+        patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 60)),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
         mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
 
         with pytest.raises(Exception, match="Timeout while extracting code changes"):
@@ -153,9 +158,10 @@ def test_extract_and_save_code_changes_unknown_status():
     mock_result.returncode = 0
     mock_result.stdout = git_diff_output
 
-    with patch("subprocess.run", return_value=mock_result), \
-         patch("app.services.drift_analysis.get_local_repo_path") as mock_path:
-
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
         mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
 
         _extract_and_save_code_changes(session, drift_event)
@@ -175,9 +181,10 @@ def test_extract_and_save_code_changes_skips_malformed_lines():
     mock_result.returncode = 0
     mock_result.stdout = git_diff_output
 
-    with patch("subprocess.run", return_value=mock_result), \
-         patch("app.services.drift_analysis.get_local_repo_path") as mock_path:
-
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
         mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
 
         _extract_and_save_code_changes(session, drift_event)
@@ -188,16 +195,19 @@ def test_extract_and_save_code_changes_skips_malformed_lines():
 
 # Test that correct git command is constructed with base and head SHAs
 def test_extract_and_save_code_changes_correct_git_command():
-    drift_event = _make_drift_event(base_sha="sha_base", head_sha="sha_head", repo_name="org/project")
+    drift_event = _make_drift_event(
+        base_sha="sha_base", head_sha="sha_head", repo_name="org/project"
+    )
     session = MagicMock()
 
     mock_result = MagicMock()
     mock_result.returncode = 0
     mock_result.stdout = ""
 
-    with patch("subprocess.run", return_value=mock_result) as mock_run, \
-         patch("app.services.drift_analysis.get_local_repo_path") as mock_path:
-
+    with (
+        patch("subprocess.run", return_value=mock_result) as mock_run,
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
         mock_repo_path = MagicMock(spec=Path, exists=MagicMock(return_value=True))
         mock_path.return_value = mock_repo_path
 
@@ -234,12 +244,13 @@ def _setup_run_mocks(drift_event_id=None, check_run_id=12345):
 def test_run_drift_analysis_success():
     session, drift_event = _setup_run_mocks()
 
-    with patch("app.services.drift_analysis._create_session", return_value=session), \
-         patch("app.services.drift_analysis._extract_and_save_code_changes") as mock_extract, \
-         patch("app.services.drift_analysis.update_github_check_run", new=MagicMock()), \
-         patch("asyncio.run") as mock_asyncio_run, \
-         patch("time.sleep"):
-
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch("app.services.drift_analysis._extract_and_save_code_changes") as mock_extract,
+        patch("app.services.drift_analysis.update_github_check_run", new=MagicMock()),
+        patch("asyncio.run") as mock_asyncio_run,
+        patch("time.sleep"),
+    ):
         run_drift_analysis(str(drift_event.id))
 
     # Verify scouting phase was set
@@ -262,9 +273,10 @@ def test_run_drift_analysis_event_not_found():
     session = MagicMock()
     session.query.return_value.filter.return_value.first.return_value = None
 
-    with patch("app.services.drift_analysis._create_session", return_value=session), \
-         patch("app.services.drift_analysis._extract_and_save_code_changes") as mock_extract:
-
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch("app.services.drift_analysis._extract_and_save_code_changes") as mock_extract,
+    ):
         run_drift_analysis("nonexistent-id")
 
     mock_extract.assert_not_called()
@@ -275,13 +287,16 @@ def test_run_drift_analysis_event_not_found():
 def test_run_drift_analysis_session_closed_on_error():
     session, drift_event = _setup_run_mocks()
 
-    with patch("app.services.drift_analysis._create_session", return_value=session), \
-         patch("app.services.drift_analysis._extract_and_save_code_changes",
-               side_effect=RuntimeError("boom")), \
-         patch("app.services.drift_analysis.update_github_check_run", new=MagicMock()), \
-         patch("asyncio.run"), \
-         patch("time.sleep"):
-
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch(
+            "app.services.drift_analysis._extract_and_save_code_changes",
+            side_effect=RuntimeError("boom"),
+        ),
+        patch("app.services.drift_analysis.update_github_check_run", new=MagicMock()),
+        patch("asyncio.run"),
+        patch("time.sleep"),
+    ):
         with pytest.raises(RuntimeError):
             run_drift_analysis(str(drift_event.id))
 
@@ -296,13 +311,15 @@ def test_run_drift_analysis_sets_scouting_phase():
     def capture_phase(sess, event):
         phases_during_extract.append(event.processing_phase)
 
-    with patch("app.services.drift_analysis._create_session", return_value=session), \
-         patch("app.services.drift_analysis._extract_and_save_code_changes",
-               side_effect=capture_phase), \
-         patch("app.services.drift_analysis.update_github_check_run", new=MagicMock()), \
-         patch("asyncio.run"), \
-         patch("time.sleep"):
-
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch(
+            "app.services.drift_analysis._extract_and_save_code_changes", side_effect=capture_phase
+        ),
+        patch("app.services.drift_analysis.update_github_check_run", new=MagicMock()),
+        patch("asyncio.run"),
+        patch("time.sleep"),
+    ):
         run_drift_analysis(str(drift_event.id))
 
     # During extraction, phase should already be "scouting"

@@ -17,7 +17,7 @@ def test_create_access_token():
     expires_delta = timedelta(minutes=15)
     token = security.create_access_token(subject, expires_delta)
     assert isinstance(token, str)
-    
+
     # Decode and verify token contents
     payload = security.verify_token(token)
     assert payload is not None
@@ -31,7 +31,7 @@ def test_create_refresh_token():
     expires_delta = timedelta(days=7)
     token = security.create_refresh_token(subject, expires_delta)
     assert isinstance(token, str)
-    
+
     # Decode and verify token contents
     payload = security.verify_token(token)
     assert payload is not None
@@ -44,7 +44,7 @@ def test_expired_token():
     subject = "test_user_id"
     expires_delta = timedelta(minutes=-1)  # Setting token as expired
     token = security.create_access_token(subject, expires_delta)
-    
+
     payload = security.verify_token(token)
     assert payload is None  # Should return None for expired tokens
 
