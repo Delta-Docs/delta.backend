@@ -124,10 +124,10 @@ def _handle_repos_removed(db: Session, payload: dict):
             Repository.repo_name.in_(repo_full_names)
         ).delete(synchronize_session=False)
 
-# Handle PR webhook event (Opened or Updated)
+# Handle PR webhook event (Opened)
 async def _handle_pr_event(db: Session, payload: dict):
     action = payload.get("action")
-    if action not in ["opened", "synchronize"]:
+    if action != "opened":
         return
 
     installation_id = payload.get("installation", {}).get("id")
