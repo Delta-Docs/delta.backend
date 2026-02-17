@@ -1,11 +1,7 @@
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from sqlalchemy import func
 from app.routers.dashboard import get_dashboard_stats, get_dashboard_repos
-from app.models.installation import Installation
-from app.models.repository import Repository
-from app.models.drift import DriftEvent
 
 
 # Test fixtures for mocking user and database
@@ -24,8 +20,8 @@ def mock_db():
 # Test that dashboard stats returns correct counts
 def test_get_dashboard_stats(mock_db, mock_user):
     query_mock = mock_db.query.return_value
-    filter_mock = query_mock.filter.return_value
-    join_mock = query_mock.join.return_value
+    _ = query_mock.filter.return_value
+    _ = query_mock.join.return_value
     
     # Mock the count queries to return specific values
     mock_db.query.return_value.filter.return_value.scalar.side_effect = [5]

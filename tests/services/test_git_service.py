@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 from pathlib import Path
 import subprocess
 from app.services.git_service import clone_repository, remove_cloned_repository, pull_branches, get_local_repo_path
@@ -119,7 +119,7 @@ async def test_clone_repository_custom_branch():
         
         mock_settings.REPOS_BASE_PATH = "/tmp/repos"
         
-        result = await clone_repository(repo_full_name, access_token, target_branch)
+        await clone_repository(repo_full_name, access_token, target_branch)
         
         # Verify custom branch is used
         args = mock_run.call_args[0][0]
@@ -137,7 +137,7 @@ async def test_clone_repository_failure():
     mock_result.returncode = 1
     mock_result.stderr = "fatal: repository not found"
     
-    with patch("subprocess.run", return_value=mock_result) as mock_run, \
+    with patch("subprocess.run", return_value=mock_result), \
          patch("pathlib.Path.mkdir"), \
          patch("app.services.git_service.settings") as mock_settings:
         
@@ -156,7 +156,7 @@ async def test_clone_repository_timeout():
     access_token = "test_token"
     target_branch = "main"
     
-    with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 1000)) as mock_run, \
+    with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 1000)), \
          patch("pathlib.Path.mkdir"), \
          patch("app.services.git_service.settings") as mock_settings:
         
@@ -262,7 +262,7 @@ async def test_pull_branches_set_url_failure():
     mock_result.returncode = 1
     mock_result.stderr = "fatal: No such remote 'origin'"
     
-    with patch("subprocess.run", return_value=mock_result) as mock_run, \
+    with patch("subprocess.run", return_value=mock_result), \
          patch("app.services.git_service.settings") as mock_settings, \
          patch.object(Path, "exists", return_value=True):
         
@@ -293,7 +293,7 @@ async def test_pull_branches_fetch_failure():
             mock_result.returncode = 0
         return mock_result
     
-    with patch("subprocess.run", side_effect=mock_run_side_effect) as mock_run, \
+    with patch("subprocess.run", side_effect=mock_run_side_effect), \
          patch("app.services.git_service.settings") as mock_settings, \
          patch.object(Path, "exists", return_value=True):
         
@@ -332,7 +332,7 @@ async def test_pull_branches_checkout_failure():
             mock_result.returncode = 0
         return mock_result
     
-    with patch("subprocess.run", side_effect=mock_run_side_effect) as mock_run, \
+    with patch("subprocess.run", side_effect=mock_run_side_effect), \
          patch("app.services.git_service.settings") as mock_settings, \
          patch.object(Path, "exists", return_value=True):
         
@@ -351,7 +351,7 @@ async def test_pull_branches_timeout():
     access_token = "test_token"
     branches = ["main"]
     
-    with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 500)) as mock_run, \
+    with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 500)), \
          patch("app.services.git_service.settings") as mock_settings, \
          patch.object(Path, "exists", return_value=True):
         
@@ -370,7 +370,7 @@ async def test_pull_branches_exception():
     access_token = "test_token"
     branches = ["main"]
     
-    with patch("subprocess.run", side_effect=Exception("Unexpected error")) as mock_run, \
+    with patch("subprocess.run", side_effect=Exception("Unexpected error")), \
          patch("app.services.git_service.settings") as mock_settings, \
          patch.object(Path, "exists", return_value=True):
         

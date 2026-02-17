@@ -1,7 +1,6 @@
 import pytest
-from unittest.mock import MagicMock, ANY, call, patch, AsyncMock
+from unittest.mock import MagicMock, patch, AsyncMock
 from app.services import github_webhook_service
-from app.models.user import User
 from app.models.installation import Installation
 from app.models.repository import Repository
 from app.models.drift import DriftEvent
@@ -143,9 +142,9 @@ async def test_handle_pr_opened_success():
     mock_repo.target_branch = "main"
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
     
-    with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock) as mock_create_check, \
+    with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock), \
          patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
-         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock) as mock_pull:
+         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock):
         mock_get_token.return_value = "test_token"
         await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
     

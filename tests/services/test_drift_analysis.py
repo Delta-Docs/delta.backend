@@ -1,6 +1,6 @@
 import pytest
 import subprocess
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 from pathlib import Path
 from uuid import uuid4
 
@@ -236,7 +236,7 @@ def test_run_drift_analysis_success():
 
     with patch("app.services.drift_analysis._create_session", return_value=session), \
          patch("app.services.drift_analysis._extract_and_save_code_changes") as mock_extract, \
-         patch("app.services.drift_analysis.update_github_check_run", new=MagicMock()) as mock_check_run, \
+         patch("app.services.drift_analysis.update_github_check_run", new=MagicMock()), \
          patch("asyncio.run") as mock_asyncio_run, \
          patch("time.sleep"):
 

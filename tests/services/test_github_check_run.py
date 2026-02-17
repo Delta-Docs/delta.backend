@@ -99,7 +99,7 @@ async def test_handle_pr_triggers_check_run():
     
     with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock) as mock_create_check, \
          patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
-         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock) as mock_pull:
+         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock):
         mock_create_check.return_value = 123456789
         mock_get_token.return_value = "test_token"
         

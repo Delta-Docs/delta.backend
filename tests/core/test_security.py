@@ -1,4 +1,3 @@
-import pytest
 from datetime import timedelta
 from app.core import security
 
