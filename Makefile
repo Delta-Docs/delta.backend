@@ -61,4 +61,5 @@ history:
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
+	rm -rf .ruff_cache
 	find . -type f -name "*.pyc" -delete
