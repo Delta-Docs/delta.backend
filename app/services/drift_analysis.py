@@ -64,7 +64,7 @@ def _extract_and_save_code_changes(session, drift_event):
             change_type = change_type_map.get(status, "modified")
             
             # Determine if the changed file is a code file (excluding common non-code files)
-            non_code_extensions = {".md", ".txt", ".rst", ".pdf", ".doc", ".docx", ".jpg", ".png", ".gif", ".svg"}
+            non_code_extensions = {".md", ".txt", ".rst", ".pdf", ".doc", ".docx", ".jpg", ".png", ".gif", ".svg", "LICENSE"}
             is_code = not any(file_path.lower().endswith(ext) for ext in non_code_extensions)
             
             # Create CodeChange record in DB
@@ -118,6 +118,7 @@ def run_drift_analysis(drift_event_id: str):
         _extract_and_save_code_changes(session, drift_event)
 
         # TODO: Add more steps of code analysis
+        time.sleep(10) 
 
         # Mark as completed and set result
         drift_event.processing_phase = "completed"
