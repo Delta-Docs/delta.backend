@@ -12,7 +12,7 @@ from app.core.queue import task_queue
 from app.services.drift_analysis import run_drift_analysis
 
 # Upsert repositorites (Insert if they don't exist or update existing repos)
-async def _insert_repositories(db: Session, installation_id: int, repos_list: list, account_avatar_url: str = None):
+async def _insert_repositories(db: Session, installation_id: int, repos_list: list, account_avatar_url: str | None = None):
     if not repos_list:
         return
 

@@ -47,7 +47,7 @@ def login(
 ):
     # Verify credentials
     user = db.query(User).filter(User.email == user_in.email).first()
-    if not user or not security.verify_hash(user_in.password, user.password_hash):
+    if not user or not user.password_hash or not security.verify_hash(user_in.password, user.password_hash):
         raise HTTPException(
             status_code=401,
             detail="Incorrect credentials."

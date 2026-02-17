@@ -152,6 +152,7 @@ def test_fetch_job():
         
         job = task_queue.fetch_job("job-123")
         
+        assert job is not None
         assert job.id == "job-123"
         assert job.get_status() == "queued"
         mock_queue.fetch_job.assert_called_once_with("job-123")

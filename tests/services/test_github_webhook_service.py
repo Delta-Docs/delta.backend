@@ -1,4 +1,5 @@
 import pytest
+import uuid
 from unittest.mock import MagicMock, patch, AsyncMock
 from app.services import github_webhook_service
 from app.models.installation import Installation
@@ -227,9 +228,10 @@ async def test_pr_opened_enqueues_task():
         mock_get_token.return_value = "test_token"
         
         # Setup mock_db.add to capture the drift event
+        drift_id = uuid.uuid4()
         def capture_drift_event(obj):
             if isinstance(obj, DriftEvent):
-                obj.id = "drift-event-uuid"
+                obj.id = drift_id
         
         mock_db.add.side_effect = capture_drift_event
         
@@ -241,6 +243,7 @@ async def test_pr_opened_enqueues_task():
         assert args[0] == mock_run_drift_analysis
 
         # The drift event ID is passed as a string
+        assert args[1] == str(drift_id)
         assert isinstance(args[1], str)
 
 
@@ -318,11 +321,12 @@ async def test_drift_event_id_passed_as_string():
         
         # Setup mock_db to simulate drift event creation
         mock_drift_event = MagicMock()
-        mock_drift_event.id = "test-uuid-12345"
+        drift_id = uuid.uuid4()
+        mock_drift_event.id = drift_id
         
         def add_side_effect(obj):
             if isinstance(obj, DriftEvent):
-                obj.id = "test-uuid-12345"
+                obj.id = drift_id
         
         mock_db.add.side_effect = add_side_effect
         
@@ -330,5 +334,5 @@ async def test_drift_event_id_passed_as_string():
         
         # Verify drift event ID is passed as string
         args, _ = mock_task_queue.enqueue.call_args
-        assert args[1] == "test-uuid-12345"
+        assert args[1] == str(drift_id)
         assert isinstance(args[1], str)

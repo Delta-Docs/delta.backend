@@ -117,14 +117,14 @@ async def update_github_check_run(
     check_run_id: int,
     installation_id: int,
     status: str,
-    conclusion: str = None,
-    title: str = None,
-    summary: str = None
+    conclusion: str | None = None,
+    title: str | None = None,
+    summary: str | None = None
 ):
     try:
         access_token = await get_installation_access_token(installation_id)
         
-        payload = { "status": status } # Setting the status of the check run
+        payload: dict = { "status": status } # Setting the status of the check run
         
         if status == "completed" and conclusion:
             payload["conclusion"] = conclusion

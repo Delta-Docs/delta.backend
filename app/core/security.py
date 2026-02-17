@@ -1,7 +1,7 @@
 import json
 import bcrypt
 import hashlib
-from pyseto import Key, Paseto
+from pyseto import Key, Paseto, KeyInterface
 from typing import Any, Optional
 from datetime import datetime, timedelta, timezone
 from app.core.config import settings
@@ -17,7 +17,7 @@ def verify_hash(plain_text: str, hashed_text: str) -> bool:
     return bcrypt.checkpw(pre_hash.encode('utf-8'), hashed_text.encode('utf-8'))
 
 # Generates a PASETO key from secret
-def _get_paseto_key() -> Key:
+def _get_paseto_key() -> KeyInterface:
     key_material = hashlib.sha256(settings.SECRET_KEY.encode('utf-8')).digest()
     return Key.new(version=4, purpose="local", key=key_material)
 
@@ -38,7 +38,10 @@ def verify_token(token: str) -> Optional[dict[str, Any]]:
     key = _get_paseto_key()
     try:
         decoded = Paseto.new().decode(key, token)
-        payload_dict = json.loads(decoded.payload)
+        if isinstance(decoded.payload, dict):
+            payload_dict = decoded.payload
+        else:
+            payload_dict = json.loads(decoded.payload)
         
         # Check if token is expired
         if "exp" in payload_dict:

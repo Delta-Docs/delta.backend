@@ -37,6 +37,9 @@ async def github_webhook_handler(request: Request, db: Session = Depends(get_db_
     payload = await request.json()
     event_type = request.headers.get("X-GitHub-Event")
     
+    if not event_type:
+        raise HTTPException(status_code=400, detail="Missing X-GitHub-Event header")
+
     try:
         # Route the webhook event to the appropriate handler
         await handle_github_event(db, event_type, payload)

@@ -72,6 +72,8 @@ async def get_dashboard_repos(
         repo_owner, repo_name = repo.repo_name.split('/')
         try:
             # Fetch live data from GitHub API
+            if not repo.installation_id:
+                raise ValueError("No installation ID for repository")
             details = await get_repo_details(repo.installation_id, repo_owner, repo_name)
             results.append(details)
         except Exception:

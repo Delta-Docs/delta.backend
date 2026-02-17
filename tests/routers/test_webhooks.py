@@ -5,7 +5,7 @@ import json
 from unittest.mock import MagicMock, AsyncMock
 from app.core.config import settings
 from app.routers.webhooks import validate_github_signature
-from fastapi import Request
+from fastapi import Request, HTTPException
 
 
 # Test that valid GH signatures pass validation
@@ -26,7 +26,7 @@ async def test_validate_github_signature_valid():
     mock_request.body = AsyncMock(return_value=body)
     
     result = await validate_github_signature(mock_request)
-    assert result is True
+    assert result
 
 
 # Test that requests without signature are rejected
@@ -35,7 +35,7 @@ async def test_validate_github_signature_missing():
     mock_request = MagicMock(spec=Request)
     mock_request.headers.get.return_value = None
     
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(HTTPException) as exc_info:
         await validate_github_signature(mock_request)
     assert exc_info.value.status_code == 403
     assert exc_info.value.detail == "Missing signature"
@@ -50,7 +50,7 @@ async def test_validate_github_signature_invalid():
     mock_request.headers.get.return_value = "sha256=invalidsignature"
     mock_request.body = AsyncMock(return_value=body)
     
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(HTTPException) as exc_info:
         await validate_github_signature(mock_request)
     assert exc_info.value.status_code == 403
     assert exc_info.value.detail == "Invalid signature"

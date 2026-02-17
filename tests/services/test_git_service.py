@@ -87,6 +87,7 @@ async def test_clone_repository_success():
         result = await clone_repository(repo_full_name, access_token, target_branch)
         
         # Verify it returns the repository path (using Path so it works cross-platform)
+        assert result is not None
         assert Path(result) == Path("/tmp/repos/owner/repo")
         
         # Verify mkdir was called to create owner directory
