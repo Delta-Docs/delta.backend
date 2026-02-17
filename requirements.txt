@@ -14,3 +14,5 @@ pytest-asyncio
 pyjwt
 redis
 rq
+ruff
+pyrefly
