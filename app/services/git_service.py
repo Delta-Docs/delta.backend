@@ -3,6 +3,12 @@ from pathlib import Path
 from typing import Optional
 from app.core.config import settings
 
+# Utility function to get local path for a cloned repository
+def get_local_repo_path(repo_full_name: str) -> Path:
+    owner, repo_name = repo_full_name.split("/")
+    repos_base = Path(settings.REPOS_BASE_PATH)
+    return repos_base / owner / repo_name
+
 # Clones a repository on linking a repository
 async def clone_repository(
     repo_full_name: str,
@@ -10,11 +16,8 @@ async def clone_repository(
     target_branch: str = "main"
 ) -> Optional[str]:
     try:
-        owner, repo_name = repo_full_name.split("/")
-        
-        repos_base = Path(settings.REPOS_BASE_PATH)
-        owner_dir = repos_base / owner
-        repo_path = owner_dir / repo_name
+        repo_path = get_local_repo_path(repo_full_name)
+        owner_dir = repo_path.parent
         
         # Ensure the owner directory exists
         owner_dir.mkdir(parents=True, exist_ok=True)
@@ -46,10 +49,7 @@ async def clone_repository(
 # Removes a cloned repository when a repository is unlinked
 def remove_cloned_repository(repo_full_name: str) -> bool:
     try:
-        owner, repo_name = repo_full_name.split("/")
-        
-        repos_base = Path(settings.REPOS_BASE_PATH)
-        repo_path = repos_base / owner / repo_name
+        repo_path = get_local_repo_path(repo_full_name)
         
         # Remove the cloned repository directory if it exists
         if repo_path.exists():
@@ -70,10 +70,7 @@ async def pull_branches(
     branches: list[str]
 ) -> bool:
     try:
-        owner, repo_name = repo_full_name.split("/")
-        
-        repos_base = Path(settings.REPOS_BASE_PATH)
-        repo_path = repos_base / owner / repo_name
+        repo_path = get_local_repo_path(repo_full_name)
         
         if not repo_path.exists():
             return False

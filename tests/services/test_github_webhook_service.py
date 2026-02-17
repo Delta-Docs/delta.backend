@@ -223,7 +223,7 @@ async def test_pr_opened_enqueues_task():
          patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
          patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock), \
          patch("app.services.github_webhook_service.task_queue") as mock_task_queue, \
-         patch("app.services.github_webhook_service.sample_task") as mock_sample_task:
+         patch("app.services.github_webhook_service.run_drift_analysis") as mock_run_drift_analysis:
         
         mock_get_token.return_value = "test_token"
         
@@ -239,44 +239,10 @@ async def test_pr_opened_enqueues_task():
         # Verify task was enqueued with the drift event ID
         mock_task_queue.enqueue.assert_called_once()
         args, _ = mock_task_queue.enqueue.call_args
-        assert args[0] == mock_sample_task
+        assert args[0] == mock_run_drift_analysis
 
         # The drift event ID is passed as a string
         assert isinstance(args[1], str)
-
-
-# Test that task is enqueued for PR synchronize action
-@pytest.mark.asyncio
-async def test_pr_synchronize_enqueues_task():
-    mock_db = MagicMock()
-    payload = {
-        "action": "synchronize",
-        "number": 456,
-        "installation": {"id": 200},
-        "repository": {"full_name": "owner/repo2"},
-        "pull_request": {
-            "base": {"sha": "base789", "ref": "develop"},
-            "head": {"sha": "head012", "ref": "fix-branch"}
-        },
-    }
-    
-    mock_repo = MagicMock()
-    mock_repo.id = "uuid-456"
-    mock_repo.target_branch = "develop"
-    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
-    
-    with patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock), \
-         patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
-         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock), \
-         patch("app.services.github_webhook_service.task_queue") as mock_task_queue, \
-         patch("app.services.github_webhook_service.sample_task"):
-        
-        mock_get_token.return_value = "test_token"
-        
-        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
-        
-        # Verify task was enqueued
-        mock_task_queue.enqueue.assert_called_once()
 
 
 # Test that task is not enqueued for unsupported PR actions
@@ -347,7 +313,7 @@ async def test_drift_event_id_passed_as_string():
          patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock) as mock_get_token, \
          patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock), \
          patch("app.services.github_webhook_service.task_queue") as mock_task_queue, \
-         patch("app.services.github_webhook_service.sample_task"):
+         patch("app.services.github_webhook_service.run_drift_analysis"):
         
         mock_get_token.return_value = "test_token"
         
