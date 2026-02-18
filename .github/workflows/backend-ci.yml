@@ -9,17 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    services:
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
     - uses: actions/checkout@v4
@@ -36,17 +25,5 @@ jobs:
         pip install -r requirements.txt
 
     - name: Run tests
-      env:
-        PYTHONPATH: .
-        POSTGRES_CONNECTION_URL: "postgresql://user:password@localhost:5432/dbname"
-        SECRET_KEY: "dummy_secret_key_for_ci_testing_only"
-        ALGORITHM: "HS256"
-        GITHUB_APP_ID: "12345"
-        GITHUB_PRIVATE_KEY_PATH: "dummy_key.pem"
-        GITHUB_CLIENT_ID: "dummy_client_id"
-        GITHUB_CLIENT_SECRET: "dummy_client_secret"
-        GITHUB_WEBHOOK_SECRET: "dummy_webhook_secret"
-        FRONTEND_URL: "http://localhost:5173"
-        REDIS_URL: "redis://localhost:6379/0"
       run: |
         python -m pytest
