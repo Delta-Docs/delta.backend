@@ -67,8 +67,8 @@ clean:
 	find . -type f -name "*.pyc" -delete
 
 lint:
-	-$(BIN)/ruff check .
-	-$(BIN)/pyrefly check .
+	-$(BIN)/ruff check
+	-$(BIN)/pyrefly check
 
 format:
 	-$(BIN)/ruff format .

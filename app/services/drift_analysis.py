@@ -118,10 +118,10 @@ def run_drift_analysis(drift_event_id: str):
         drift_event.processing_phase = "analyzing"
         drift_event.started_at = datetime.now(timezone.utc)
         session.commit()
-        print(f"[DRIFT ANALYSIS]          processing_phase → 'analyzing'")
+        print("[DRIFT ANALYSIS]          processing_phase → 'analyzing'")
 
         _extract_and_save_code_changes(session, drift_event)
-        print(f"[DRIFT ANALYSIS]          code changes extracted and saved to DB")
+        print("[DRIFT ANALYSIS]          code changes extracted and saved to DB")
 
         repo_path = get_local_repo_path(drift_event.repository.repo_name)
 
@@ -137,14 +137,14 @@ def run_drift_analysis(drift_event_id: str):
             "findings": [],
         }
 
-        print(f"[DRIFT ANALYSIS] Step 3/3: Initial state built")
+        print("[DRIFT ANALYSIS] Step 3/3: Initial state built")
         print(f"[DRIFT ANALYSIS]          repo_path     = {repo_path}")
         print(f"[DRIFT ANALYSIS]          docs_root_path = {initial_state['docs_root_path']}")
 
         print("[DRIFT ANALYSIS]          Invoking LangGraph workflow...")
         final_state = drift_analysis_graph.invoke(initial_state)
 
-        print(f"\n[DRIFT ANALYSIS] Step 3/3: LangGraph workflow completed")
+        print("\n[DRIFT ANALYSIS] Step 3/3: LangGraph workflow completed")
         print(f"[DRIFT ANALYSIS]          change_elements  = {len(final_state.get('change_elements', []))} file(s)")
         print(f"[DRIFT ANALYSIS]          findings         = {len(final_state.get('findings', []))} finding(s)")
 

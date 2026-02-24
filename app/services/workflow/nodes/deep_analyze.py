@@ -56,7 +56,7 @@ def _get_git_diff(repo_path: str, base_sha: str, head_sha: str, file_path: str) 
 
 def deep_analyze(state: DriftAnalysisState) -> dict:
     print(f"\n{'─'*60}")
-    print(f"[ANALYZE] Starting deep_analyze node")
+    print("[ANALYZE] Starting deep_analyze node")
     print(f"{'─'*60}")
 
     analysis_payloads: list[dict] = state["analysis_payloads"]
@@ -92,11 +92,11 @@ def deep_analyze(state: DriftAnalysisState) -> dict:
         diff = _get_git_diff(repo_path, base_sha, head_sha, code_path)
 
         if diff is None:
-            print(f"[ANALYZE]   ↳ Could not retrieve git diff — skipping")
+            print("[ANALYZE]   ↳ Could not retrieve git diff — skipping")
             continue
 
         if not diff.strip():
-            print(f"[ANALYZE]   ↳ Empty diff — skipping")
+            print("[ANALYZE]   ↳ Empty diff — skipping")
             continue
 
         user_prompt = (

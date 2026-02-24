@@ -60,7 +60,7 @@ def _get_git_file_content(repo_path: str, commit_sha: str, file_path: str) -> st
 
 def scout_changes(state: DriftAnalysisState) -> dict:
     print(f"\n{'─'*60}")
-    print(f"[SCOUT] Starting scout_changes node")
+    print("[SCOUT] Starting scout_changes node")
     print(f"{'─'*60}")
 
     session = state["session"]
@@ -74,7 +74,7 @@ def scout_changes(state: DriftAnalysisState) -> dict:
         session.query(CodeChange)
         .filter(
             CodeChange.drift_event_id == drift_event_id,
-            CodeChange.is_code == True,
+            CodeChange.is_code.is_(True),
         )
         .all()
     )

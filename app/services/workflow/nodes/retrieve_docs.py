@@ -38,7 +38,7 @@ def _extract_snippet(content: str, element: str, context_lines: int = _CONTEXT_L
 
 def retrieve_docs(state: DriftAnalysisState) -> dict:
     print(f"\n{'─'*60}")
-    print(f"[RETRIEVE] Starting retrieve_docs node")
+    print("[RETRIEVE] Starting retrieve_docs node")
     print(f"{'─'*60}")
 
     change_elements: list[dict] = state["change_elements"]
@@ -63,7 +63,7 @@ def retrieve_docs(state: DriftAnalysisState) -> dict:
         print(f"\n[RETRIEVE] [{i}/{len(change_elements)}] {file_path} ({change_type}) — {len(search_terms)} search term(s)")
 
         if not search_terms:
-            print(f"[RETRIEVE]   ↳ Skipped (no elements)")
+            print("[RETRIEVE]   ↳ Skipped (no elements)")
             continue
 
         matched_snippets: dict[str, list[str]] = {}
@@ -81,7 +81,7 @@ def retrieve_docs(state: DriftAnalysisState) -> dict:
 
         total_matches = sum(len(s) for s in matched_snippets.values())
         if change_type == "added" and total_matches == 0:
-            print(f"[RETRIEVE]   ↳ FAST-TRACK: missing_docs (0 matches, added code)")
+            print("[RETRIEVE]   ↳ FAST-TRACK: missing_docs (0 matches, added code)")
             new_findings.append(
                 {
                     "code_path": file_path,
@@ -95,7 +95,7 @@ def retrieve_docs(state: DriftAnalysisState) -> dict:
             continue
 
         if change_type == "modified" and total_matches == 0:
-            print(f"[RETRIEVE]   ↳ FAST-TRACK: outdated_docs (0 matches, modified code)")
+            print("[RETRIEVE]   ↳ FAST-TRACK: outdated_docs (0 matches, modified code)")
             new_findings.append(
                 {
                     "code_path": file_path,
@@ -109,7 +109,7 @@ def retrieve_docs(state: DriftAnalysisState) -> dict:
             continue
 
         if total_matches == 0:
-            print(f"[RETRIEVE]   ↳ No doc matches found, skipping")
+            print("[RETRIEVE]   ↳ No doc matches found, skipping")
             continue
         combined_snippets = "\n\n---\n\n".join(
             f"[{doc_path}]\n{chr(10).join(snippets)}"

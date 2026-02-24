@@ -8,7 +8,7 @@ from app.services.workflow.state import DriftAnalysisState
 
 def aggregate_results(state: DriftAnalysisState) -> dict:
     print(f"\n{'─'*60}")
-    print(f"[AGGREGATE] Starting aggregate_results node")
+    print("[AGGREGATE] Starting aggregate_results node")
     print(f"{'─'*60}")
 
     session = state["session"]
@@ -97,7 +97,7 @@ def aggregate_results(state: DriftAnalysisState) -> dict:
         drift_event.processing_phase = "completed"
         drift_event.completed_at = datetime.now(timezone.utc)
         session.commit()
-        print(f"[AGGREGATE] DriftEvent updated — processing_phase='completed', completed_at set")
+        print("[AGGREGATE] DriftEvent updated — processing_phase='completed', completed_at set")
     else:
         print(f"[AGGREGATE] WARNING: DriftEvent {drift_event_id} not found in DB")
         session.commit()
@@ -128,8 +128,8 @@ def aggregate_results(state: DriftAnalysisState) -> dict:
         except Exception as exc:
             print(f"[AGGREGATE] GitHub Check Run update failed: {exc}")
     else:
-        print(f"[AGGREGATE] No check_run_id — skipping GitHub update")
+        print("[AGGREGATE] No check_run_id — skipping GitHub update")
 
-    print(f"\n[AGGREGATE] Done")
+    print("\n[AGGREGATE] Done")
 
     return {"findings": []}
