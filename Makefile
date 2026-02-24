@@ -33,7 +33,7 @@ run:
 	$(BIN)/uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 dev:
-	$(BIN)/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	$(BIN)/uvicorn app.main:app --reload --reload-exclude "repos/**" --host 0.0.0.0 --port 8000
 
 docker-up:
 	docker compose up -d
