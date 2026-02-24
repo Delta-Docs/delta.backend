@@ -1,5 +1,5 @@
 import subprocess
-from typing import Literal
+from typing import Literal, Any, cast
 
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -54,22 +54,14 @@ def _get_git_diff(repo_path: str, base_sha: str, head_sha: str, file_path: str) 
         return None
 
 
-def deep_analyze(state: DriftAnalysisState) -> dict:
-    print(f"\n{'─'*60}")
-    print("[ANALYZE] Starting deep_analyze node")
-    print(f"{'─'*60}")
-
+def deep_analyze(state: DriftAnalysisState) -> dict[str, Any]:
     analysis_payloads: list[dict] = state["analysis_payloads"]
     repo_path: str = state["repo_path"]
     base_sha: str = state["base_sha"]
     head_sha: str = state["head_sha"]
 
     if not analysis_payloads:
-        print("[ANALYZE] No analysis payloads — skipping LLM calls")
         return {"findings": []}
-
-    print(f"[ANALYZE] {len(analysis_payloads)} payload(s) to analyze")
-    print(f"[ANALYZE] base_sha={base_sha[:10]}... head_sha={head_sha[:10]}...")
 
     llm = ChatGoogleGenerativeAI(
         model=settings.LLM_MODEL,
@@ -87,16 +79,14 @@ def deep_analyze(state: DriftAnalysisState) -> dict:
         old_elements: list[str] = payload.get("old_elements", [])
         matched_doc_snippets: str = payload.get("matched_doc_snippets", "")
 
-        print(f"\n[ANALYZE] [{i}/{len(analysis_payloads)}] {code_path} ({change_type})")
-
         diff = _get_git_diff(repo_path, base_sha, head_sha, code_path)
 
         if diff is None:
-            print("[ANALYZE]   ↳ Could not retrieve git diff — skipping")
+            print("ERROR: Could not retrieve git diff")
             continue
 
         if not diff.strip():
-            print("[ANALYZE]   ↳ Empty diff — skipping")
+
             continue
 
         user_prompt = (
@@ -111,19 +101,17 @@ def deep_analyze(state: DriftAnalysisState) -> dict:
         )
 
         try:
-            result: LLMDriftFinding = structured_llm.invoke(
+            raw_result = structured_llm.invoke(
                 [
                     {"role": "system", "content": _SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
                 ]
             )
+            result = cast(LLMDriftFinding, raw_result)
         except Exception as exc:
-            print(f"[ANALYZE]   ↳ LLM error: {exc}")
+            print(f"LLM error: {exc}")
             continue
 
-        print(f"[ANALYZE]   ↳ drift_detected={result.drift_detected}, "
-              f"type={result.drift_type}, score={result.drift_score:.2f}, "
-              f"confidence={result.confidence:.2f}")
 
         if result.drift_detected:
             new_findings.append(
@@ -138,6 +126,5 @@ def deep_analyze(state: DriftAnalysisState) -> dict:
                 }
             )
 
-    print(f"\n[ANALYZE] Done — {len(new_findings)} finding(s) from LLM analysis")
 
     return {"findings": new_findings}

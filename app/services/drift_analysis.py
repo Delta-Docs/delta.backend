@@ -95,33 +95,24 @@ def _extract_and_save_code_changes(session, drift_event):
 
 # Main task that orchestrates the drift analysis process for a PR
 def run_drift_analysis(drift_event_id: str):
-    print(f"\n{'='*60}")
-    print(f"[DRIFT ANALYSIS] Starting for event: {drift_event_id}")
-    print(f"{'='*60}")
-
     if not drift_event_id or drift_event_id == "None":
-        print(f"[DRIFT ANALYSIS] ERROR: invalid drift_event_id: {drift_event_id!r}")
+        print(f"ERROR: invalid drift_event_id: {drift_event_id!r}")
         return
 
     session = _create_session()
-    print("[DRIFT ANALYSIS] Step 1/3: Database session created")
 
     try:
         drift_event = session.query(DriftEvent).filter(DriftEvent.id == drift_event_id).first()
 
         if not drift_event:
-            print(f"[DRIFT ANALYSIS] Event {drift_event_id} not found in DB. Aborting.")
+            print(f"Event {drift_event_id} not found in DB. Aborting.")
             return
-
-        print(f"[DRIFT ANALYSIS] Step 2/3: DriftEvent found — repo={drift_event.repository.repo_name}, PR#{drift_event.pr_number}")
 
         drift_event.processing_phase = "analyzing"
         drift_event.started_at = datetime.now(timezone.utc)
         session.commit()
-        print("[DRIFT ANALYSIS]          processing_phase → 'analyzing'")
 
         _extract_and_save_code_changes(session, drift_event)
-        print("[DRIFT ANALYSIS]          code changes extracted and saved to DB")
 
         repo_path = get_local_repo_path(drift_event.repository.repo_name)
 
@@ -137,23 +128,10 @@ def run_drift_analysis(drift_event_id: str):
             "findings": [],
         }
 
-        print("[DRIFT ANALYSIS] Step 3/3: Initial state built")
-        print(f"[DRIFT ANALYSIS]          repo_path     = {repo_path}")
-        print(f"[DRIFT ANALYSIS]          docs_root_path = {initial_state['docs_root_path']}")
-
-        print("[DRIFT ANALYSIS]          Invoking LangGraph workflow...")
         final_state = drift_analysis_graph.invoke(initial_state)
 
-        print("\n[DRIFT ANALYSIS] Step 3/3: LangGraph workflow completed")
-        print(f"[DRIFT ANALYSIS]          change_elements  = {len(final_state.get('change_elements', []))} file(s)")
-        print(f"[DRIFT ANALYSIS]          findings         = {len(final_state.get('findings', []))} finding(s)")
-
-        print(f"\n{'='*60}")
-        print(f"[DRIFT ANALYSIS] Completed for event: {drift_event_id}")
-        print(f"{'='*60}\n")
-
     except Exception as e:
-        print(f"[DRIFT ANALYSIS] ERROR: {e}")
+        print(f"ERROR: {e}")
         session.rollback()
         raise
     finally:

@@ -1,5 +1,6 @@
 import os
 import re
+from typing import Any
 
 from app.services.workflow.state import DriftAnalysisState
 
@@ -36,11 +37,7 @@ def _extract_snippet(content: str, element: str, context_lines: int = _CONTEXT_L
     return ""
 
 
-def retrieve_docs(state: DriftAnalysisState) -> dict:
-    print(f"\n{'─'*60}")
-    print("[RETRIEVE] Starting retrieve_docs node")
-    print(f"{'─'*60}")
-
+def retrieve_docs(state: DriftAnalysisState) -> dict[str, Any]:
     change_elements: list[dict] = state["change_elements"]
     repo_path: str = state["repo_path"]
     docs_root_path: str = state["docs_root_path"]
@@ -50,7 +47,6 @@ def retrieve_docs(state: DriftAnalysisState) -> dict:
 
     docs_dir = os.path.join(repo_path, docs_root_path.lstrip("/"))
     doc_files = _load_markdown_files(docs_dir)
-    print(f"[RETRIEVE] Loaded {len(doc_files)} markdown doc(s) from {docs_dir}")
 
     for i, ce in enumerate(change_elements, 1):
         file_path: str = ce["file_path"]
@@ -60,10 +56,7 @@ def retrieve_docs(state: DriftAnalysisState) -> dict:
 
         search_terms: set[str] = set(elements + old_elements)
 
-        print(f"\n[RETRIEVE] [{i}/{len(change_elements)}] {file_path} ({change_type}) — {len(search_terms)} search term(s)")
-
         if not search_terms:
-            print("[RETRIEVE]   ↳ Skipped (no elements)")
             continue
 
         matched_snippets: dict[str, list[str]] = {}
@@ -81,7 +74,7 @@ def retrieve_docs(state: DriftAnalysisState) -> dict:
 
         total_matches = sum(len(s) for s in matched_snippets.values())
         if change_type == "added" and total_matches == 0:
-            print("[RETRIEVE]   ↳ FAST-TRACK: missing_docs (0 matches, added code)")
+
             new_findings.append(
                 {
                     "code_path": file_path,
@@ -95,7 +88,7 @@ def retrieve_docs(state: DriftAnalysisState) -> dict:
             continue
 
         if change_type == "modified" and total_matches == 0:
-            print("[RETRIEVE]   ↳ FAST-TRACK: outdated_docs (0 matches, modified code)")
+
             new_findings.append(
                 {
                     "code_path": file_path,
@@ -109,14 +102,11 @@ def retrieve_docs(state: DriftAnalysisState) -> dict:
             continue
 
         if total_matches == 0:
-            print("[RETRIEVE]   ↳ No doc matches found, skipping")
             continue
         combined_snippets = "\n\n---\n\n".join(
             f"[{doc_path}]\n{chr(10).join(snippets)}"
             for doc_path, snippets in matched_snippets.items()
         )
-
-        print(f"[RETRIEVE]   ↳ {total_matches} match(es) across {len(matched_snippets)} doc(s) → payload for LLM")
 
         new_payloads.append(
             {
@@ -128,8 +118,6 @@ def retrieve_docs(state: DriftAnalysisState) -> dict:
                 "matched_doc_snippets": combined_snippets,
             }
         )
-
-    print(f"\n[RETRIEVE] Done — {len(new_findings)} fast-track finding(s), {len(new_payloads)} payload(s) for LLM")
 
     return {"findings": new_findings, "analysis_payloads": new_payloads}
 

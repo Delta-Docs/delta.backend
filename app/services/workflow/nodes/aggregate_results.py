@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 from datetime import datetime, timezone
 
 from app.db.base import DriftEvent, DriftFinding
@@ -6,18 +7,12 @@ from app.services.github_api import update_github_check_run
 from app.services.workflow.state import DriftAnalysisState
 
 
-def aggregate_results(state: DriftAnalysisState) -> dict:
-    print(f"\n{'─'*60}")
-    print("[AGGREGATE] Starting aggregate_results node")
-    print(f"{'─'*60}")
-
+def aggregate_results(state: DriftAnalysisState) -> dict[str, Any]:
     session = state["session"]
     drift_event_id = state["drift_event_id"]
     findings: list[dict] = state["findings"]
     change_elements: list[dict] = state["change_elements"]
     analysis_payloads: list[dict] = state["analysis_payloads"]
-
-    print(f"[AGGREGATE] {len(findings)} finding(s) to persist")
 
     if not findings:
         overall_score = 0.0
@@ -26,8 +21,6 @@ def aggregate_results(state: DriftAnalysisState) -> dict:
         overall_score = max(f.get("drift_score", 0.0) for f in findings)
         has_missing = any(f.get("drift_type") == "missing_docs" for f in findings)
         drift_result = "missing_docs" if has_missing else "drift_detected"
-
-    print(f"[AGGREGATE] overall_score={overall_score:.2f}, drift_result={drift_result}")
 
     if drift_result == "clean":
         summary = "Clean - No documentation drift detected."
@@ -67,7 +60,6 @@ def aggregate_results(state: DriftAnalysisState) -> dict:
             f"Total findings: {len(findings)}."
         ),
     }
-    print(f"[AGGREGATE] agent_logs generated ({len(agent_logs)} step(s))")
 
     for f in findings:
         doc_paths = f.get("matched_doc_paths", [])
@@ -85,8 +77,6 @@ def aggregate_results(state: DriftAnalysisState) -> dict:
         )
         session.add(finding)
 
-    print(f"[AGGREGATE] {len(findings)} DriftFinding row(s) staged")
-
     drift_event = session.query(DriftEvent).filter(DriftEvent.id == drift_event_id).first()
 
     if drift_event:
@@ -97,9 +87,8 @@ def aggregate_results(state: DriftAnalysisState) -> dict:
         drift_event.processing_phase = "completed"
         drift_event.completed_at = datetime.now(timezone.utc)
         session.commit()
-        print("[AGGREGATE] DriftEvent updated — processing_phase='completed', completed_at set")
     else:
-        print(f"[AGGREGATE] WARNING: DriftEvent {drift_event_id} not found in DB")
+        print(f"DriftEvent {drift_event_id} not found in DB")
         session.commit()
 
     if drift_event and drift_event.check_run_id:
@@ -110,8 +99,6 @@ def aggregate_results(state: DriftAnalysisState) -> dict:
 
         conclusion = "success" if drift_result == "clean" else "action_required"
         title = "Delta Drift Analysis"
-
-        print(f"[AGGREGATE] Updating GitHub Check Run #{check_run_id} → conclusion={conclusion}")
 
         try:
             asyncio.run(
@@ -126,10 +113,6 @@ def aggregate_results(state: DriftAnalysisState) -> dict:
                 )
             )
         except Exception as exc:
-            print(f"[AGGREGATE] GitHub Check Run update failed: {exc}")
-    else:
-        print("[AGGREGATE] No check_run_id — skipping GitHub update")
-
-    print("\n[AGGREGATE] Done")
+            print(f"GitHub Check Run update failed: {exc}")
 
     return {"findings": []}

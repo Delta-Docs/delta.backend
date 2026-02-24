@@ -1,6 +1,7 @@
 import ast
 import os
 import subprocess
+from typing import Any
 
 from app.db.base import CodeChange
 from app.services.workflow.state import DriftAnalysisState
@@ -57,18 +58,11 @@ def _get_git_file_content(repo_path: str, commit_sha: str, file_path: str) -> st
     except (subprocess.TimeoutExpired, OSError):
         return None
 
-
-def scout_changes(state: DriftAnalysisState) -> dict:
-    print(f"\n{'─'*60}")
-    print("[SCOUT] Starting scout_changes node")
-    print(f"{'─'*60}")
-
+def scout_changes(state: DriftAnalysisState) -> dict[str, Any]:
     session = state["session"]
     drift_event_id = state["drift_event_id"]
     repo_path = state["repo_path"]
     base_sha = state["base_sha"]
-
-    print(f"[SCOUT] base_sha = {base_sha[:10]}...")
 
     code_changes = (
         session.query(CodeChange)
@@ -78,23 +72,20 @@ def scout_changes(state: DriftAnalysisState) -> dict:
         )
         .all()
     )
-    print(f"[SCOUT] Found {len(code_changes)} code change(s) in DB")
 
     py_changes = [cc for cc in code_changes if cc.file_path.endswith(".py")]
-    print(f"[SCOUT] Filtered to {len(py_changes)} Python file(s)")
 
     change_elements: list[dict] = []
 
     for i, change in enumerate(py_changes, 1):
         elements: list[str] = []
         old_elements: list[str] = []
-        print(f"\n[SCOUT] [{i}/{len(py_changes)}] Processing: {change.file_path} ({change.change_type})")
 
         if change.change_type == "deleted":
             old_source = _get_git_file_content(repo_path, base_sha, change.file_path)
             if old_source:
                 old_elements = _extract_elements_from_source(old_source, change.file_path)
-            print(f"[SCOUT]   ↳ Deleted — old_elements: {old_elements}")
+
             change_elements.append(
                 {
                     "file_path": change.file_path,
@@ -111,7 +102,7 @@ def scout_changes(state: DriftAnalysisState) -> dict:
             with open(abs_path, "r", encoding="utf-8") as f:
                 source = f.read()
         except (FileNotFoundError, OSError) as exc:
-            print(f"[SCOUT]   ↳ File read error: {exc}")
+            print(f"File read error: {exc}")
             change_elements.append(
                 {
                     "file_path": change.file_path,
@@ -128,10 +119,7 @@ def scout_changes(state: DriftAnalysisState) -> dict:
             old_source = _get_git_file_content(repo_path, base_sha, change.file_path)
             if old_source:
                 old_elements = _extract_elements_from_source(old_source, change.file_path)
-            print(f"[SCOUT]   ↳ elements:     {elements}")
-            print(f"[SCOUT]   ↳ old_elements: {old_elements}")
-        else:
-            print(f"[SCOUT]   ↳ elements: {elements} (added, no old version)")
+
 
         change_elements.append(
             {
@@ -141,8 +129,5 @@ def scout_changes(state: DriftAnalysisState) -> dict:
                 "old_elements": old_elements,
             }
         )
-
-    total_elements = sum(len(ce["elements"]) + len(ce["old_elements"]) for ce in change_elements)
-    print(f"\n[SCOUT] Done — {len(change_elements)} file(s) processed, {total_elements} element(s) extracted total")
 
     return {"change_elements": change_elements}
