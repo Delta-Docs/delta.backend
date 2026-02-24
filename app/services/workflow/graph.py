@@ -9,12 +9,12 @@ from app.services.workflow.nodes.aggregate_results import aggregate_results
 
 
 def build_drift_analysis_graph() -> CompiledStateGraph:
-    graph = StateGraph(DriftAnalysisState)                   # type: ignore[bad-specialization]
+    graph = StateGraph(DriftAnalysisState)  # type: ignore[bad-specialization]
 
-    graph.add_node("scout_changes", scout_changes)           # type: ignore[no-matching-overload]
-    graph.add_node("retrieve_docs", retrieve_docs)           # type: ignore[no-matching-overload]
-    graph.add_node("deep_analyze", deep_analyze)             # type: ignore[no-matching-overload]   
-    graph.add_node("aggregate_results", aggregate_results)   # type: ignore[no-matching-overload]
+    graph.add_node("scout_changes", scout_changes)  # type: ignore[no-matching-overload]
+    graph.add_node("retrieve_docs", retrieve_docs)  # type: ignore[no-matching-overload]
+    graph.add_node("deep_analyze", deep_analyze)  # type: ignore[no-matching-overload]
+    graph.add_node("aggregate_results", aggregate_results)  # type: ignore[no-matching-overload]
 
     graph.add_edge(START, "scout_changes")
     graph.add_edge("scout_changes", "retrieve_docs")
@@ -26,4 +26,3 @@ def build_drift_analysis_graph() -> CompiledStateGraph:
 
 
 drift_analysis_graph = build_drift_analysis_graph()
-

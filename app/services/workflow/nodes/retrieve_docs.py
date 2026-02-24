@@ -74,7 +74,6 @@ def retrieve_docs(state: DriftAnalysisState) -> dict[str, Any]:
 
         total_matches = sum(len(s) for s in matched_snippets.values())
         if change_type == "added" and total_matches == 0:
-
             new_findings.append(
                 {
                     "code_path": file_path,
@@ -88,7 +87,6 @@ def retrieve_docs(state: DriftAnalysisState) -> dict[str, Any]:
             continue
 
         if change_type == "modified" and total_matches == 0:
-
             new_findings.append(
                 {
                     "code_path": file_path,
@@ -120,4 +118,3 @@ def retrieve_docs(state: DriftAnalysisState) -> dict[str, Any]:
         )
 
     return {"findings": new_findings, "analysis_payloads": new_payloads}
-

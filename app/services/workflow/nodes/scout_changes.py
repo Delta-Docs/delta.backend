@@ -1,5 +1,5 @@
-import ast
 import os
+import ast
 import subprocess
 from typing import Any
 
@@ -15,11 +15,19 @@ def _extract_routes_from_decorators(node: ast.FunctionDef | ast.AsyncFunctionDef
             continue
 
         for arg in decorator.args:
-            if isinstance(arg, ast.Constant) and isinstance(arg.value, str) and arg.value.startswith("/"):
+            if (
+                isinstance(arg, ast.Constant)
+                and isinstance(arg.value, str)
+                and arg.value.startswith("/")
+            ):
                 routes.append(arg.value)
 
         for kw in decorator.keywords:
-            if isinstance(kw.value, ast.Constant) and isinstance(kw.value, str) and kw.value.startswith("/"):
+            if (
+                isinstance(kw.value, ast.Constant)
+                and isinstance(kw.value, str)
+                and kw.value.startswith("/")
+            ):
                 routes.append(kw.value)
 
     return routes
@@ -57,6 +65,7 @@ def _get_git_file_content(repo_path: str, commit_sha: str, file_path: str) -> st
         return result.stdout
     except (subprocess.TimeoutExpired, OSError):
         return None
+
 
 def scout_changes(state: DriftAnalysisState) -> dict[str, Any]:
     session = state["session"]
@@ -119,7 +128,6 @@ def scout_changes(state: DriftAnalysisState) -> dict[str, Any]:
             old_source = _get_git_file_content(repo_path, base_sha, change.file_path)
             if old_source:
                 old_elements = _extract_elements_from_source(old_source, change.file_path)
-
 
         change_elements.append(
             {

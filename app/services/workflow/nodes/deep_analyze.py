@@ -13,19 +13,16 @@ class LLMDriftFinding(BaseModel):
         description="True if the documentation needs updating based on the code change."
     )
     drift_type: Literal["outdated_docs", "missing_docs", "ambiguous_docs", ""] = Field(
-        default="",
-        description="Type of drift detected. Empty string if no drift."
+        default="", description="Type of drift detected. Empty string if no drift."
     )
     drift_score: float = Field(
-        ge=0.0, le=1.0,
-        description="Severity of the drift from 0.0 (none) to 1.0 (critical)."
+        ge=0.0, le=1.0, description="Severity of the drift from 0.0 (none) to 1.0 (critical)."
     )
     explanation: str = Field(
         description="Clear, developer-friendly explanation of what changed and why docs are out of sync."
     )
     confidence: float = Field(
-        ge=0.0, le=1.0,
-        description="How confident the LLM is in this assessment."
+        ge=0.0, le=1.0, description="How confident the LLM is in this assessment."
     )
 
 
@@ -86,7 +83,6 @@ def deep_analyze(state: DriftAnalysisState) -> dict[str, Any]:
             continue
 
         if not diff.strip():
-
             continue
 
         user_prompt = (
@@ -112,7 +108,6 @@ def deep_analyze(state: DriftAnalysisState) -> dict[str, Any]:
             print(f"LLM error: {exc}")
             continue
 
-
         if result.drift_detected:
             new_findings.append(
                 {
@@ -125,6 +120,5 @@ def deep_analyze(state: DriftAnalysisState) -> dict[str, Any]:
                     "matched_doc_paths": payload.get("matched_doc_paths", []),
                 }
             )
-
 
     return {"findings": new_findings}

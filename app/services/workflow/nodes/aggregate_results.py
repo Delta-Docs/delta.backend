@@ -53,7 +53,9 @@ def aggregate_results(state: DriftAnalysisState) -> dict[str, Any]:
         "Analysis": (
             f"Sent {len(analysis_payloads)} code diff(s) to LLM for semantic verification. "
             f"LLM identified {len(llm_findings)} documentation drift(s)."
-        ) if analysis_payloads else "No payloads required LLM analysis. All resolved during retrieval.",
+        )
+        if analysis_payloads
+        else "No payloads required LLM analysis. All resolved during retrieval.",
         "Result": (
             f"Overall drift score: {overall_score:.2f}. "
             f"Verdict: {drift_result}. "

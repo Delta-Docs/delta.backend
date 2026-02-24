@@ -122,7 +122,7 @@ def run_drift_analysis(drift_event_id: str):
             "head_sha": drift_event.head_sha,
             "session": session,
             "repo_path": str(repo_path),
-            "docs_root_path": drift_event.repository.docs_root_path or "/docs",
+            "docs_root_path": drift_event.repository.docs_root_path,
             "change_elements": [],
             "analysis_payloads": [],
             "findings": [],
