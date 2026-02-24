@@ -16,3 +16,5 @@ redis
 rq
 ruff
 pyrefly
+langgraph
+langchain-google-genai
