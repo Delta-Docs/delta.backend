@@ -1,6 +1,7 @@
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 from app.services.workflow.nodes.aggregate_results import aggregate_results
+from app.services.workflow.state import DriftAnalysisState
 
 
 # Helper function to build a minimal state dictionary
@@ -9,7 +10,7 @@ def _make_state(
     change_elements: list[dict] | None = None,
     analysis_payloads: list[dict] | None = None,
     drift_event_id: str = "evt-1",
-):
+) -> DriftAnalysisState:
     return {
         "drift_event_id": drift_event_id,
         "base_sha": "abc123",
@@ -111,7 +112,7 @@ def test_missing_docs_result():
 
     with patch("app.services.workflow.nodes.aggregate_results.DriftFinding") as mock_finding_cls:
         mock_finding_cls.return_value = MagicMock()
-        result = aggregate_results(state)
+        aggregate_results(state)
 
     assert drift_event.drift_result == "missing_docs"
     assert drift_event.overall_drift_score == 1.0

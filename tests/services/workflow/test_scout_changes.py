@@ -1,4 +1,3 @@
-import os
 import textwrap
 from unittest.mock import MagicMock, patch
 
@@ -6,6 +5,7 @@ from app.services.workflow.nodes.scout_changes import (
     scout_changes,
     _extract_elements_from_source,
 )
+from app.services.workflow.state import DriftAnalysisState
 
 
 # Helper function to build a mock CodeChange row
@@ -17,19 +17,20 @@ def _make_code_change(file_path: str, change_type: str = "modified", is_code: bo
     return cc
 
 
-# Helper function build a minimal state dict
+# Helper function to build a minimal state dict
 def _make_state(
     drift_event_id: str = "evt-1",
     repo_path: str = "/tmp/repo",
     base_sha: str = "abc123def4",
     code_changes: list | None = None,
-):
+) -> DriftAnalysisState:
     session = MagicMock()
     session.query.return_value.filter.return_value.all.return_value = code_changes or []
 
     return {
         "drift_event_id": drift_event_id,
         "base_sha": base_sha,
+        "head_sha": "def456abc7",
         "session": session,
         "repo_path": repo_path,
         "docs_root_path": "/docs",

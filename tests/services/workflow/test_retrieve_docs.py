@@ -1,6 +1,7 @@
 import textwrap
 
 from app.services.workflow.nodes.retrieve_docs import retrieve_docs
+from app.services.workflow.state import DriftAnalysisState
 
 
 # Helper function to build a minimal state dictionary
@@ -8,10 +9,11 @@ def _make_state(
     change_elements: list[dict] | None = None,
     repo_path: str = "/tmp/repo",
     docs_root_path: str = "/docs",
-):
+) -> DriftAnalysisState:
     return {
         "drift_event_id": "evt-1",
         "base_sha": "abc123def4",
+        "head_sha": "def456abc7",
         "session": None,
         "repo_path": repo_path,
         "docs_root_path": docs_root_path,

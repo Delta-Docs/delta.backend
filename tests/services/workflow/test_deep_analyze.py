@@ -1,10 +1,11 @@
+from typing import Literal
 from unittest.mock import patch, MagicMock
 
 from app.services.workflow.nodes.deep_analyze import (
     deep_analyze,
     LLMDriftFinding,
-    _get_git_diff,
 )
+from app.services.workflow.state import DriftAnalysisState
 
 
 # Helper function to build a minimal state dictionary
@@ -13,7 +14,7 @@ def _make_state(
     repo_path: str = "/tmp/repo",
     base_sha: str = "abc123def4",
     head_sha: str = "def456abc7",
-):
+) -> DriftAnalysisState:
     return {
         "drift_event_id": "evt-1",
         "base_sha": base_sha,
@@ -29,9 +30,12 @@ def _make_state(
 
 # Helper function to create a mock LLMDriftFinding response.
 def _mock_drift_finding(drift_detected: bool, **kwargs) -> LLMDriftFinding:
+    drift_type: Literal["outdated_docs", "missing_docs", "ambiguous_docs", ""] = (
+        "outdated_docs" if drift_detected else ""
+    )
     defaults = {
         "drift_detected": drift_detected,
-        "drift_type": "outdated_docs" if drift_detected else "",
+        "drift_type": drift_type,
         "drift_score": 0.9 if drift_detected else 0.0,
         "explanation": "Route changed from /date to /today but docs still say /date." if drift_detected else "Docs are up to date.",
         "confidence": 0.95 if drift_detected else 0.9,
