@@ -48,28 +48,3 @@ class Repository(Base):
     )
 
     __table_args__ = (UniqueConstraint("installation_id", "repo_name"),)
-
-
-class DocCoverageMap(Base):
-    __tablename__ = "doc_coverage_map"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
-    )
-    repo_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("repositories.id", ondelete="CASCADE")
-    )
-
-    code_path: Mapped[str] = mapped_column(String, nullable=False)
-    doc_file_path: Mapped[str | None] = mapped_column(String)
-
-    last_verified_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
-    )
-
-    repository = relationship("Repository")
-
-    __table_args__ = (
-        UniqueConstraint("repo_id", "code_path", "doc_file_path"),
-        Index("idx_coverage_repo", "repo_id"),
-    )
