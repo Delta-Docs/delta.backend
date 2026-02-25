@@ -223,14 +223,15 @@ def test_extract_and_save_code_changes_correct_git_command():
 
 
 # Helper to set up a mock session with a drift event
-def _setup_run_mocks(drift_event_id=None, check_run_id=12345):
+def _setup_run_mocks(drift_event_id=None, docs_root_path="/docs"):
     drift_event_id = drift_event_id or str(uuid4())
 
     drift_event = MagicMock()
     drift_event.id = drift_event_id
     drift_event.repository.repo_name = "owner/repo"
     drift_event.repository.installation_id = 99
-    drift_event.check_run_id = check_run_id
+    drift_event.repository.docs_root_path = docs_root_path
+    drift_event.check_run_id = 12345
     drift_event.processing_phase = "queued"
     drift_event.drift_result = "pending"
 
@@ -240,46 +241,14 @@ def _setup_run_mocks(drift_event_id=None, check_run_id=12345):
     return session, drift_event
 
 
-# Test full successful run_drift_analysis flow
-def test_run_drift_analysis_success():
-    session, drift_event = _setup_run_mocks()
-
-    with (
-        patch("app.services.drift_analysis._create_session", return_value=session),
-        patch("app.services.drift_analysis._extract_and_save_code_changes") as mock_extract,
-        patch("app.services.drift_analysis.update_github_check_run", new=MagicMock()),
-        patch("asyncio.run") as mock_asyncio_run,
-        patch("time.sleep"),
-    ):
-        run_drift_analysis(str(drift_event.id))
-
-    # Verify scouting phase was set
-    assert drift_event.processing_phase == "completed"
-    assert drift_event.drift_result == "clean"
-
-    # Verify code changes were extracted
-    mock_extract.assert_called_once_with(session, drift_event)
-
-    # Verify GitHub check run was updated twice (in_progress + completed)
-    assert mock_asyncio_run.call_count == 2
-
-    # Verify session was committed and closed
-    assert session.commit.call_count >= 2
-    session.close.assert_called_once()
-
-
 # Test run_drift_analysis when drift event is not found
 def test_run_drift_analysis_event_not_found():
     session = MagicMock()
     session.query.return_value.filter.return_value.first.return_value = None
 
-    with (
-        patch("app.services.drift_analysis._create_session", return_value=session),
-        patch("app.services.drift_analysis._extract_and_save_code_changes") as mock_extract,
-    ):
+    with patch("app.services.drift_analysis._create_session", return_value=session):
         run_drift_analysis("nonexistent-id")
 
-    mock_extract.assert_not_called()
     session.close.assert_called_once()
 
 
@@ -290,37 +259,74 @@ def test_run_drift_analysis_session_closed_on_error():
     with (
         patch("app.services.drift_analysis._create_session", return_value=session),
         patch(
-            "app.services.drift_analysis._extract_and_save_code_changes",
+            "app.services.drift_analysis.get_local_repo_path",
             side_effect=RuntimeError("boom"),
         ),
-        patch("app.services.drift_analysis.update_github_check_run", new=MagicMock()),
-        patch("asyncio.run"),
-        patch("time.sleep"),
     ):
         with pytest.raises(RuntimeError):
             run_drift_analysis(str(drift_event.id))
 
+    session.rollback.assert_called_once()
     session.close.assert_called_once()
 
 
-# Test run_drift_analysis sets scouting phase before extraction
-def test_run_drift_analysis_sets_scouting_phase():
+# Test run_drift_analysis sets analyzing phase
+def test_run_drift_analysis_sets_analyzing_phase():
     session, drift_event = _setup_run_mocks()
-    phases_during_extract = []
+    phase_at_commit = []
 
-    def capture_phase(sess, event):
-        phases_during_extract.append(event.processing_phase)
+    original_commit = session.commit
+
+    def capture_phase():
+        phase_at_commit.append(drift_event.processing_phase)
+        original_commit()
+
+    session.commit = capture_phase
 
     with (
         patch("app.services.drift_analysis._create_session", return_value=session),
-        patch(
-            "app.services.drift_analysis._extract_and_save_code_changes", side_effect=capture_phase
-        ),
-        patch("app.services.drift_analysis.update_github_check_run", new=MagicMock()),
-        patch("asyncio.run"),
-        patch("time.sleep"),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch("app.services.drift_analysis._extract_and_save_code_changes"),
+        patch("app.services.drift_analysis.drift_analysis_graph") as mock_graph,
     ):
+        mock_path.return_value = Path("/repos/owner/repo")
+        mock_graph.invoke.return_value = {"change_elements": [], "findings": []}
+
         run_drift_analysis(str(drift_event.id))
 
-    # During extraction, phase should already be "scouting"
-    assert phases_during_extract[0] == "scouting"
+    # At commit time, phase should be "analyzing"
+    assert phase_at_commit[0] == "analyzing"
+
+
+# Test run_drift_analysis builds initial state with correct values
+def test_run_drift_analysis_builds_initial_state():
+    session, drift_event = _setup_run_mocks(docs_root_path="/documentation")
+    drift_event.id = "test-event-id"
+    drift_event.base_sha = "base123"
+    drift_event.head_sha = "head456"
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch("app.services.drift_analysis._extract_and_save_code_changes"),
+        patch("app.services.drift_analysis.drift_analysis_graph") as mock_graph,
+    ):
+        mock_path.return_value = Path("/repos/owner/repo")
+        mock_graph.invoke.return_value = {"change_elements": [], "findings": []}
+
+        run_drift_analysis(str(drift_event.id))
+
+        # Verify get_local_repo_path was called with the repo name
+        mock_path.assert_called_once_with("owner/repo")
+
+        # Verify the initial state passed to the graph has all correct values
+        invoked_state = mock_graph.invoke.call_args[0][0]
+        assert invoked_state["drift_event_id"] == "test-event-id"
+        assert invoked_state["base_sha"] == "base123"
+        assert invoked_state["head_sha"] == "head456"
+        assert invoked_state["session"] is session
+        assert invoked_state["repo_path"] == str(Path("/repos/owner/repo"))
+        assert invoked_state["docs_root_path"] == "/documentation"
+        assert invoked_state["change_elements"] == []
+        assert invoked_state["analysis_payloads"] == []
+        assert invoked_state["findings"] == []
