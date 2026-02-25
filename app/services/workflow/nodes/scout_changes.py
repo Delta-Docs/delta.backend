@@ -7,6 +7,7 @@ from app.db.base import CodeChange
 from app.services.workflow.state import DriftAnalysisState
 
 
+# Fetch route path strings from FastAPI/Flask style decorator arguments
 def _extract_routes_from_decorators(node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
     routes: list[str] = []
 
@@ -33,14 +34,17 @@ def _extract_routes_from_decorators(node: ast.FunctionDef | ast.AsyncFunctionDef
     return routes
 
 
+# Parses Python source and extract top level class/function names and route paths
 def _extract_elements_from_source(source: str, filename: str = "<string>") -> list[str]:
     elements: list[str] = []
 
     try:
+        # Gettng AST parse tress of the source
         tree = ast.parse(source, filename=filename)
     except SyntaxError:
         return elements
 
+    # Add nodes in parse tree to elements list if they are class or function def
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, ast.ClassDef):
             elements.append(node.name)
@@ -52,8 +56,10 @@ def _extract_elements_from_source(source: str, filename: str = "<string>") -> li
     return elements
 
 
+# Retrieves the content of a file at a specific git commit
 def _get_git_file_content(repo_path: str, commit_sha: str, file_path: str) -> str | None:
     try:
+        # Use git show at the specified commit sha
         result = subprocess.run(
             ["git", "-C", repo_path, "show", f"{commit_sha}:{file_path}"],
             capture_output=True,
@@ -67,12 +73,14 @@ def _get_git_file_content(repo_path: str, commit_sha: str, file_path: str) -> st
         return None
 
 
+# Node queries changed Python files (MVP supports only Python) and extracts their code elements
 def scout_changes(state: DriftAnalysisState) -> dict[str, Any]:
     session = state["session"]
     drift_event_id = state["drift_event_id"]
     repo_path = state["repo_path"]
     base_sha = state["base_sha"]
 
+    # Only consider changed files flagged as code
     code_changes = (
         session.query(CodeChange)
         .filter(
@@ -82,14 +90,17 @@ def scout_changes(state: DriftAnalysisState) -> dict[str, Any]:
         .all()
     )
 
+    # Check only Python files for AST based element extraction
     py_changes = [cc for cc in code_changes if cc.file_path.endswith(".py")]
 
     change_elements: list[dict] = []
 
+    # Extract current and previous code elements for each changed file
     for i, change in enumerate(py_changes, 1):
         elements: list[str] = []
         old_elements: list[str] = []
 
+        # For deleted files, reading elements only from the base commit
         if change.change_type == "deleted":
             old_source = _get_git_file_content(repo_path, base_sha, change.file_path)
             if old_source:
@@ -106,7 +117,7 @@ def scout_changes(state: DriftAnalysisState) -> dict[str, Any]:
             continue
 
         abs_path = os.path.join(repo_path, change.file_path)
-
+        # Read the source file content
         try:
             with open(abs_path, "r", encoding="utf-8") as f:
                 source = f.read()
@@ -124,6 +135,7 @@ def scout_changes(state: DriftAnalysisState) -> dict[str, Any]:
 
         elements = _extract_elements_from_source(source, change.file_path)
 
+        # For modified files, extract old elements along with new elements
         if change.change_type == "modified":
             old_source = _get_git_file_content(repo_path, base_sha, change.file_path)
             if old_source:

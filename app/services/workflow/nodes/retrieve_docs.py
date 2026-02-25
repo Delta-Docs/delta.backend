@@ -4,9 +4,11 @@ from typing import Any
 
 from app.services.workflow.state import DriftAnalysisState
 
-_CONTEXT_LINES = 10
+# Number of lines above and below a match to include in a snippet for context
+_CONTEXT_LINES = 15
 
 
+# Recursively loads all markdown files from the docs directory
 def _load_markdown_files(docs_dir: str) -> dict[str, str]:
     docs: dict[str, str] = {}
 
@@ -15,6 +17,7 @@ def _load_markdown_files(docs_dir: str) -> dict[str, str]:
 
     for root, _dirs, files in os.walk(docs_dir):
         for fname in files:
+            # Get all .md files
             if not fname.endswith(".md"):
                 continue
             abs_path = os.path.join(root, fname)
@@ -27,6 +30,7 @@ def _load_markdown_files(docs_dir: str) -> dict[str, str]:
     return docs
 
 
+# Returns a section of content around the first line that mentions the element
 def _extract_snippet(content: str, element: str, context_lines: int = _CONTEXT_LINES) -> str:
     lines = content.splitlines()
     for idx, line in enumerate(lines):
@@ -37,6 +41,7 @@ def _extract_snippet(content: str, element: str, context_lines: int = _CONTEXT_L
     return ""
 
 
+# Node searches documentation for references to changed code elements
 def retrieve_docs(state: DriftAnalysisState) -> dict[str, Any]:
     change_elements: list[dict] = state["change_elements"]
     repo_path: str = state["repo_path"]
@@ -48,12 +53,14 @@ def retrieve_docs(state: DriftAnalysisState) -> dict[str, Any]:
     docs_dir = os.path.join(repo_path, docs_root_path.lstrip("/"))
     doc_files = _load_markdown_files(docs_dir)
 
+    # For each changed file, search docs for any matching element names
     for i, ce in enumerate(change_elements, 1):
         file_path: str = ce["file_path"]
         change_type: str = ce["change_type"]
         elements: list[str] = ce["elements"]
         old_elements: list[str] = ce.get("old_elements", [])
 
+        # Combine current and old elements to find renamed identifiers
         search_terms: set[str] = set(elements + old_elements)
 
         if not search_terms:
@@ -61,6 +68,7 @@ def retrieve_docs(state: DriftAnalysisState) -> dict[str, Any]:
 
         matched_snippets: dict[str, list[str]] = {}
 
+        # Use prefix anchored regex for routes, word-boundary regex for identifiers
         for term in search_terms:
             if term.startswith("/"):
                 pattern = re.compile(re.escape(term) + r"(?:\b|$)")
@@ -72,6 +80,7 @@ def retrieve_docs(state: DriftAnalysisState) -> dict[str, Any]:
                     if snippet:
                         matched_snippets.setdefault(doc_path, []).append(snippet)
 
+        # Skip rest of the code for obvious findings that don't need LLM analysis
         total_matches = sum(len(s) for s in matched_snippets.values())
         if change_type == "added" and total_matches == 0:
             new_findings.append(
@@ -99,6 +108,7 @@ def retrieve_docs(state: DriftAnalysisState) -> dict[str, Any]:
             )
             continue
 
+        # Elements that need LLM analysis
         if total_matches == 0:
             continue
         combined_snippets = "\n\n---\n\n".join(

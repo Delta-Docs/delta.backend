@@ -9,7 +9,6 @@ from sqlalchemy import (
     text,
     BigInteger,
     UniqueConstraint,
-    Index,
 )
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship, Mapped, mapped_column

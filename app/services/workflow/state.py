@@ -2,6 +2,7 @@ import operator
 from typing import Annotated, Any, TypedDict
 
 
+# Shared state passed between each node of the drift analysis workflow
 class DriftAnalysisState(TypedDict):
     drift_event_id: str
     base_sha: str

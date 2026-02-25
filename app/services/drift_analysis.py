@@ -128,7 +128,7 @@ def run_drift_analysis(drift_event_id: str):
             "findings": [],
         }
 
-        final_state = drift_analysis_graph.invoke(initial_state)
+        drift_analysis_graph.invoke(initial_state)
 
     except Exception as e:
         print(f"ERROR: {e}")

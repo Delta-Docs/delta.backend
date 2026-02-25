@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 
+# Base Repository schema
 class RepositoryBase(BaseModel):
     repo_name: str
 

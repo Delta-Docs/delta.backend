@@ -7,6 +7,7 @@ from app.services.github_api import update_github_check_run
 from app.services.workflow.state import DriftAnalysisState
 
 
+# Node persists all findings to the DB and updates the GH Check Run
 def aggregate_results(state: DriftAnalysisState) -> dict[str, Any]:
     session = state["session"]
     drift_event_id = state["drift_event_id"]
@@ -14,6 +15,7 @@ def aggregate_results(state: DriftAnalysisState) -> dict[str, Any]:
     change_elements: list[dict] = state["change_elements"]
     analysis_payloads: list[dict] = state["analysis_payloads"]
 
+    # Determine overall drift score and conclusion from all findings
     if not findings:
         overall_score = 0.0
         drift_result = "clean"
@@ -22,8 +24,9 @@ def aggregate_results(state: DriftAnalysisState) -> dict[str, Any]:
         has_missing = any(f.get("drift_type") == "missing_docs" for f in findings)
         drift_result = "missing_docs" if has_missing else "drift_detected"
 
+    # Build a human readable summary for the GH Check Run output
     if drift_result == "clean":
-        summary = "Clean - No documentation drift detected."
+        summary = "No documentation drift detected."
     else:
         drift_types = set(f.get("drift_type", "") for f in findings)
         summary = (
@@ -34,6 +37,7 @@ def aggregate_results(state: DriftAnalysisState) -> dict[str, Any]:
             summary += f"{i}. {f.get('code_path', '?')} - {f.get('drift_type', '?')} (score: {f.get('drift_score', 0):.1f})\n"
             summary += f"   {f.get('explanation', '')}\n\n"
 
+    # Compile agent logs for debugging and audit trails
     file_names = [ce.get("file_path", "?") for ce in change_elements]
     total_elements = sum(len(ce.get("elements", [])) for ce in change_elements)
     total_old = sum(len(ce.get("old_elements", [])) for ce in change_elements)
@@ -58,11 +62,12 @@ def aggregate_results(state: DriftAnalysisState) -> dict[str, Any]:
         else "No payloads required LLM analysis. All resolved during retrieval.",
         "Result": (
             f"Overall drift score: {overall_score:.2f}. "
-            f"Verdict: {drift_result}. "
+            f"Conclusion: {drift_result}. "
             f"Total findings: {len(findings)}."
         ),
     }
 
+    # Add each finding as a DriftFinding record in DB
     for f in findings:
         doc_paths = f.get("matched_doc_paths", [])
         doc_file_path = doc_paths[0] if doc_paths else None
@@ -79,6 +84,7 @@ def aggregate_results(state: DriftAnalysisState) -> dict[str, Any]:
         )
         session.add(finding)
 
+    # Update the drift event record with the final score, conclusion and logs
     drift_event = session.query(DriftEvent).filter(DriftEvent.id == drift_event_id).first()
 
     if drift_event:
@@ -93,6 +99,7 @@ def aggregate_results(state: DriftAnalysisState) -> dict[str, Any]:
         print(f"DriftEvent {drift_event_id} not found in DB")
         session.commit()
 
+    # Push the final result to GH as a completed Check Run
     if drift_event and drift_event.check_run_id:
         repo = drift_event.repository
         repo_full_name = repo.repo_name
