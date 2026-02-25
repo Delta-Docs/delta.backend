@@ -15,6 +15,7 @@ keys/
 
 # Testing & Coverage
 .coverage
+.coverage.**
 
 # OS
 .DS_Store
