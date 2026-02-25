@@ -122,7 +122,9 @@ def test_missing_docs_result():
 
 
 # Tests that when check_run_id exists, update_github_check_run is called.
-@patch("app.services.workflow.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock)
+@patch(
+    "app.services.workflow.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock
+)
 def test_check_run_updated(mock_update):
     findings = [
         {
@@ -146,7 +148,9 @@ def test_check_run_updated(mock_update):
 
 
 # Tests that when there is no check_run_id, the update helper is not called.
-@patch("app.services.workflow.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock)
+@patch(
+    "app.services.workflow.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock
+)
 def test_check_run_skipped_when_none(mock_update):
     state = _make_state(findings=[])
     drift_event = _make_drift_event(check_run_id=None)
