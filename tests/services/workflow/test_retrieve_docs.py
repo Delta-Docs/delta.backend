@@ -30,7 +30,12 @@ def test_fast_track_missing_docs(tmp_path):
     state = _make_state(
         repo_path=str(tmp_path),
         change_elements=[
-            {"file_path": "src/new_module.py", "change_type": "added", "elements": ["NewClass", "helper_fn"], "old_elements": []},
+            {
+                "file_path": "src/new_module.py",
+                "change_type": "added",
+                "elements": ["NewClass", "helper_fn"],
+                "old_elements": [],
+            },
         ],
     )
 
@@ -55,7 +60,12 @@ def test_added_with_matches_no_finding(tmp_path):
     state = _make_state(
         repo_path=str(tmp_path),
         change_elements=[
-            {"file_path": "src/new_module.py", "change_type": "added", "elements": ["NewClass"], "old_elements": []},
+            {
+                "file_path": "src/new_module.py",
+                "change_type": "added",
+                "elements": ["NewClass"],
+                "old_elements": [],
+            },
         ],
     )
 
@@ -87,7 +97,12 @@ def test_matched_docs_produce_payload(tmp_path):
     state = _make_state(
         repo_path=str(tmp_path),
         change_elements=[
-            {"file_path": "src/tax.py", "change_type": "modified", "elements": ["calculate_tax"], "old_elements": ["calculate_tax"]},
+            {
+                "file_path": "src/tax.py",
+                "change_type": "modified",
+                "elements": ["calculate_tax"],
+                "old_elements": ["calculate_tax"],
+            },
         ],
     )
 
@@ -137,7 +152,12 @@ def test_deleted_files_with_docs(tmp_path):
     state = _make_state(
         repo_path=str(tmp_path),
         change_elements=[
-            {"file_path": "src/legacy.py", "change_type": "deleted", "elements": [], "old_elements": ["OldClass"]},
+            {
+                "file_path": "src/legacy.py",
+                "change_type": "deleted",
+                "elements": [],
+                "old_elements": ["OldClass"],
+            },
         ],
     )
 
@@ -207,7 +227,12 @@ def test_empty_elements_skipped(tmp_path):
     state = _make_state(
         repo_path=str(tmp_path),
         change_elements=[
-            {"file_path": "src/empty.py", "change_type": "modified", "elements": [], "old_elements": []},
+            {
+                "file_path": "src/empty.py",
+                "change_type": "modified",
+                "elements": [],
+                "old_elements": [],
+            },
         ],
     )
 
@@ -223,7 +248,12 @@ def test_missing_docs_dir(tmp_path):
         repo_path=str(tmp_path),
         docs_root_path="/nonexistent_docs",
         change_elements=[
-            {"file_path": "src/app.py", "change_type": "added", "elements": ["App"], "old_elements": []},
+            {
+                "file_path": "src/app.py",
+                "change_type": "added",
+                "elements": ["App"],
+                "old_elements": [],
+            },
         ],
     )
 
@@ -240,7 +270,12 @@ def test_modified_zero_matches_outdated_docs(tmp_path):
     state = _make_state(
         repo_path=str(tmp_path),
         change_elements=[
-            {"file_path": "src/routes.py", "change_type": "modified", "elements": ["/today", "get_date"], "old_elements": []},
+            {
+                "file_path": "src/routes.py",
+                "change_type": "modified",
+                "elements": ["/today", "get_date"],
+                "old_elements": [],
+            },
         ],
     )
 
@@ -259,7 +294,12 @@ def test_deleted_zero_matches_skipped(tmp_path):
     state = _make_state(
         repo_path=str(tmp_path),
         change_elements=[
-            {"file_path": "src/old.py", "change_type": "deleted", "elements": [], "old_elements": ["OldThing"]},
+            {
+                "file_path": "src/old.py",
+                "change_type": "deleted",
+                "elements": [],
+                "old_elements": ["OldThing"],
+            },
         ],
     )
 

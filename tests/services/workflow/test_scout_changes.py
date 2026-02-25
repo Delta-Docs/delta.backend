@@ -167,6 +167,7 @@ def test_scout_changes_modified_extracts_old_and_new(tmp_path):
     assert "get_date" in elem["old_elements"]
     assert "/date" in elem["old_elements"]
 
+
 # Tests that deleted files get old_elements from base commit via git show.
 def test_scout_changes_deleted_extracts_old_elements():
     old_source = textwrap.dedent("""\

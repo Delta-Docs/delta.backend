@@ -161,7 +161,10 @@ def test_check_run_skipped_when_none(mock_asyncio):
 def test_agent_logs_populated():
     state = _make_state(
         findings=[],
-        change_elements=[{"file_path": "a.py", "elements": ["Foo"], "old_elements": []}, {"file_path": "b.py", "elements": ["Bar"], "old_elements": []}],
+        change_elements=[
+            {"file_path": "a.py", "elements": ["Foo"], "old_elements": []},
+            {"file_path": "b.py", "elements": ["Bar"], "old_elements": []},
+        ],
         analysis_payloads=[{"code_path": "a.py"}],
     )
     drift_event = _make_drift_event()

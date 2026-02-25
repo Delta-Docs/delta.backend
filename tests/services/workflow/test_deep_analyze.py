@@ -37,7 +37,9 @@ def _mock_drift_finding(drift_detected: bool, **kwargs) -> LLMDriftFinding:
         "drift_detected": drift_detected,
         "drift_type": drift_type,
         "drift_score": 0.9 if drift_detected else 0.0,
-        "explanation": "Route changed from /date to /today but docs still say /date." if drift_detected else "Docs are up to date.",
+        "explanation": "Route changed from /date to /today but docs still say /date."
+        if drift_detected
+        else "Docs are up to date.",
         "confidence": 0.95 if drift_detected else 0.9,
     }
     defaults.update(kwargs)
