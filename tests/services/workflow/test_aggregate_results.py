@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.workflow.nodes.aggregate_results import aggregate_results
 from app.services.workflow.state import DriftAnalysisState
@@ -122,8 +122,8 @@ def test_missing_docs_result():
 
 
 # Tests that when check_run_id exists, update_github_check_run is called.
-@patch("app.services.workflow.nodes.aggregate_results.asyncio")
-def test_check_run_updated(mock_asyncio):
+@patch("app.services.workflow.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock)
+def test_check_run_updated(mock_update):
     findings = [
         {
             "code_path": "src/api.py",
@@ -142,19 +142,19 @@ def test_check_run_updated(mock_asyncio):
         mock_finding_cls.return_value = MagicMock()
         aggregate_results(state)
 
-    mock_asyncio.run.assert_called_once()
+    mock_update.assert_called_once()
 
 
 # Tests that when there is no check_run_id, the update helper is not called.
-@patch("app.services.workflow.nodes.aggregate_results.asyncio")
-def test_check_run_skipped_when_none(mock_asyncio):
+@patch("app.services.workflow.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock)
+def test_check_run_skipped_when_none(mock_update):
     state = _make_state(findings=[])
     drift_event = _make_drift_event(check_run_id=None)
     state["session"].query.return_value.filter.return_value.first.return_value = drift_event
 
     aggregate_results(state)
 
-    mock_asyncio.run.assert_not_called()
+    mock_update.assert_not_called()
 
 
 # Tests that the agent_logs JSONB field is populated.
