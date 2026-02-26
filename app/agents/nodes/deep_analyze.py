@@ -4,8 +4,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.core.config import settings
 from app.schemas import LLMDriftFinding
-from app.services.workflow.state import DriftAnalysisState
-from app.services.workflow.prompts import DEEP_ANALYZE_SYSTEM_PROMPT, build_deep_analyze_user_prompt
+from app.agents.state import DriftAnalysisState
+from app.agents.prompts import DEEP_ANALYZE_SYSTEM_PROMPT, build_deep_analyze_user_prompt
 
 
 # Return git diff output for a specific file between commits

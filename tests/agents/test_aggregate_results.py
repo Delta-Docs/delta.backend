@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.workflow.nodes.aggregate_results import aggregate_results
-from app.services.workflow.state import DriftAnalysisState
+from app.agents.nodes.aggregate_results import aggregate_results
+from app.agents.state import DriftAnalysisState
 
 
 # Helper function to build a minimal state dictionary
@@ -73,7 +73,7 @@ def test_drift_detected_persists_findings():
     drift_event = _make_drift_event()
     state["session"].query.return_value.filter.return_value.first.return_value = drift_event
 
-    with patch("app.services.workflow.nodes.aggregate_results.DriftFinding") as mock_finding_cls:
+    with patch("app.agents.nodes.aggregate_results.DriftFinding") as mock_finding_cls:
         mock_finding_cls.return_value = MagicMock()
         result = aggregate_results(state)
 
@@ -110,7 +110,7 @@ def test_missing_docs_result():
     drift_event = _make_drift_event()
     state["session"].query.return_value.filter.return_value.first.return_value = drift_event
 
-    with patch("app.services.workflow.nodes.aggregate_results.DriftFinding") as mock_finding_cls:
+    with patch("app.agents.nodes.aggregate_results.DriftFinding") as mock_finding_cls:
         mock_finding_cls.return_value = MagicMock()
         aggregate_results(state)
 
@@ -122,9 +122,7 @@ def test_missing_docs_result():
 
 
 # Tests that when check_run_id exists, update_github_check_run is called.
-@patch(
-    "app.services.workflow.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock
-)
+@patch("app.agents.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock)
 def test_check_run_updated(mock_update):
     findings = [
         {
@@ -140,7 +138,7 @@ def test_check_run_updated(mock_update):
     drift_event = _make_drift_event(check_run_id=999)
     state["session"].query.return_value.filter.return_value.first.return_value = drift_event
 
-    with patch("app.services.workflow.nodes.aggregate_results.DriftFinding") as mock_finding_cls:
+    with patch("app.agents.nodes.aggregate_results.DriftFinding") as mock_finding_cls:
         mock_finding_cls.return_value = MagicMock()
         aggregate_results(state)
 
@@ -148,9 +146,7 @@ def test_check_run_updated(mock_update):
 
 
 # Tests that when there is no check_run_id, the update helper is not called.
-@patch(
-    "app.services.workflow.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock
-)
+@patch("app.agents.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock)
 def test_check_run_skipped_when_none(mock_update):
     state = _make_state(findings=[])
     drift_event = _make_drift_event(check_run_id=None)

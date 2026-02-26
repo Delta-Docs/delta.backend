@@ -1,11 +1,11 @@
 import textwrap
 from unittest.mock import MagicMock, patch
 
-from app.services.workflow.nodes.scout_changes import (
+from app.agents.nodes.scout_changes import (
     scout_changes,
     _extract_elements_from_source,
 )
-from app.services.workflow.state import DriftAnalysisState
+from app.agents.state import DriftAnalysisState
 
 
 # Helper function to build a mock CodeChange row
@@ -156,7 +156,7 @@ def test_scout_changes_modified_extracts_old_and_new(tmp_path):
     state = _make_state(repo_path=str(tmp_path), code_changes=[cc])
 
     with patch(
-        "app.services.workflow.nodes.scout_changes._get_git_file_content",
+        "app.agents.nodes.scout_changes._get_git_file_content",
         return_value=old_source,
     ):
         result = scout_changes(state)
@@ -182,7 +182,7 @@ def test_scout_changes_deleted_extracts_old_elements():
     state = _make_state(code_changes=[cc])
 
     with patch(
-        "app.services.workflow.nodes.scout_changes._get_git_file_content",
+        "app.agents.nodes.scout_changes._get_git_file_content",
         return_value=old_source,
     ):
         result = scout_changes(state)
@@ -198,7 +198,7 @@ def test_scout_changes_deleted_git_show_fails():
     state = _make_state(code_changes=[cc])
 
     with patch(
-        "app.services.workflow.nodes.scout_changes._get_git_file_content",
+        "app.agents.nodes.scout_changes._get_git_file_content",
         return_value=None,
     ):
         result = scout_changes(state)
@@ -230,7 +230,7 @@ def test_scout_changes_handles_syntax_error(tmp_path):
     state = _make_state(repo_path=str(tmp_path), code_changes=[cc])
 
     with patch(
-        "app.services.workflow.nodes.scout_changes._get_git_file_content",
+        "app.agents.nodes.scout_changes._get_git_file_content",
         return_value=None,
     ):
         result = scout_changes(state)

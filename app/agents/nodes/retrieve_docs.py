@@ -2,7 +2,7 @@ import os
 import re
 from typing import Any
 
-from app.services.workflow.state import DriftAnalysisState
+from app.agents.state import DriftAnalysisState
 
 # Number of lines above and below a match to include in a snippet for context
 _CONTEXT_LINES = 15

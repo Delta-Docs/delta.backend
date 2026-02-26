@@ -180,8 +180,14 @@ delta.backend/
 │   ├── versions/                        # Migration files
 │   ├── env.py                           # Alembic environment config
 │   └── script.py.mako                   # Migration template
-│         
+│
 ├── app/                                 # Main application code
+│   ├── agents/                          # LangGraph multi-agent workflow
+│   │   ├── graph.py                     # LangGraph workflow graph
+│   │   ├── prompts.py                   # Agent prompts
+│   │   ├── state.py                     # Workflow state definitions
+│   │   └── nodes/                       # Agent nodes
+│   │
 │   ├── core/                            # Core functionality
 │   │         
 │   ├── db/                              # Database configuration
@@ -197,11 +203,17 @@ delta.backend/
 │   ├── api.py                           # API router aggregation
 │   ├── deps.py                          # Dependency injection
 │   └── main.py                          # FastAPI application entry point
-│         
-├── bruno/                               # API testing (Bruno client)         
+│
+├── bruno/                               # API testing (Bruno client)
+│   ├── auth/                            # Auth request collection
+│   ├── dashboard/                       # Dashboard request collection
+│   ├── environments/                    # Bruno environments
+│   └── repos/                           # Repos request collection
+│
 ├── docs/                                # Markdown files for documentation
 ├── images/                              # Diagrams that are shown in docs
 ├── keys/                                # GitHub App private key (gitignored)
+├── repos/                               # Cloned repositories (gitignored)
 ├── tests/                               # Unit & Integration tests
 │         
 ├── .env                                 # Environment variables (gitignored)

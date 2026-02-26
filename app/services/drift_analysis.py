@@ -7,8 +7,8 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.db.base import DriftEvent, CodeChange
 from app.services.git_service import get_local_repo_path
-from app.services.workflow.state import DriftAnalysisState
-from app.services.workflow.graph import drift_analysis_graph
+from app.agents.state import DriftAnalysisState
+from app.agents.graph import drift_analysis_graph
 
 
 # Creates a separate SQLAlchemy session for use in background tasks

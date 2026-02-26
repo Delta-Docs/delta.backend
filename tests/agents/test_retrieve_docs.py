@@ -1,7 +1,7 @@
 import textwrap
 
-from app.services.workflow.nodes.retrieve_docs import retrieve_docs
-from app.services.workflow.state import DriftAnalysisState
+from app.agents.nodes.retrieve_docs import retrieve_docs
+from app.agents.state import DriftAnalysisState
 
 
 # Helper function to build a minimal state dictionary

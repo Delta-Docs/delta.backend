@@ -4,7 +4,7 @@ import subprocess
 from typing import Any
 
 from app.db.base import CodeChange
-from app.services.workflow.state import DriftAnalysisState
+from app.agents.state import DriftAnalysisState
 
 
 # Fetch route path strings from FastAPI/Flask style decorator arguments

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from app.db.base import DriftEvent, DriftFinding
 from app.services.github_api import update_github_check_run
-from app.services.workflow.state import DriftAnalysisState
+from app.agents.state import DriftAnalysisState
 
 
 # Node persists all findings to the DB and updates the GH Check Run

@@ -1,11 +1,11 @@
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.state import CompiledStateGraph
 
-from app.services.workflow.state import DriftAnalysisState
-from app.services.workflow.nodes.scout_changes import scout_changes
-from app.services.workflow.nodes.retrieve_docs import retrieve_docs
-from app.services.workflow.nodes.deep_analyze import deep_analyze
-from app.services.workflow.nodes.aggregate_results import aggregate_results
+from app.agents.state import DriftAnalysisState
+from app.agents.nodes.scout_changes import scout_changes
+from app.agents.nodes.retrieve_docs import retrieve_docs
+from app.agents.nodes.deep_analyze import deep_analyze
+from app.agents.nodes.aggregate_results import aggregate_results
 
 
 # Build and compile the drift analysis LangGraph workflow

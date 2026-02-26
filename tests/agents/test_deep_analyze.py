@@ -1,11 +1,11 @@
 from typing import Literal
 from unittest.mock import patch, MagicMock
 
-from app.services.workflow.nodes.deep_analyze import (
+from app.agents.nodes.deep_analyze import (
     deep_analyze,
     LLMDriftFinding,
 )
-from app.services.workflow.state import DriftAnalysisState
+from app.agents.state import DriftAnalysisState
 
 
 # Helper function to build a minimal state dictionary
@@ -56,8 +56,8 @@ def test_empty_payloads_returns_empty():
 
 
 # Tests that when the LLM returns drift_detected=True, a finding dict is appended.
-@patch("app.services.workflow.nodes.deep_analyze._get_git_diff")
-@patch("app.services.workflow.nodes.deep_analyze.ChatGoogleGenerativeAI")
+@patch("app.agents.nodes.deep_analyze._get_git_diff")
+@patch("app.agents.nodes.deep_analyze.ChatGoogleGenerativeAI")
 def test_drift_detected_produces_finding(mock_llm_class, mock_get_diff):
     mock_get_diff.return_value = "- @app.route('/date')\n+ @app.route('/today')"
 
@@ -92,8 +92,8 @@ def test_drift_detected_produces_finding(mock_llm_class, mock_get_diff):
 
 
 # Tests that when the LLM returns drift_detected=False, no findings are appended.
-@patch("app.services.workflow.nodes.deep_analyze._get_git_diff")
-@patch("app.services.workflow.nodes.deep_analyze.ChatGoogleGenerativeAI")
+@patch("app.agents.nodes.deep_analyze._get_git_diff")
+@patch("app.agents.nodes.deep_analyze.ChatGoogleGenerativeAI")
 def test_no_drift_skipped(mock_llm_class, mock_get_diff):
     mock_get_diff.return_value = "- # old comment\n+ # new comment"
 
@@ -121,7 +121,7 @@ def test_no_drift_skipped(mock_llm_class, mock_get_diff):
 
 
 # Tests that when the git diff returns None, the payload is skipped.
-@patch("app.services.workflow.nodes.deep_analyze._get_git_diff")
+@patch("app.agents.nodes.deep_analyze._get_git_diff")
 def test_git_diff_error_handled(mock_get_diff):
     mock_get_diff.return_value = None
 
@@ -143,8 +143,8 @@ def test_git_diff_error_handled(mock_get_diff):
 
 
 # Tests that with two payloads where one has drift and one doesn't, only one finding is produced.
-@patch("app.services.workflow.nodes.deep_analyze._get_git_diff")
-@patch("app.services.workflow.nodes.deep_analyze.ChatGoogleGenerativeAI")
+@patch("app.agents.nodes.deep_analyze._get_git_diff")
+@patch("app.agents.nodes.deep_analyze.ChatGoogleGenerativeAI")
 def test_multiple_payloads(mock_llm_class, mock_get_diff):
     mock_get_diff.return_value = "some diff content"
 
@@ -183,8 +183,8 @@ def test_multiple_payloads(mock_llm_class, mock_get_diff):
 
 
 # Tests that when the LLM raises an exception, the payload is skipped without crashing.
-@patch("app.services.workflow.nodes.deep_analyze._get_git_diff")
-@patch("app.services.workflow.nodes.deep_analyze.ChatGoogleGenerativeAI")
+@patch("app.agents.nodes.deep_analyze._get_git_diff")
+@patch("app.agents.nodes.deep_analyze.ChatGoogleGenerativeAI")
 def test_llm_exception_handled(mock_llm_class, mock_get_diff):
     mock_get_diff.return_value = "some diff"
 
