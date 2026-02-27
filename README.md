@@ -17,7 +17,7 @@
 - [Team](#team)
 
 
-> **More documentation available at [docs/](docs/). See:**
+> **More documentation available at [/docs](/docs). See:**
 > - [API Documentation](docs/API_DOCUMENTATON.md)
 > - [Auth Documentation](docs/AUTH_DOCUMENTATION.md)
 > - [Database Documentation](docs/DB_DOCUMENTATION.md)
@@ -122,6 +122,12 @@ make down
 
 # Clean cache files
 make clean
+
+# Run ruff and pyrefly linting
+make lint
+
+# Run ruff's formatter
+make format
 ```
 
 > **NOTE**: The `make` commands are designed to work only on Linux.  

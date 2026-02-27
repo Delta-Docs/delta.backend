@@ -55,20 +55,6 @@ CREATE TABLE repositories (
 );
 ```
 
-### Doc Coverage Map Table
-```sql
-CREATE TABLE doc_coverage_map (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    repo_id UUID REFERENCES repositories(id) ON DELETE CASCADE,
-    code_path VARCHAR NOT NULL,
-    doc_file_path VARCHAR,
-    last_verified_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(repo_id, code_path, doc_file_path)
-);
-
-CREATE INDEX idx_coverage_repo ON doc_coverage_map(repo_id);
-```
-
 ### Drift Events Table
 ```sql
 CREATE TABLE drift_events (
