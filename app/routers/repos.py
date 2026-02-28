@@ -3,9 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.deps import get_db_connection, get_current_user
+from app.models.drift import DriftEvent
 from app.models.user import User
 from app.models.installation import Installation
 from app.models.repository import Repository
+from app.schemas.drift import DriftEventResponse
 from app.schemas.repository import RepositorySettings, RepositoryActivation, RepositoryResponse
 
 router = APIRouter()
@@ -79,3 +81,31 @@ def toggle_repo_activation(
     db.commit()
     db.refresh(repo)
     return repo
+
+
+# Endpoint to get all drift events for a repo
+@router.get("/{repo_id}/drift-events", response_model=list[DriftEventResponse])
+def get_drift_events(
+    repo_id: UUID,
+    db: Session = Depends(get_db_connection),
+    current_user: User = Depends(get_current_user),
+):
+    # Making sure the user actually owns the repo
+    repo = (
+        db.query(Repository)
+        .join(Installation, Repository.installation_id == Installation.installation_id)
+        .filter(Repository.id == repo_id, Installation.user_id == current_user.id)
+        .first()
+    )
+
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    # Returning the drift events
+    events = (
+        db.query(DriftEvent)
+        .filter(DriftEvent.repo_id == repo_id)
+        .order_by(DriftEvent.created_at.desc())
+        .all()
+    )
+    return events

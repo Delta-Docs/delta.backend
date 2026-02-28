@@ -1,5 +1,7 @@
-from typing import Literal
-from pydantic import BaseModel, Field
+import uuid
+from datetime import datetime
+from typing import Literal, Optional
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # Structured output schema for the LLM drift assessment
@@ -19,3 +21,21 @@ class LLMDriftFinding(BaseModel):
     confidence: float = Field(
         ge=0.0, le=1.0, description="How confident the LLM is in this assessment."
     )
+
+# Schema for the drift event response
+class DriftEventResponse(BaseModel):
+    id: uuid.UUID
+    repo_id: Optional[uuid.UUID]
+    pr_number: int
+    base_branch: str
+    head_branch: str
+    processing_phase: str
+    drift_result: str
+    overall_drift_score: Optional[float]
+    summary: Optional[str]
+    error_message: Optional[str]
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
