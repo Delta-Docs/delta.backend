@@ -164,6 +164,29 @@ Update repository configuration.
 }
 ```
 
+### GET `/repos/{repo_id}/drift-events`
+Get all drift events for a repository, ordered by most recent first.
+
+**Response:**
+```json
+[
+  {
+    "id": "a3f9c120-12d4-4b3e-9c7a-1a2b3c4d5e6f",
+    "pr_number": 42,
+    "base_branch": "main",
+    "head_branch": "feat/update-auth",
+    "processing_phase": "completed",
+    "drift_result": "drift_detected",
+    "overall_drift_score": 0.8,
+    "summary": "Authentication flow was updated but related docs were not.",
+    "error_message": null,
+    "started_at": "2026-02-28T19:59:19.752504Z",
+    "completed_at": "2026-02-28T19:59:22.853917Z",
+    "created_at": "2026-02-28T19:59:10.705067Z"
+  }
+]
+```
+
 ## Dashboard Endpoints (`/api/dashboard`)
 
 ### GET `/dashboard/stats`

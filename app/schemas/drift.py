@@ -25,7 +25,6 @@ class LLMDriftFinding(BaseModel):
 # Schema for the drift event response
 class DriftEventResponse(BaseModel):
     id: uuid.UUID
-    repo_id: Optional[uuid.UUID]
     pr_number: int
     base_branch: str
     head_branch: str
