@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from app.db.base import DriftEvent, DriftFinding
 from app.services.github_api import update_github_check_run
+from app.services.notification_service import create_notification
 from app.agents.state import DriftAnalysisState
 
 
@@ -94,6 +95,20 @@ def aggregate_results(state: DriftAnalysisState) -> dict[str, Any]:
         drift_event.agent_logs = agent_logs
         drift_event.processing_phase = "completed"
         drift_event.completed_at = datetime.now(timezone.utc)
+
+        if drift_event.repository and drift_event.repository.installation:
+            user_id = drift_event.repository.installation.user_id
+            if user_id:
+                repo_name = drift_event.repository.repo_name
+                pr_number = drift_event.pr_number
+                if drift_result == "clean":
+                    notif_content = f"Drift analysis for PR #{pr_number} in {repo_name} completed - No documentation drift detected."
+                elif drift_result == "missing_docs":
+                    notif_content = f"Drift analysis for PR #{pr_number} in {repo_name} completed - Missing documentation detected (score: {overall_score:.2f})."
+                else:
+                    notif_content = f"Drift analysis for PR #{pr_number} in {repo_name} completed - Documentation drift detected (score: {overall_score:.2f})."
+                create_notification(session, user_id, notif_content)
+
         session.commit()
     else:
         print(f"DriftEvent {drift_event_id} not found in DB")
