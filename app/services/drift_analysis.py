@@ -1,3 +1,4 @@
+import asyncio
 import fnmatch
 import subprocess
 from datetime import datetime, timezone
@@ -8,6 +9,8 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.db.base import DriftEvent, CodeChange
 from app.services.git_service import get_local_repo_path
+from app.services.github_api import update_github_check_run
+from app.services.notification_service import create_notification
 from app.agents.state import DriftAnalysisState
 from app.agents.graph import drift_analysis_graph
 
@@ -139,6 +142,49 @@ def run_drift_analysis(drift_event_id: str):
     except Exception as e:
         print(f"ERROR: {e}")
         session.rollback()
+
+        # Mark the event as failed and notify the user
+        try:
+            drift_event = session.query(DriftEvent).filter(DriftEvent.id == drift_event_id).first()
+            if drift_event:
+                drift_event.processing_phase = "failed"
+                drift_event.drift_result = "error"
+                drift_event.error_message = str(e)
+
+                if drift_event.repository and drift_event.repository.installation:
+                    repo = drift_event.repository
+                    user_id = repo.installation.user_id
+
+                    # Update the GitHub check run to reflect failure
+                    if drift_event.check_run_id:
+                        try:
+                            asyncio.run(
+                                update_github_check_run(
+                                    repo_full_name=repo.repo_name,
+                                    check_run_id=drift_event.check_run_id,
+                                    installation_id=repo.installation_id,
+                                    status="completed",
+                                    conclusion="failure",
+                                    title="Delta Drift Analysis",
+                                    summary="Drift analysis failed due to an internal error.",
+                                )
+                            )
+                        except Exception as check_run_e:
+                            print(f"Failed to update check run on failure: {check_run_e}")
+
+                    # Creating a notification for the failure of drift analysis
+                    if user_id:
+                        create_notification(
+                            session,
+                            user_id,
+                            f"Drift analysis for PR #{drift_event.pr_number} in {repo.repo_name} failed.",
+                        )
+
+                session.commit()
+        except Exception as inner_e:
+            print(f"Failed to mark drift event as failed: {inner_e}")
+            session.rollback()
+
         raise
     finally:
         session.close()
