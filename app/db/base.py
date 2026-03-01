@@ -7,3 +7,4 @@ from app.models.drift import (
     DriftFinding as DriftFinding,
     CodeChange as CodeChange,
 )
+from app.models.notification import Notification as Notification
