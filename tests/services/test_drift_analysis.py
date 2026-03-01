@@ -568,6 +568,53 @@ def test_run_drift_analysis_failure_check_run_error_doesnt_break_cleanup():
     session.commit.assert_called()
 
 
+# Test notification is sent on failure with the correct content
+def test_run_drift_analysis_failure_sends_notification():
+    session, drift_event, drift_event_id = _setup_failure_mocks()
+    user_id = drift_event.repository.installation.user_id
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch(
+            "app.services.drift_analysis._extract_and_save_code_changes",
+            side_effect=RuntimeError("something broke"),
+        ),
+        patch("app.services.drift_analysis.asyncio.run"),
+        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock),
+        patch("app.services.drift_analysis.create_notification") as mock_notif,
+    ):
+        with pytest.raises(RuntimeError):
+            run_drift_analysis(drift_event_id)
+
+    mock_notif.assert_called_once()
+    _, notif_user_id, content = mock_notif.call_args[0]
+    assert notif_user_id == user_id
+    assert "PR #42" in content
+    assert "owner/repo" in content
+    assert "failed" in content
+
+
+# Test no notification is sent when installation has no user_id
+def test_run_drift_analysis_failure_no_notification_when_no_user_id():
+    session, drift_event, drift_event_id = _setup_failure_mocks()
+    drift_event.repository.installation.user_id = None
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch(
+            "app.services.drift_analysis._extract_and_save_code_changes",
+            side_effect=RuntimeError("something broke"),
+        ),
+        patch("app.services.drift_analysis.asyncio.run"),
+        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock),
+        patch("app.services.drift_analysis.create_notification") as mock_notif,
+    ):
+        with pytest.raises(RuntimeError):
+            run_drift_analysis(drift_event_id)
+
+    mock_notif.assert_not_called()
+
+
 # Test wildcard pattern matching (e.g. *.cfg and directory prefix patterns)
 def test_extract_and_save_code_changes_wildcard_pattern():
     drift_event = _make_drift_event(file_ignore_patterns=["*.cfg", "config/*"])
