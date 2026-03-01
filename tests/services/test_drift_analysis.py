@@ -8,12 +8,18 @@ from app.services.drift_analysis import _extract_and_save_code_changes, run_drif
 
 
 # Helper to create a mock drift event with repository info
-def _make_drift_event(base_sha="abc123", head_sha="def456", repo_name="owner/repo"):
+def _make_drift_event(
+    base_sha="abc123",
+    head_sha="def456",
+    repo_name="owner/repo",
+    file_ignore_patterns=None,
+):
     drift_event = MagicMock()
     drift_event.id = uuid4()
     drift_event.base_sha = base_sha
     drift_event.head_sha = head_sha
     drift_event.repository.repo_name = repo_name
+    drift_event.repository.file_ignore_patterns = file_ignore_patterns
     return drift_event
 
 
@@ -330,3 +336,103 @@ def test_run_drift_analysis_builds_initial_state():
         assert invoked_state["change_elements"] == []
         assert invoked_state["analysis_payloads"] == []
         assert invoked_state["findings"] == []
+
+
+# Test files matching an ignore pattern are saved with is_ignored=True
+def test_extract_and_save_code_changes_ignores_pattern_match():
+    drift_event = _make_drift_event(file_ignore_patterns=["tests/*", "*.lock"])
+    session = MagicMock()
+
+    git_diff_output = "A\tsrc/main.py\nA\ttests/test_main.py\nA\tpoetry.lock\n"
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = git_diff_output
+
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+
+        _extract_and_save_code_changes(session, drift_event)
+
+    added_changes = [c.args[0] for c in session.add.call_args_list]
+    is_ignored_flags = {c.file_path: c.is_ignored for c in added_changes}
+
+    assert is_ignored_flags["src/main.py"] is False
+    assert is_ignored_flags["tests/test_main.py"] is True
+    assert is_ignored_flags["poetry.lock"] is True
+
+
+# Test files not matching any pattern are saved with is_ignored=False
+def test_extract_and_save_code_changes_no_match_not_ignored():
+    drift_event = _make_drift_event(file_ignore_patterns=["migrations/*"])
+    session = MagicMock()
+
+    git_diff_output = "M\tsrc/api.py\nM\tsrc/models.py\n"
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = git_diff_output
+
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+
+        _extract_and_save_code_changes(session, drift_event)
+
+    added_changes = [c.args[0] for c in session.add.call_args_list]
+    assert all(c.is_ignored is False for c in added_changes)
+
+
+# Test with no ignore patterns set (None), all files should be is_ignored=False
+def test_extract_and_save_code_changes_no_ignore_patterns():
+    drift_event = _make_drift_event(file_ignore_patterns=None)
+    session = MagicMock()
+
+    git_diff_output = "A\tsrc/app.py\nA\ttests/test_app.py\n"
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = git_diff_output
+
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+
+        _extract_and_save_code_changes(session, drift_event)
+
+    added_changes = [c.args[0] for c in session.add.call_args_list]
+    assert all(c.is_ignored is False for c in added_changes)
+
+
+# Test wildcard pattern matching (e.g. *.cfg and directory prefix patterns)
+def test_extract_and_save_code_changes_wildcard_pattern():
+    drift_event = _make_drift_event(file_ignore_patterns=["*.cfg", "config/*"])
+    session = MagicMock()
+
+    git_diff_output = "M\tsetup.cfg\nM\tconfig/settings.py\nM\tsrc/service.py\n"
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = git_diff_output
+
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+
+        _extract_and_save_code_changes(session, drift_event)
+
+    added_changes = [c.args[0] for c in session.add.call_args_list]
+    is_ignored_flags = {c.file_path: c.is_ignored for c in added_changes}
+
+    assert is_ignored_flags["setup.cfg"] is True
+    assert is_ignored_flags["config/settings.py"] is True
+    assert is_ignored_flags["src/service.py"] is False

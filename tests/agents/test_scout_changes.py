@@ -9,11 +9,14 @@ from app.agents.state import DriftAnalysisState
 
 
 # Helper function to build a mock CodeChange row
-def _make_code_change(file_path: str, change_type: str = "modified", is_code: bool = True):
+def _make_code_change(
+    file_path: str, change_type: str = "modified", is_code: bool = True, is_ignored: bool = False
+):
     cc = MagicMock()
     cc.file_path = file_path
     cc.change_type = change_type
     cc.is_code = is_code
+    cc.is_ignored = is_ignored
     return cc
 
 
@@ -25,7 +28,8 @@ def _make_state(
     code_changes: list | None = None,
 ) -> DriftAnalysisState:
     session = MagicMock()
-    session.query.return_value.filter.return_value.all.return_value = code_changes or []
+    filtered = [cc for cc in (code_changes or []) if not cc.is_ignored]
+    session.query.return_value.filter.return_value.all.return_value = filtered
 
     return {
         "drift_event_id": drift_event_id,
@@ -337,3 +341,41 @@ def test_scout_changes_non_route_decorators_safe(tmp_path):
 
     elements = result["change_elements"][0]["elements"]
     assert elements == ["login_required", "secret_page"]
+
+
+# Tests that code changes with is_ignored=True are excluded from processing
+def test_scout_changes_skips_ignored_files(tmp_path):
+    source = textwrap.dedent("""\
+        def important_function():
+            pass
+    """)
+    py_file = tmp_path / "src" / "service.py"
+    py_file.parent.mkdir(parents=True)
+    py_file.write_text(source)
+
+    ignored_cc = _make_code_change("src/service.py", "modified", is_ignored=True)
+    state = _make_state(repo_path=str(tmp_path), code_changes=[ignored_cc])
+
+    result = scout_changes(state)
+
+    assert result["change_elements"] == []
+
+
+# Tests that only non-ignored files are processed when mixed with ignored ones
+def test_scout_changes_processes_non_ignored_only(tmp_path):
+    source = textwrap.dedent("""\
+        def kept_function():
+            pass
+    """)
+    py_file = tmp_path / "src" / "kept.py"
+    py_file.parent.mkdir(parents=True)
+    py_file.write_text(source)
+
+    kept_cc = _make_code_change("src/kept.py", "modified", is_ignored=False)
+    ignored_cc = _make_code_change("tests/test_kept.py", "modified", is_ignored=True)
+    state = _make_state(repo_path=str(tmp_path), code_changes=[kept_cc, ignored_cc])
+
+    result = scout_changes(state)
+
+    assert len(result["change_elements"]) == 1
+    assert result["change_elements"][0]["file_path"] == "src/kept.py"
