@@ -1,3 +1,4 @@
+import fnmatch
 import subprocess
 from datetime import datetime, timezone
 
@@ -75,12 +76,17 @@ def _extract_and_save_code_changes(session, drift_event):
             }
             is_code = not any(file_path.lower().endswith(ext) for ext in non_code_extensions)
 
+            # Check if file matches any of the repo's ignore patterns
+            ignore_patterns: list[str] = drift_event.repository.file_ignore_patterns or []
+            is_ignored = any(fnmatch.fnmatch(file_path, pattern) for pattern in ignore_patterns)
+
             # Create CodeChange record in DB
             code_change = CodeChange(
                 drift_event_id=drift_event.id,
                 file_path=file_path,
                 change_type=change_type,
                 is_code=is_code,
+                is_ignored=is_ignored,
             )
             session.add(code_change)
 

@@ -80,12 +80,13 @@ def scout_changes(state: DriftAnalysisState) -> dict[str, Any]:
     repo_path = state["repo_path"]
     base_sha = state["base_sha"]
 
-    # Only consider changed files flagged as code
+    # Only consider changed files flagged as code and not ignored
     code_changes = (
         session.query(CodeChange)
         .filter(
             CodeChange.drift_event_id == drift_event_id,
             CodeChange.is_code.is_(True),
+            CodeChange.is_ignored.is_(False),
         )
         .all()
     )
