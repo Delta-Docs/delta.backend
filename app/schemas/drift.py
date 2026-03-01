@@ -22,6 +22,7 @@ class LLMDriftFinding(BaseModel):
         ge=0.0, le=1.0, description="How confident the LLM is in this assessment."
     )
 
+
 # Schema for the drift event response
 class DriftEventResponse(BaseModel):
     id: uuid.UUID
