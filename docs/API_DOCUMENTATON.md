@@ -218,3 +218,63 @@ Get basic repository information for the 5 most recently linked repositories:
   }
 ]
 ```
+
+## Notification Endpoints (`/api/notifications`)
+
+### GET `/notifications`
+Get all notifications for the user, ordered by most recent first.
+
+**Response:**
+```json
+[
+  {
+    "id": "b2e1d3c4-11a2-4f3e-8b9a-0c1d2e3f4a5b",
+    "content": "Drift detected in PR #42 for owner/repo_name.",
+    "is_read": false,
+    "created_at": "2026-03-01T10:00:00.000000Z"
+  }
+]
+```
+
+### PATCH `/notifications/{notification_id}/read`
+Mark a single notification as read.
+
+**Response:**
+```json
+{
+  "id": "b2e1d3c4-11a2-4f3e-8b9a-0c1d2e3f4a5b",
+  "content": "Drift detected in PR #42 for owner/repo_name.",
+  "is_read": true,
+  "created_at": "2026-03-01T10:00:00.000000Z"
+}
+```
+
+### PATCH `/notifications/read-all`
+Mark all notifications for the authenticated user as read.
+
+**Response:**
+```json
+{
+  "message": "All notifications marked as read"
+}
+```
+
+### DELETE `/notifications/{notification_id}`
+Delete a single notification.
+
+**Response:**
+```json
+{
+  "message": "Notification deleted"
+}
+```
+
+### DELETE `/notifications`
+Delete all notifications for the authenticated user.
+
+**Response:**
+```json
+{
+  "message": "All notifications deleted"
+}
+```
