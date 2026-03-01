@@ -42,7 +42,8 @@ def test_no_findings_clean():
     drift_event = _make_drift_event()
     state["session"].query.return_value.filter.return_value.first.return_value = drift_event
 
-    result = aggregate_results(state)
+    with patch("app.agents.nodes.aggregate_results.create_notification"):
+        result = aggregate_results(state)
 
     assert result == {"findings": []}
 
@@ -73,7 +74,10 @@ def test_drift_detected_persists_findings():
     drift_event = _make_drift_event()
     state["session"].query.return_value.filter.return_value.first.return_value = drift_event
 
-    with patch("app.agents.nodes.aggregate_results.DriftFinding") as mock_finding_cls:
+    with (
+        patch("app.agents.nodes.aggregate_results.DriftFinding") as mock_finding_cls,
+        patch("app.agents.nodes.aggregate_results.create_notification"),
+    ):
         mock_finding_cls.return_value = MagicMock()
         result = aggregate_results(state)
 
@@ -110,7 +114,10 @@ def test_missing_docs_result():
     drift_event = _make_drift_event()
     state["session"].query.return_value.filter.return_value.first.return_value = drift_event
 
-    with patch("app.agents.nodes.aggregate_results.DriftFinding") as mock_finding_cls:
+    with (
+        patch("app.agents.nodes.aggregate_results.DriftFinding") as mock_finding_cls,
+        patch("app.agents.nodes.aggregate_results.create_notification"),
+    ):
         mock_finding_cls.return_value = MagicMock()
         aggregate_results(state)
 

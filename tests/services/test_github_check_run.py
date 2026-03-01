@@ -114,6 +114,7 @@ async def test_handle_pr_triggers_check_run():
             new_callable=AsyncMock,
         ) as mock_get_token,
         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook_service.create_notification"),
     ):
         mock_create_check.return_value = 123456789
         mock_get_token.return_value = "test_token"

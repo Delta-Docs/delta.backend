@@ -411,6 +411,163 @@ def test_extract_and_save_code_changes_no_ignore_patterns():
     assert all(c.is_ignored is False for c in added_changes)
 
 
+# Helper functio to set up mocks specifically for failure-path tests in run_drift_analysis
+def _setup_failure_mocks(check_run_id=12345):
+    drift_event_id = str(uuid4())
+
+    drift_event = MagicMock()
+    drift_event.id = drift_event_id
+    drift_event.pr_number = 42
+    drift_event.check_run_id = check_run_id
+    drift_event.repository.repo_name = "owner/repo"
+    drift_event.repository.installation_id = 99
+    drift_event.repository.docs_root_path = "/docs"
+    drift_event.repository.installation.user_id = uuid4()
+
+    session = MagicMock()
+    session.query.return_value.filter.return_value.first.return_value = drift_event
+
+    return session, drift_event, drift_event_id
+
+
+# Test that failure marks the drift event phase, result and error message
+def test_run_drift_analysis_failure_marks_event_as_failed():
+    session, drift_event, drift_event_id = _setup_failure_mocks()
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch(
+            "app.services.drift_analysis._extract_and_save_code_changes",
+            side_effect=RuntimeError("something broke"),
+        ),
+        patch("app.services.drift_analysis.asyncio.run"),
+        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock),
+        patch("app.services.drift_analysis.create_notification"),
+    ):
+        with pytest.raises(RuntimeError):
+            run_drift_analysis(drift_event_id)
+
+    assert drift_event.processing_phase == "failed"
+    assert drift_event.drift_result == "error"
+    assert "something broke" in drift_event.error_message
+
+
+# Test that failure re-raises the original exception after cleanup
+def test_run_drift_analysis_failure_reraises_exception():
+    session, drift_event, drift_event_id = _setup_failure_mocks()
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch(
+            "app.services.drift_analysis._extract_and_save_code_changes",
+            side_effect=ValueError("critical failure"),
+        ),
+        patch("app.services.drift_analysis.asyncio.run"),
+        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock),
+        patch("app.services.drift_analysis.create_notification"),
+    ):
+        with pytest.raises(ValueError, match="critical failure"):
+            run_drift_analysis(drift_event_id)
+
+
+# Test that failure rolls back and then commits after cleanup
+def test_run_drift_analysis_failure_rollback_then_commit():
+    session, drift_event, drift_event_id = _setup_failure_mocks()
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch(
+            "app.services.drift_analysis._extract_and_save_code_changes",
+            side_effect=RuntimeError("something broke"),
+        ),
+        patch("app.services.drift_analysis.asyncio.run"),
+        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock),
+        patch("app.services.drift_analysis.create_notification"),
+    ):
+        with pytest.raises(RuntimeError):
+            run_drift_analysis(drift_event_id)
+
+    session.rollback.assert_called_once()
+    # First commit sets "analyzing", second commit is the failure cleanup
+    assert session.commit.call_count == 2
+
+
+# Test that failure calls update_github_check_run with the correct failure args
+def test_run_drift_analysis_failure_updates_check_run():
+    session, drift_event, drift_event_id = _setup_failure_mocks(check_run_id=99999)
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch(
+            "app.services.drift_analysis._extract_and_save_code_changes",
+            side_effect=RuntimeError("crash"),
+        ),
+        patch("app.services.drift_analysis.asyncio.run") as mock_asyncio_run,
+        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock) as mock_update_check_run,
+        patch("app.services.drift_analysis.create_notification"),
+    ):
+        with pytest.raises(RuntimeError):
+            run_drift_analysis(drift_event_id)
+
+    mock_update_check_run.assert_called_once_with(
+        repo_full_name="owner/repo",
+        check_run_id=99999,
+        installation_id=99,
+        status="completed",
+        conclusion="failure",
+        title="Delta Drift Analysis",
+        summary="Drift analysis failed due to an internal error.",
+    )
+    mock_asyncio_run.assert_called_once()
+
+
+# Test that check run is NOT updated when check_run_id is None
+def test_run_drift_analysis_failure_skips_check_run_when_no_id():
+    session, drift_event, drift_event_id = _setup_failure_mocks(check_run_id=None)
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch(
+            "app.services.drift_analysis._extract_and_save_code_changes",
+            side_effect=RuntimeError("crash"),
+        ),
+        patch("app.services.drift_analysis.asyncio.run") as mock_asyncio_run,
+        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock) as mock_update_check_run,
+        patch("app.services.drift_analysis.create_notification"),
+    ):
+        with pytest.raises(RuntimeError):
+            run_drift_analysis(drift_event_id)
+
+    mock_update_check_run.assert_not_called()
+    mock_asyncio_run.assert_not_called()
+
+
+# Test that a failing check run update doesn't block the rest of failure cleanup
+def test_run_drift_analysis_failure_check_run_error_doesnt_break_cleanup():
+    session, drift_event, drift_event_id = _setup_failure_mocks(check_run_id=12345)
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch(
+            "app.services.drift_analysis._extract_and_save_code_changes",
+            side_effect=RuntimeError("crash"),
+        ),
+        patch(
+            "app.services.drift_analysis.asyncio.run",
+            side_effect=Exception("GitHub API down"),
+        ),
+        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock),
+        patch("app.services.drift_analysis.create_notification"),
+    ):
+        with pytest.raises(RuntimeError, match="crash"):
+            run_drift_analysis(drift_event_id)
+
+    # Event should still be marked as failed and session committed
+    assert drift_event.processing_phase == "failed"
+    assert drift_event.drift_result == "error"
+    session.commit.assert_called()
+
+
 # Test wildcard pattern matching (e.g. *.cfg and directory prefix patterns)
 def test_extract_and_save_code_changes_wildcard_pattern():
     drift_event = _make_drift_event(file_ignore_patterns=["*.cfg", "config/*"])
