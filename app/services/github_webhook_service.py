@@ -6,7 +6,7 @@ from app.models.installation import Installation
 from app.models.repository import Repository
 from app.models.drift import DriftEvent
 
-from app.services.github_api import create_github_check_run, get_installation_access_token
+from app.services.github_api import create_github_check_run, create_skipped_check_run, get_installation_access_token
 from app.services.git_service import clone_repository, remove_cloned_repository, pull_branches
 from app.core.queue import task_queue
 from app.services.drift_analysis import run_drift_analysis
@@ -209,6 +209,13 @@ async def _handle_pr_event(db: Session, payload: dict):
 
     if not repo.is_active:
         print(f"Skipping PR #{payload['number']} for deactivated repository: {repo_full_name}")
+        head_sha = payload["pull_request"]["head"]["sha"]
+        await create_skipped_check_run(
+            repo_full_name,
+            head_sha,
+            installation_id,
+            "Drift analysis is disabled for this repository. Enable it in Delta to resume tracking.",
+        )
         return
 
     base_branch = payload["pull_request"]["base"]["ref"]

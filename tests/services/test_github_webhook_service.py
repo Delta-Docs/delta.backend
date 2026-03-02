@@ -338,11 +338,50 @@ async def test_pr_no_task_when_repo_deactivated():
     mock_repo.is_active = False
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
 
-    with patch("app.services.github_webhook_service.task_queue") as mock_task_queue:
+    with (
+        patch("app.services.github_webhook_service.task_queue") as mock_task_queue,
+        patch(
+            "app.services.github_webhook_service.create_skipped_check_run", new_callable=AsyncMock
+        ),
+    ):
         await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
 
         # Verify task was not enqueued for deactivated repo
         mock_task_queue.enqueue.assert_not_called()
+
+
+# Test that a skipped check run is created on GitHub when repo is deactivated
+@pytest.mark.asyncio
+async def test_pr_skipped_check_run_when_repo_deactivated():
+    mock_db = MagicMock()
+    payload = {
+        "action": "opened",
+        "number": 103,
+        "installation": {"id": 100},
+        "repository": {"full_name": "owner/repo"},
+        "pull_request": {
+            "base": {"sha": "base123", "ref": "main"},
+            "head": {"sha": "head456", "ref": "feature-branch"},
+        },
+    }
+
+    mock_repo = MagicMock()
+    mock_repo.is_suspended = False
+    mock_repo.is_active = False
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
+
+    with patch(
+        "app.services.github_webhook_service.create_skipped_check_run", new_callable=AsyncMock
+    ) as mock_skipped_check_run:
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+
+        # Verify a skipped check run was created on GitHub so the PR shows correct status
+        mock_skipped_check_run.assert_called_once_with(
+            "owner/repo",
+            "head456",
+            100,
+            "Drift analysis is disabled for this repository. Enable it in Delta to resume tracking.",
+        )
 
 
 # Test notification is sent when a PR is queued for drift analysis
