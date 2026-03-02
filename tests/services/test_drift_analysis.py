@@ -503,7 +503,9 @@ def test_run_drift_analysis_failure_updates_check_run():
             side_effect=RuntimeError("crash"),
         ),
         patch("app.services.drift_analysis.asyncio.run") as mock_asyncio_run,
-        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock) as mock_update_check_run,
+        patch(
+            "app.services.drift_analysis.update_github_check_run", new_callable=MagicMock
+        ) as mock_update_check_run,
         patch("app.services.drift_analysis.create_notification"),
     ):
         with pytest.raises(RuntimeError):
@@ -532,7 +534,9 @@ def test_run_drift_analysis_failure_skips_check_run_when_no_id():
             side_effect=RuntimeError("crash"),
         ),
         patch("app.services.drift_analysis.asyncio.run") as mock_asyncio_run,
-        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock) as mock_update_check_run,
+        patch(
+            "app.services.drift_analysis.update_github_check_run", new_callable=MagicMock
+        ) as mock_update_check_run,
         patch("app.services.drift_analysis.create_notification"),
     ):
         with pytest.raises(RuntimeError):

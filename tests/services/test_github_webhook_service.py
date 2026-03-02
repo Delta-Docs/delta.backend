@@ -328,8 +328,13 @@ async def test_notification_on_pr_queued():
     mock_db.query.side_effect = mock_query
 
     with (
-        patch("app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock),
-        patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock),
+        patch(
+            "app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock
+        ),
+        patch(
+            "app.services.github_webhook_service.get_installation_access_token",
+            new_callable=AsyncMock,
+        ),
         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock),
         patch("app.services.github_webhook_service.create_notification") as mock_notif,
     ):
@@ -359,7 +364,10 @@ async def test_notification_on_repos_added():
     mock_db.query.return_value.filter.return_value.first.return_value = mock_installation
 
     with (
-        patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock),
+        patch(
+            "app.services.github_webhook_service.get_installation_access_token",
+            new_callable=AsyncMock,
+        ),
         patch("app.services.github_webhook_service.clone_repository", new_callable=AsyncMock),
         patch("app.services.github_webhook_service.create_notification") as mock_notif,
     ):
@@ -413,7 +421,11 @@ async def test_notification_on_installation_created():
         "action": "created",
         "installation": {
             "id": 123,
-            "account": {"login": "test-org", "type": "Organization", "avatar_url": "http://avatar.url"},
+            "account": {
+                "login": "test-org",
+                "type": "Organization",
+                "avatar_url": "http://avatar.url",
+            },
         },
         "sender": {"id": 456},
         "repositories": [{"full_name": "test-org/repo1"}, {"full_name": "test-org/repo2"}],
@@ -424,7 +436,10 @@ async def test_notification_on_installation_created():
     mock_db.query.return_value.filter.return_value.first.return_value = mock_user
 
     with (
-        patch("app.services.github_webhook_service.get_installation_access_token", new_callable=AsyncMock),
+        patch(
+            "app.services.github_webhook_service.get_installation_access_token",
+            new_callable=AsyncMock,
+        ),
         patch("app.services.github_webhook_service.clone_repository", new_callable=AsyncMock),
         patch("app.services.github_webhook_service.create_notification") as mock_notif,
     ):

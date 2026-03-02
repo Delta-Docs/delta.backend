@@ -26,7 +26,9 @@ def _make_state(
 
 
 # Helper function to create a mock DriftEvent with repository relationship.
-def _make_drift_event(check_run_id=None, repo_name="owner/repo", installation_id=12345, pr_number=42):
+def _make_drift_event(
+    check_run_id=None, repo_name="owner/repo", installation_id=12345, pr_number=42
+):
     repo = MagicMock()
     repo.repo_name = repo_name
     repo.installation_id = installation_id
@@ -191,6 +193,7 @@ def test_agent_logs_populated():
     assert "a.py" in logs["Scouting"]
     assert "b.py" in logs["Scouting"]
     assert "clean" in logs["Result"]
+
 
 # Test notification content when result is clean
 def test_notification_content_clean():

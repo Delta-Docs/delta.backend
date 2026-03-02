@@ -252,7 +252,9 @@ async def _handle_pr_event(db: Session, payload: dict):
         print(f"Error: DriftEvent ID is None for PR #{payload['number']} in {repo_full_name}.")
 
     # Notify the user that the PR has been queued for drift analysis
-    installation = db.query(Installation).filter(Installation.installation_id == installation_id).first()
+    installation = (
+        db.query(Installation).filter(Installation.installation_id == installation_id).first()
+    )
     if installation and installation.user_id:
         create_notification(
             db,
