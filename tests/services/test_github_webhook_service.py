@@ -291,6 +291,60 @@ async def test_pr_no_task_when_repo_not_found():
         mock_task_queue.enqueue.assert_not_called()
 
 
+# Test that task is not enqueued when repo is suspended
+@pytest.mark.asyncio
+async def test_pr_no_task_when_repo_suspended():
+    mock_db = MagicMock()
+    payload = {
+        "action": "opened",
+        "number": 101,
+        "installation": {"id": 100},
+        "repository": {"full_name": "owner/repo"},
+        "pull_request": {
+            "base": {"sha": "base123", "ref": "main"},
+            "head": {"sha": "head456", "ref": "feature-branch"},
+        },
+    }
+
+    mock_repo = MagicMock()
+    mock_repo.is_suspended = True
+    mock_repo.is_active = True
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
+
+    with patch("app.services.github_webhook_service.task_queue") as mock_task_queue:
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+
+        # Verify task was not enqueued for suspended repo
+        mock_task_queue.enqueue.assert_not_called()
+
+
+# Test that task is not enqueued when repo is deactivated
+@pytest.mark.asyncio
+async def test_pr_no_task_when_repo_deactivated():
+    mock_db = MagicMock()
+    payload = {
+        "action": "opened",
+        "number": 102,
+        "installation": {"id": 100},
+        "repository": {"full_name": "owner/repo"},
+        "pull_request": {
+            "base": {"sha": "base123", "ref": "main"},
+            "head": {"sha": "head456", "ref": "feature-branch"},
+        },
+    }
+
+    mock_repo = MagicMock()
+    mock_repo.is_suspended = False
+    mock_repo.is_active = False
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
+
+    with patch("app.services.github_webhook_service.task_queue") as mock_task_queue:
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+
+        # Verify task was not enqueued for deactivated repo
+        mock_task_queue.enqueue.assert_not_called()
+
+
 # Test notification is sent when a PR is queued for drift analysis
 @pytest.mark.asyncio
 async def test_notification_on_pr_queued():

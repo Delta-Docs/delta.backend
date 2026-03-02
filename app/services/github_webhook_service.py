@@ -207,6 +207,10 @@ async def _handle_pr_event(db: Session, payload: dict):
         print(f"Warning: Repository not found: {repo_full_name} (inst: {installation_id})")
         return
 
+    if not repo.is_active:
+        print(f"Skipping PR #{payload['number']} for deactivated repository: {repo_full_name}")
+        return
+
     base_branch = payload["pull_request"]["base"]["ref"]
     head_branch = payload["pull_request"]["head"]["ref"]
 
