@@ -6,7 +6,11 @@ from app.models.installation import Installation
 from app.models.repository import Repository
 from app.models.drift import DriftEvent
 
-from app.services.github_api import create_github_check_run, create_skipped_check_run, get_installation_access_token
+from app.services.github_api import (
+    create_github_check_run,
+    create_skipped_check_run,
+    get_installation_access_token,
+)
 from app.services.git_service import clone_repository, remove_cloned_repository, pull_branches
 from app.core.queue import task_queue
 from app.services.drift_analysis import run_drift_analysis
