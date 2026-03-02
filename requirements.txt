@@ -17,7 +17,6 @@ langgraph
 langchain-google-genai
 
 # Dev
-watchfiles
 ruff
 pyrefly
 
