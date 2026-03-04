@@ -1,9 +1,5 @@
 # API Endpoints
 
-## Base URL
-- **Development**: `http://localhost:8000/api`
-- **Production**: `https://production-domain.com/api`
-
 ## Authentication Endpoints (`/api/auth`)
 
 ### POST `/auth/signup`
@@ -278,3 +274,7 @@ Delete all notifications for the authenticated user.
   "message": "All notifications deleted"
 }
 ```
+
+## API Testing
+
+[Bruno](https://www.usebruno.com/) can be used as the API testing client. Pre-configured `.bru` collection files for all endpoints are available in the [`/bruno`](../bruno) directory.

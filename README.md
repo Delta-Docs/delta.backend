@@ -74,6 +74,10 @@ Delta is a continuous documentation platform that treats documentation as a livi
    FRONTEND_URL="http://localhost:5173"
 
    REPOS_BASE_PATH="/path/to/delta.backend/repos"
+
+   # LLM Config
+   GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+   LLM_MODEL="gemini-2.5-flash"
    ```
 
 4. **Run setup command**
@@ -182,55 +186,56 @@ The plan is a 4 agent workflow with `LangGraph` as the orchestrator:
 
 ```
 delta.backend/
-├── alembic/                             # Database migrations
-│   ├── versions/                        # Migration files
-│   ├── env.py                           # Alembic environment config
-│   └── script.py.mako                   # Migration template
-│
-├── app/                                 # Main application code
-│   ├── agents/                          # LangGraph multi-agent workflow
-│   │   ├── graph.py                     # LangGraph workflow graph
-│   │   ├── prompts.py                   # Agent prompts
-│   │   ├── state.py                     # Workflow state definitions
-│   │   └── nodes/                       # Agent nodes
-│   │
-│   ├── core/                            # Core functionality
-│   │         
-│   ├── db/                              # Database configuration
-│   │   ├── base.py                      # Import all models
-│   │   ├── base_class.py                # SQLAlchemy declarative base
-│   │   └── session.py                   # Database session factory
-│   │         
-│   ├── models/                          # SQLAlchemy models (Schema)
-│   ├── routers/                         # API route handlers
-│   ├── schemas/                         # Pydantic schemas
-│   ├── services/                        # Business logic
-│   │         
-│   ├── api.py                           # API router aggregation
-│   ├── deps.py                          # Dependency injection
-│   └── main.py                          # FastAPI application entry point
-│
-├── bruno/                               # API testing (Bruno client)
-│   ├── auth/                            # Auth request collection
-│   ├── dashboard/                       # Dashboard request collection
-│   ├── environments/                    # Bruno environments
-│   └── repos/                           # Repos request collection
-│
-├── docs/                                # Markdown files for documentation
-├── images/                              # Diagrams that are shown in docs
-├── keys/                                # GitHub App private key (gitignored)
-├── repos/                               # Cloned repositories (gitignored)
-├── tests/                               # Unit & Integration tests
-│         
-├── .env                                 # Environment variables (gitignored)
-├── alembic.ini                          # Alembic configuration
-├── docker-compose.yml                   # Docker services definition
-├── Makefile                             # Development commands
-├── pytest.ini                           # Pytest configuration
-├── pyrefly.toml                         # Pyrefly configuration
-├── ruff.toml                            # Ruff configuration
-├── requirements.txt                     # Python dependencies
-└── workers.py                           # Script to run fixed number of RQ workers
+   ├── alembic/                             # Database migrations
+   │   ├── versions/                        # Migration files
+   │   ├── env.py                           # Alembic environment config
+   │   └── script.py.mako                   # Migration template
+   │
+   ├── app/                                 # Main application code
+   │   ├── agents/                          # LangGraph multi-agent workflow
+   │   │   ├── nodes/                       # Agent nodes
+   │   │   ├── graph.py                     # LangGraph workflow graph
+   │   │   ├── prompts.py                   # Agent prompts
+   │   │   └──  state.py                    # Workflow state definitions
+   │   │
+   │   ├── core/                            # Core functionality
+   │   │         
+   │   ├── db/                              # Database configuration
+   │   │   ├── base.py                      # Import all models
+   │   │   ├── base_class.py                # SQLAlchemy declarative base
+   │   │   └── session.py                   # Database session factory
+   │   │         
+   │   ├── models/                          # SQLAlchemy models (Schema)
+   │   ├── routers/                         # API route handlers
+   │   ├── schemas/                         # Pydantic schemas
+   │   ├── services/                        # Business logic
+   │   │         
+   │   ├── api.py                           # API router aggregation
+   │   ├── deps.py                          # Dependency injection
+   │   └── main.py                          # FastAPI application entry point
+   │
+   ├── bruno/                               # API testing (Bruno client)
+   │   ├── auth/                            # Auth request collection
+   │   ├── dashboard/                       # Dashboard request collection
+   │   ├── environments/                    # Bruno environments
+   │   └── repos/                           # Repos request collection
+   │
+   ├── docs/                                # Markdown files for documentation
+   ├── images/                              # Diagrams for Delta documentation
+   ├── tests/                               # Unit & Integration tests
+   │         
+   ├── .env.example                         # Sample .env file
+   ├── .gitignore                           # Git ignore rules
+   ├── alembic.ini                          # Alembic configuration
+   ├── docker-compose.yml                   # Docker services definition
+   ├── LICENSE                              # MIT License
+   ├── Makefile                             # Development commands
+   ├── pyrefly.toml                         # Pyrefly configuration
+   ├── pytest.ini                           # Pytest configuration
+   ├── README.md                            # Project documentation
+   ├── requirements.txt                     # Python dependencies
+   ├── ruff.toml                            # Ruff configuration
+   └── workers.py                           # Script to run the RQ workers
 ```
 
 
