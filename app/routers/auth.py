@@ -16,7 +16,9 @@ router = APIRouter()
 
 # Endpoint to create a new user account with email & password
 @router.post("/signup", response_model=schemas.UserLoginResponse)
-def create_user(response: Response, user_in: schemas.UserCreate, db: Session = Depends(get_db_connection)):
+def create_user(
+    response: Response, user_in: schemas.UserCreate, db: Session = Depends(get_db_connection)
+):
     # Check if user already exists
     user = db.query(User).filter(User.email == user_in.email).first()
     if user:
