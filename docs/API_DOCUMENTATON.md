@@ -15,9 +15,11 @@ Create a new user account.
 ```
 
 **Response:**
+- Sets `access_token` and `refresh_token` cookies
 ```json
 {
-  "message": "User created successfully"
+  "email": "user@example.com",
+  "name": "User Name"
 }
 ```
 

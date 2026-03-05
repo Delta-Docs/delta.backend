@@ -58,7 +58,7 @@ Delta is a continuous documentation platform that treats documentation as a livi
    SECRET_KEY="YOUR_SECRET_KEY"
    ALGORITHM="ALGORITHM_USED"
    ACCESS_TOKEN_EXPIRE_MINUTES=60
-   REFRESH_TOKEN_EXPIRE_DAYS=7
+   REFRESH_TOKEN_EXPIRE_DAYS=15
 
    # GitHub App
    GITHUB_APP_ID="YOUR_GITHUB_APP_ID"
