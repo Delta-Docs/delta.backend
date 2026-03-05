@@ -1,2 +1,2 @@
-exclude = [".venv", "alembic"]
+exclude = [".venv", "alembic", "repos"]
 line-length = 100

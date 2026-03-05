@@ -55,20 +55,6 @@ CREATE TABLE repositories (
 );
 ```
 
-### Doc Coverage Map Table
-```sql
-CREATE TABLE doc_coverage_map (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    repo_id UUID REFERENCES repositories(id) ON DELETE CASCADE,
-    code_path VARCHAR NOT NULL,
-    doc_file_path VARCHAR,
-    last_verified_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(repo_id, code_path, doc_file_path)
-);
-
-CREATE INDEX idx_coverage_repo ON doc_coverage_map(repo_id);
-```
-
 ### Drift Events Table
 ```sql
 CREATE TABLE drift_events (
@@ -122,6 +108,17 @@ CREATE TABLE code_changes (
     change_type VARCHAR,
     is_code BOOLEAN DEFAULT TRUE,
     CONSTRAINT check_code_change_type CHECK (change_type IN ('added', 'modified', 'deleted'))
+);
+```
+
+### Notifications Table
+```sql
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    content TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 ```
 

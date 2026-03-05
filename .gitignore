@@ -1,10 +1,24 @@
-__pycache__
+# Python
+__pycache__/
 *.pyc
-.env
-.venv
-env/
+
+# Virtual Environments
+.venv/
 venv/
-.DS_Store
+
+# Environment Variables
+.env
+
+# Security & Secrets
 keys/
 *.pem
+
+# Testing & Coverage
+.coverage
+.coverage.**
+
+# OS
+.DS_Store
+
+# Project-specific
 /repos

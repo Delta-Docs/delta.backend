@@ -1,9 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
 
+# Base Repository schema
 class RepositoryBase(BaseModel):
     repo_name: str
 
@@ -36,5 +37,4 @@ class RepositoryResponse(BaseModel):
     file_ignore_patterns: Optional[list[str]]
     last_synced_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

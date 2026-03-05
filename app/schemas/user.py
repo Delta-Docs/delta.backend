@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from uuid import UUID
 from datetime import datetime
 
@@ -26,8 +26,7 @@ class User(UserBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True  # Allow creation by ORM models
+    model_config = ConfigDict(from_attributes=True)  # Allow creation by ORM models
 
 
 # Schema for login response

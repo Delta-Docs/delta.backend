@@ -118,6 +118,7 @@ class CodeChange(Base):
     change_type: Mapped[str | None] = mapped_column(String)
 
     is_code: Mapped[bool | None] = mapped_column(Boolean, default=True)
+    is_ignored: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     drift_event = relationship("DriftEvent")
 

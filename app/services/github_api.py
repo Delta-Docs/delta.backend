@@ -119,6 +119,40 @@ async def create_github_check_run(
         return None
 
 
+# Creates a skipped check run if the linked repo is inactive
+async def create_skipped_check_run(
+    repo_full_name: str, head_sha: str, installation_id: int, reason: str
+):
+    try:
+        access_token = await get_installation_access_token(installation_id)
+
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                f"https://api.github.com/repos/{repo_full_name}/check-runs",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                },
+                json={
+                    "name": "Delta Docs",
+                    "head_sha": head_sha,
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "output": {
+                        "title": "Analysis Skipped",
+                        "summary": reason,
+                    },
+                },
+            )
+
+            if res.status_code != 201:
+                print(f"Error creating skipped check run: {res.text}")
+
+    except Exception as e:
+        print(f"Exception in create_skipped_check_run: {str(e)}")
+
+
 # Updates the GitHub Check Run status and output
 async def update_github_check_run(
     repo_full_name: str,

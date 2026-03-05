@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     # Cloned Repos Storage Path
     REPOS_BASE_PATH: str
 
+    # LLM Config
+    GEMINI_API_KEY: str
+    LLM_MODEL: str
+
+    # Load values from .env file
     model_config = SettingsConfigDict(
         case_sensitive=True,
         env_file=".env",

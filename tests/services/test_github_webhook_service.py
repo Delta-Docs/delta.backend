@@ -139,6 +139,7 @@ async def test_handle_pr_opened_success():
             new_callable=AsyncMock,
         ) as mock_get_token,
         patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook_service.create_notification"),
     ):
         mock_get_token.return_value = "test_token"
         await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
@@ -288,6 +289,285 @@ async def test_pr_no_task_when_repo_not_found():
 
         # Verify task was not enqueued
         mock_task_queue.enqueue.assert_not_called()
+
+
+# Test that task is not enqueued when repo is suspended
+@pytest.mark.asyncio
+async def test_pr_no_task_when_repo_suspended():
+    mock_db = MagicMock()
+    payload = {
+        "action": "opened",
+        "number": 101,
+        "installation": {"id": 100},
+        "repository": {"full_name": "owner/repo"},
+        "pull_request": {
+            "base": {"sha": "base123", "ref": "main"},
+            "head": {"sha": "head456", "ref": "feature-branch"},
+        },
+    }
+
+    mock_repo = MagicMock()
+    mock_repo.is_suspended = True
+    mock_repo.is_active = True
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
+
+    with patch("app.services.github_webhook_service.task_queue") as mock_task_queue:
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+
+        # Verify task was not enqueued for suspended repo
+        mock_task_queue.enqueue.assert_not_called()
+
+
+# Test that task is not enqueued when repo is deactivated
+@pytest.mark.asyncio
+async def test_pr_no_task_when_repo_deactivated():
+    mock_db = MagicMock()
+    payload = {
+        "action": "opened",
+        "number": 102,
+        "installation": {"id": 100},
+        "repository": {"full_name": "owner/repo"},
+        "pull_request": {
+            "base": {"sha": "base123", "ref": "main"},
+            "head": {"sha": "head456", "ref": "feature-branch"},
+        },
+    }
+
+    mock_repo = MagicMock()
+    mock_repo.is_suspended = False
+    mock_repo.is_active = False
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
+
+    with (
+        patch("app.services.github_webhook_service.task_queue") as mock_task_queue,
+        patch(
+            "app.services.github_webhook_service.create_skipped_check_run", new_callable=AsyncMock
+        ),
+    ):
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+
+        # Verify task was not enqueued for deactivated repo
+        mock_task_queue.enqueue.assert_not_called()
+
+
+# Test that a skipped check run is created on GitHub when repo is deactivated
+@pytest.mark.asyncio
+async def test_pr_skipped_check_run_when_repo_deactivated():
+    mock_db = MagicMock()
+    payload = {
+        "action": "opened",
+        "number": 103,
+        "installation": {"id": 100},
+        "repository": {"full_name": "owner/repo"},
+        "pull_request": {
+            "base": {"sha": "base123", "ref": "main"},
+            "head": {"sha": "head456", "ref": "feature-branch"},
+        },
+    }
+
+    mock_repo = MagicMock()
+    mock_repo.is_suspended = False
+    mock_repo.is_active = False
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
+
+    with patch(
+        "app.services.github_webhook_service.create_skipped_check_run", new_callable=AsyncMock
+    ) as mock_skipped_check_run:
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+
+        # Verify a skipped check run was created on GitHub so the PR shows correct status
+        mock_skipped_check_run.assert_called_once_with(
+            "owner/repo",
+            "head456",
+            100,
+            "Drift analysis is disabled for this repository. Enable it in Delta to resume tracking.",
+        )
+
+
+# Test notification is sent when a PR is queued for drift analysis
+@pytest.mark.asyncio
+async def test_notification_on_pr_queued():
+    user_id = uuid.uuid4()
+    mock_db = MagicMock()
+    payload = {
+        "action": "opened",
+        "number": 7,
+        "installation": {"id": 100},
+        "repository": {"full_name": "owner/repo"},
+        "pull_request": {
+            "base": {"sha": "base123", "ref": "main"},
+            "head": {"sha": "head456", "ref": "feature-branch"},
+        },
+    }
+
+    mock_repo = MagicMock()
+    mock_repo.id = uuid.uuid4()
+    mock_repo.target_branch = "main"
+
+    mock_installation = MagicMock()
+    mock_installation.user_id = user_id
+
+    # Return different objects depending on which model is queried
+    def mock_query(model):
+        m = MagicMock()
+        if model == Repository:
+            m.filter.return_value.first.return_value = mock_repo
+        elif model == Installation:
+            m.filter.return_value.first.return_value = mock_installation
+        else:
+            m.filter.return_value.first.return_value = None
+        return m
+
+    mock_db.query.side_effect = mock_query
+
+    with (
+        patch(
+            "app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock
+        ),
+        patch(
+            "app.services.github_webhook_service.get_installation_access_token",
+            new_callable=AsyncMock,
+        ),
+        patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook_service.create_notification") as mock_notif,
+    ):
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+
+    mock_notif.assert_called_once()
+    _, notif_user_id, content = mock_notif.call_args[0]
+    assert notif_user_id == user_id
+    assert "PR #7" in content
+    assert "owner/repo" in content
+    assert "queued for drift analysis" in content
+
+
+# Test notification is sent when repos are linked to an installation
+@pytest.mark.asyncio
+async def test_notification_on_repos_added():
+    user_id = uuid.uuid4()
+    mock_db = MagicMock()
+    payload = {
+        "action": "added",
+        "installation": {"id": 123, "account": {"avatar_url": "http://avatar.url"}},
+        "repositories_added": [{"full_name": "test-org/new-repo"}],
+    }
+
+    mock_installation = MagicMock()
+    mock_installation.user_id = user_id
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_installation
+
+    with (
+        patch(
+            "app.services.github_webhook_service.get_installation_access_token",
+            new_callable=AsyncMock,
+        ),
+        patch("app.services.github_webhook_service.clone_repository", new_callable=AsyncMock),
+        patch("app.services.github_webhook_service.create_notification") as mock_notif,
+    ):
+        await github_webhook_service.handle_github_event(
+            mock_db, "installation_repositories", payload
+        )
+
+    mock_notif.assert_called_once()
+    _, notif_user_id, content = mock_notif.call_args[0]
+    assert notif_user_id == user_id
+    assert "test-org/new-repo" in content
+    assert "linked" in content
+
+
+# Test notification is sent when repos are unlinked from an installation
+@pytest.mark.asyncio
+async def test_notification_on_repos_removed():
+    user_id = uuid.uuid4()
+    mock_db = MagicMock()
+    payload = {
+        "action": "removed",
+        "installation": {"id": 123},
+        "repositories_removed": [{"full_name": "test-org/old-repo"}],
+    }
+
+    mock_installation = MagicMock()
+    mock_installation.user_id = user_id
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_installation
+
+    with (
+        patch("app.services.github_webhook_service.remove_cloned_repository"),
+        patch("app.services.github_webhook_service.create_notification") as mock_notif,
+    ):
+        await github_webhook_service.handle_github_event(
+            mock_db, "installation_repositories", payload
+        )
+
+    mock_notif.assert_called_once()
+    _, notif_user_id, content = mock_notif.call_args[0]
+    assert notif_user_id == user_id
+    assert "test-org/old-repo" in content
+    assert "unlinked" in content
+
+
+# Test notification is sent when GitHub account is connected
+@pytest.mark.asyncio
+async def test_notification_on_installation_created():
+    user_id = uuid.uuid4()
+    mock_db = MagicMock()
+    payload = {
+        "action": "created",
+        "installation": {
+            "id": 123,
+            "account": {
+                "login": "test-org",
+                "type": "Organization",
+                "avatar_url": "http://avatar.url",
+            },
+        },
+        "sender": {"id": 456},
+        "repositories": [{"full_name": "test-org/repo1"}, {"full_name": "test-org/repo2"}],
+    }
+
+    mock_user = MagicMock()
+    mock_user.id = user_id
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_user
+
+    with (
+        patch(
+            "app.services.github_webhook_service.get_installation_access_token",
+            new_callable=AsyncMock,
+        ),
+        patch("app.services.github_webhook_service.clone_repository", new_callable=AsyncMock),
+        patch("app.services.github_webhook_service.create_notification") as mock_notif,
+    ):
+        await github_webhook_service.handle_github_event(mock_db, "installation", payload)
+
+    mock_notif.assert_called_once()
+    _, notif_user_id, content = mock_notif.call_args[0]
+    assert notif_user_id == user_id
+    assert "test-org" in content
+    assert "connected" in content
+    assert "2 repositories" in content
+
+
+# Test notification is sent when GitHub account is disconnected
+@pytest.mark.asyncio
+async def test_notification_on_installation_deleted():
+    user_id = uuid.uuid4()
+    mock_db = MagicMock()
+    payload = {
+        "action": "deleted",
+        "installation": {"id": 123, "account": {"login": "test-org"}},
+    }
+
+    mock_installation = MagicMock()
+    mock_installation.user_id = user_id
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_installation
+
+    with patch("app.services.github_webhook_service.create_notification") as mock_notif:
+        await github_webhook_service.handle_github_event(mock_db, "installation", payload)
+
+    mock_notif.assert_called_once()
+    _, notif_user_id, content = mock_notif.call_args[0]
+    assert notif_user_id == user_id
+    assert "test-org" in content
+    assert "disconnected" in content
 
 
 # Test that drift event ID is passed as string to the task

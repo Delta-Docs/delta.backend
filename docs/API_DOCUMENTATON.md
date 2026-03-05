@@ -1,9 +1,5 @@
 # API Endpoints
 
-## Base URL
-- **Development**: `http://localhost:8000/api`
-- **Production**: `https://production-domain.com/api`
-
 ## Authentication Endpoints (`/api/auth`)
 
 ### POST `/auth/signup`
@@ -164,6 +160,29 @@ Update repository configuration.
 }
 ```
 
+### GET `/repos/{repo_id}/drift-events`
+Get all drift events for a repository, ordered by most recent first.
+
+**Response:**
+```json
+[
+  {
+    "id": "a3f9c120-12d4-4b3e-9c7a-1a2b3c4d5e6f",
+    "pr_number": 42,
+    "base_branch": "main",
+    "head_branch": "feat/update-auth",
+    "processing_phase": "completed",
+    "drift_result": "drift_detected",
+    "overall_drift_score": 0.8,
+    "summary": "Authentication flow was updated but related docs were not.",
+    "error_message": null,
+    "started_at": "2026-02-28T19:59:19.752504Z",
+    "completed_at": "2026-02-28T19:59:22.853917Z",
+    "created_at": "2026-02-28T19:59:10.705067Z"
+  }
+]
+```
+
 ## Dashboard Endpoints (`/api/dashboard`)
 
 ### GET `/dashboard/stats`
@@ -195,3 +214,67 @@ Get basic repository information for the 5 most recently linked repositories:
   }
 ]
 ```
+
+## Notification Endpoints (`/api/notifications`)
+
+### GET `/notifications`
+Get all notifications for the user, ordered by most recent first.
+
+**Response:**
+```json
+[
+  {
+    "id": "b2e1d3c4-11a2-4f3e-8b9a-0c1d2e3f4a5b",
+    "content": "Drift detected in PR #42 for owner/repo_name.",
+    "is_read": false,
+    "created_at": "2026-03-01T10:00:00.000000Z"
+  }
+]
+```
+
+### PATCH `/notifications/{notification_id}/read`
+Mark a single notification as read.
+
+**Response:**
+```json
+{
+  "id": "b2e1d3c4-11a2-4f3e-8b9a-0c1d2e3f4a5b",
+  "content": "Drift detected in PR #42 for owner/repo_name.",
+  "is_read": true,
+  "created_at": "2026-03-01T10:00:00.000000Z"
+}
+```
+
+### PATCH `/notifications/read-all`
+Mark all notifications for the authenticated user as read.
+
+**Response:**
+```json
+{
+  "message": "All notifications marked as read"
+}
+```
+
+### DELETE `/notifications/{notification_id}`
+Delete a single notification.
+
+**Response:**
+```json
+{
+  "message": "Notification deleted"
+}
+```
+
+### DELETE `/notifications`
+Delete all notifications for the authenticated user.
+
+**Response:**
+```json
+{
+  "message": "All notifications deleted"
+}
+```
+
+## API Testing
+
+[Bruno](https://www.usebruno.com/) can be used as the API testing client. Pre-configured `.bru` collection files for all endpoints are available in the [`/bruno`](../bruno) directory.

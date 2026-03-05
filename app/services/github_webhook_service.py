@@ -6,10 +6,15 @@ from app.models.installation import Installation
 from app.models.repository import Repository
 from app.models.drift import DriftEvent
 
-from app.services.github_api import create_github_check_run, get_installation_access_token
+from app.services.github_api import (
+    create_github_check_run,
+    create_skipped_check_run,
+    get_installation_access_token,
+)
 from app.services.git_service import clone_repository, remove_cloned_repository, pull_branches
 from app.core.queue import task_queue
 from app.services.drift_analysis import run_drift_analysis
+from app.services.notification_service import create_notification
 
 
 # Upsert repositorites (Insert if they don't exist or update existing repos)
@@ -83,10 +88,23 @@ async def _handle_installation_created(db: Session, payload: dict):
             db, installation["id"], payload["repositories"], account.get("avatar_url")
         )
 
+    # Create a notification for successful installation
+    if user_id:
+        num_repos = len(payload.get("repositories", []))
+        repo_word = "repository" if num_repos == 1 else "repositories"
+        create_notification(
+            db,
+            user_id,
+            f"GitHub account {account['login']} connected to Delta with {num_repos} {repo_word}.",
+        )
+
 
 # Handle when GH app is uninstalled
 def _handle_installation_deleted(db: Session, payload: dict):
     inst_id = payload["installation"]["id"]
+
+    installation = db.query(Installation).filter(Installation.installation_id == inst_id).first()
+    user_id = installation.user_id if installation else None
 
     repos = db.query(Repository).filter(Repository.installation_id == inst_id).all()
 
@@ -99,6 +117,15 @@ def _handle_installation_deleted(db: Session, payload: dict):
     db.query(Installation).filter(Installation.installation_id == inst_id).delete(
         synchronize_session=False
     )
+
+    # Create a notification for successful uninstallation
+    if user_id:
+        account_name = payload["installation"]["account"]["login"]
+        create_notification(
+            db,
+            user_id,
+            f"GitHub account {account_name} has been disconnected from Delta.",
+        )
 
 
 # Handle when installation is suspended or unsuspended
@@ -117,11 +144,24 @@ async def _handle_repos_added(db: Session, payload: dict):
     account_avatar_url = payload["installation"]["account"].get("avatar_url")
     await _insert_repositories(db, inst_id, repos, account_avatar_url)
 
+    # Create a notification for new repos added
+    installation = db.query(Installation).filter(Installation.installation_id == inst_id).first()
+    if installation and installation.user_id:
+        for repo in repos:
+            create_notification(
+                db,
+                installation.user_id,
+                f"Repository {repo['full_name']} has been successfully linked to Delta.",
+            )
+
 
 # Handle when repos are removed from an existing installation
 def _handle_repos_removed(db: Session, payload: dict):
     inst_id = payload["installation"]["id"]
     repos = payload["repositories_removed"]
+
+    installation = db.query(Installation).filter(Installation.installation_id == inst_id).first()
+    user_id = installation.user_id if installation else None
 
     repo_full_names = [repo["full_name"] for repo in repos]
 
@@ -135,6 +175,15 @@ def _handle_repos_removed(db: Session, payload: dict):
         db.query(Repository).filter(
             Repository.installation_id == inst_id, Repository.repo_name.in_(repo_full_names)
         ).delete(synchronize_session=False)
+
+        # Create a notification for repos removed
+        if user_id:
+            for repo_name in repo_full_names:
+                create_notification(
+                    db,
+                    user_id,
+                    f"Repository {repo_name} has been successfully unlinked from Delta.",
+                )
 
 
 # Handle PR webhook event (Opened)
@@ -160,6 +209,17 @@ async def _handle_pr_event(db: Session, payload: dict):
 
     if not repo:
         print(f"Warning: Repository not found: {repo_full_name} (inst: {installation_id})")
+        return
+
+    if not repo.is_active:
+        print(f"Skipping PR #{payload['number']} for deactivated repository: {repo_full_name}")
+        head_sha = payload["pull_request"]["head"]["sha"]
+        await create_skipped_check_run(
+            repo_full_name,
+            head_sha,
+            installation_id,
+            "Drift analysis is disabled for this repository. Enable it in Delta to resume tracking.",
+        )
         return
 
     base_branch = payload["pull_request"]["base"]["ref"]
@@ -205,6 +265,17 @@ async def _handle_pr_event(db: Session, payload: dict):
         task_queue.enqueue(run_drift_analysis, drift_event_id)
     else:
         print(f"Error: DriftEvent ID is None for PR #{payload['number']} in {repo_full_name}.")
+
+    # Notify the user that the PR has been queued for drift analysis
+    installation = (
+        db.query(Installation).filter(Installation.installation_id == installation_id).first()
+    )
+    if installation and installation.user_id:
+        create_notification(
+            db,
+            installation.user_id,
+            f"PR #{payload['number']} opened in {repo_full_name} has been received and queued for drift analysis.",
+        )
 
 
 # Main Router to handle different types of GH webhook events

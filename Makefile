@@ -61,14 +61,16 @@ history:
 	$(BIN)/alembic history
 
 clean:
-	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
-	rm -rf .ruff_cache
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type f -name ".coverage.*" -delete
+	find . -type f -name ".coverage" -delete
 	find . -type f -name "*.pyc" -delete
+	rm -rf .ruff_cache
 
 lint:
-	-$(BIN)/ruff check .
-	-$(BIN)/pyrefly check .
+	-$(BIN)/ruff check
+	-$(BIN)/pyrefly check
 
 format:
 	-$(BIN)/ruff format .

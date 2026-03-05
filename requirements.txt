@@ -1,3 +1,4 @@
+# Core
 fastapi
 uvicorn
 pydantic
@@ -9,10 +10,16 @@ email-validator
 bcrypt
 pyseto
 httpx
-pytest
-pytest-asyncio
 pyjwt
 redis
 rq
+langgraph
+langchain-google-genai
+
+# Dev
 ruff
 pyrefly
+
+# Testing
+pytest
+pytest-asyncio
