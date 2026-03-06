@@ -13,6 +13,8 @@ from app.services.github_api import update_github_check_run
 from app.services.notification_service import create_notification
 from app.agents.state import DriftAnalysisState
 from app.agents.graph import drift_analysis_graph
+from app.core.queue import task_queue
+from app.services.document_generation import run_document_generation
 
 
 # Creates a separate SQLAlchemy session for use in background tasks
@@ -138,6 +140,14 @@ def run_drift_analysis(drift_event_id: str):
         }
 
         drift_analysis_graph.invoke(initial_state)
+
+        # Reload the event to check the drift result after analysis
+        session.refresh(drift_event)
+
+        # If drift was detected, enqueue document generation as a follow-up task
+        if drift_event.drift_result in ("drift_detected", "missing_docs"):
+            task_queue.enqueue(run_document_generation, drift_event_id)
+            print(f"Drift detected — enqueued document generation for event {drift_event_id}")
 
     except Exception as e:
         print(f"ERROR: {e}")
