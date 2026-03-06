@@ -13,3 +13,11 @@ class DriftAnalysisState(TypedDict):
     change_elements: list[dict]
     analysis_payloads: list[dict]
     findings: Annotated[list[dict], operator.add]
+
+
+# Shared state passed between each node of the document generation workflow
+class DocGenState(TypedDict):
+    drift_findings: list[dict]
+    repo_path: str
+    target_files: list[dict]
+    rewrite_results: list[dict]

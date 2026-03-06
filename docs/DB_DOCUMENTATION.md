@@ -61,6 +61,8 @@ CREATE TABLE drift_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     repo_id UUID REFERENCES repositories(id) ON DELETE CASCADE,
     pr_number INTEGER NOT NULL,
+    base_branch VARCHAR NOT NULL,
+    head_branch VARCHAR NOT NULL,
     base_sha VARCHAR NOT NULL,
     head_sha VARCHAR NOT NULL,
     check_run_id BIGINT,
@@ -107,6 +109,7 @@ CREATE TABLE code_changes (
     file_path VARCHAR NOT NULL,
     change_type VARCHAR,
     is_code BOOLEAN DEFAULT TRUE,
+    is_ignored BOOLEAN DEFAULT FALSE NOT NULL,
     CONSTRAINT check_code_change_type CHECK (change_type IN ('added', 'modified', 'deleted'))
 );
 ```
