@@ -1,6 +1,4 @@
-import pytest
-from unittest.mock import MagicMock, patch, mock_open
-from pathlib import Path
+from unittest.mock import MagicMock, patch
 from app.agents.nodes.doc_gen_nodes import plan_updates, rewrite_docs, apply_changes
 
 

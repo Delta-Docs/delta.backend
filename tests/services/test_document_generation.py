@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 from pathlib import Path
 from app.services.document_generation import run_document_generation
 
@@ -86,8 +86,6 @@ def test_run_document_generation_happy_path(
     # Setup drift event
     mock_event = _make_mock_drift_event()
 
-    # Query for drift event returns the event, query for findings returns findings
-    mock_query = MagicMock()
 
     def query_side_effect(model):
         q = MagicMock()
@@ -102,7 +100,7 @@ def test_run_document_generation_happy_path(
     # Setup other mocks
     mock_repo_path = MagicMock(spec=Path)
     mock_repo_path.exists.return_value = True
-    mock_repo_path.__str__ = lambda x: "/tmp/repos/owner/repo"
+    mock_repo_path.__str__ = MagicMock(return_value="/tmp/repos/owner/repo")
     mock_get_repo_path.return_value = mock_repo_path
 
     mock_get_token.return_value = "test_token"
@@ -156,7 +154,7 @@ def test_run_document_generation_branch_failure_marks_failed(
 
     mock_repo_path = MagicMock(spec=Path)
     mock_repo_path.exists.return_value = True
-    mock_repo_path.__str__ = lambda x: "/tmp/repos/owner/repo"
+    mock_repo_path.__str__ = MagicMock(return_value="/tmp/repos/owner/repo")
     mock_get_repo_path.return_value = mock_repo_path
     mock_get_token.return_value = "test_token"
 

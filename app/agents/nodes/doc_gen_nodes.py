@@ -156,7 +156,7 @@ def rewrite_docs(state: DocGenState) -> dict[str, Any]:
                     {"role": "user", "content": user_prompt},
                 ]
             )
-            new_content = result.content if hasattr(result, "content") else str(result)
+            new_content: str = str(result.content) if hasattr(result, "content") else str(result)
 
             # Strip markdown code fences if the LLM wrapped the output
             if new_content.startswith("```markdown"):
