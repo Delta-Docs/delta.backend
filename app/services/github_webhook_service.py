@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import insert
 from app.models.user import User
 from app.models.installation import Installation
 from app.models.repository import Repository
-from app.models.drift import DriftEvent
+from app.models.drift import DriftEvent, DriftFinding, CodeChange
 
 from app.services.github_api import (
     create_github_check_run,
@@ -278,6 +278,61 @@ async def _handle_pr_event(db: Session, payload: dict):
         )
 
 
+# Handle when a user clicks "Re-run all checks" in the linked repo
+async def _handle_check_suite_rerequested(db: Session, payload: dict):
+    check_suite = payload.get("check_suite", {})
+    head_sha = check_suite.get("head_sha")
+    repo_full_name = payload.get("repository", {}).get("full_name")
+    installation_id = payload.get("installation", {}).get("id")
+
+    if not head_sha or not repo_full_name or not installation_id:
+        print("Warning: Missing fields in check_suite rerequested payload.")
+        return
+
+    # Find latest existing drift event by its head_sha
+    drift_event = (
+        db.query(DriftEvent)
+        .join(DriftEvent.repository)
+        .filter(DriftEvent.head_sha == head_sha)
+        .order_by(DriftEvent.created_at.desc())
+        .first()
+    )
+
+    if not drift_event:
+        print(f"Warning: No DriftEvent found for head_sha {head_sha}.")
+        return
+
+    drift_event_id = str(drift_event.id)
+
+    # Clear all stale findings and code changes from previous run
+    db.query(DriftFinding).filter(DriftFinding.drift_event_id == drift_event.id).delete(
+        synchronize_session=False
+    )
+    db.query(CodeChange).filter(CodeChange.drift_event_id == drift_event.id).delete(
+        synchronize_session=False
+    )
+
+    # Reset the drift event back to a clean queued state
+    drift_event.processing_phase = "queued"
+    drift_event.drift_result = "pending"
+    drift_event.overall_drift_score = None
+    drift_event.summary = None
+    drift_event.agent_logs = {}
+    drift_event.error_message = None
+    drift_event.started_at = None
+    drift_event.completed_at = None
+    drift_event.check_run_id = None
+    db.flush()
+
+    # Create a fresh GitHub check run
+    await create_github_check_run(
+        db, drift_event_id, repo_full_name, drift_event.head_sha, installation_id
+    )
+
+    # Re-enqueue the drift analysis job
+    task_queue.enqueue(run_drift_analysis, drift_event_id)
+
+
 # Main Router to handle different types of GH webhook events
 async def handle_github_event(db: Session, event_type: str, payload: dict):
     # Installation lifecycle events
@@ -303,5 +358,11 @@ async def handle_github_event(db: Session, event_type: str, payload: dict):
     # PR Events
     elif event_type == "pull_request":
         await _handle_pr_event(db, payload)
+
+    # Check Suite re-run request
+    elif event_type == "check_suite":
+        action = payload.get("action")
+        if action == "rerequested":
+            await _handle_check_suite_rerequested(db, payload)
 
     db.commit()
