@@ -64,7 +64,9 @@ def retrieve_docs(state: DriftAnalysisState) -> dict[str, Any]:
         search_terms: set[str] = set(elements + old_elements)
 
         if not search_terms:
-            continue
+            # Falling back to the filename stem so files with no extractable code elements are still matched
+            stem = os.path.splitext(os.path.basename(file_path))[0]
+            search_terms = {stem}
 
         matched_snippets: dict[str, list[str]] = {}
 
