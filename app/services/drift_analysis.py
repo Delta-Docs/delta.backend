@@ -121,6 +121,22 @@ def run_drift_analysis(drift_event_id: str):
         drift_event.started_at = datetime.now(timezone.utc)
         session.commit()
 
+        # Update GH check run to in_progress
+        if drift_event.check_run_id and drift_event.repository and drift_event.repository.installation:
+            try:
+                asyncio.run(
+                    update_github_check_run(
+                        repo_full_name=drift_event.repository.repo_name,
+                        check_run_id=drift_event.check_run_id,
+                        installation_id=drift_event.repository.installation_id,
+                        status="in_progress",
+                        title="Delta Drift Analysis",
+                        summary="Analysing PR for documentation drift...",
+                    )
+                )
+            except Exception as e:
+                print(f"Failed to update check run to in_progress: {e}")
+
         _extract_and_save_code_changes(session, drift_event)
 
         repo_path = get_local_repo_path(drift_event.repository.repo_name)
