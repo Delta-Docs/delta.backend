@@ -118,6 +118,10 @@ def commit_and_pr(state: DriftAnalysisState) -> dict[str, Any]:
         )
     )
 
+    # Store the docs PR number in the drift event
+    if docs_pr_number:
+        drift_event.docs_pr_number = docs_pr_number
+
     # Notify the user
     user_id = repo.installation.user_id if repo.installation else None
     if user_id:
