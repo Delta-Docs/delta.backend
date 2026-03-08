@@ -44,17 +44,8 @@ def get_dashboard_stats(
         or 0
     )
 
-    # Count drift events that detected drift and are completed (need attention)
-    pr_waiting_count = int(
-        db.query(func.count(DriftEvent.id))
-        .join(Repository, DriftEvent.repo_id == Repository.id)
-        .join(Installation, Repository.installation_id == Installation.installation_id)
-        .filter(Installation.user_id == current_user.id)
-        .filter(DriftEvent.processing_phase == "completed")
-        .filter(DriftEvent.drift_result.in_(["drift_detected", "missing_docs"]))
-        .scalar()
-        or 0
-    )
+    # TODO: Count PRs that are waiting for review
+    pr_waiting_count = 0
 
     return {
         "installations_count": installations_count,

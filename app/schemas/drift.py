@@ -42,9 +42,9 @@ class DriftEventResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# Schema for drift event detail with agent logs
+# Schema for drift event detail response
 class DriftEventDetailResponse(DriftEventResponse):
-    agent_logs: Optional[dict] = None
+    pass
 
 
 # Schema for drift finding response

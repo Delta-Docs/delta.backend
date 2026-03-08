@@ -116,7 +116,7 @@ def get_drift_events(
     return events
 
 
-# Endpoint to get a single drift event with full details including agent logs
+# Endpoint to get a single drift event with full details
 @router.get("/{repo_id}/drift-events/{event_id}", response_model=DriftEventDetailResponse)
 def get_drift_event_detail(
     repo_id: UUID,
