@@ -96,7 +96,6 @@ List all repositories for the authenticated user.
     "avatar_url": "repo avatar url",
     "docs_root_path": "/docs",
     "target_branch": "main",
-    "drift_sensitivity": 0.5,
     "style_preference": "professional",
     "file_ignore_patterns": null,
     "last_synced_at": null,
@@ -124,7 +123,6 @@ Activate or deactivate drift monitoring for a repository.
   "avatar_url": "repo avatar url",
   "docs_root_path": "/docs",
   "target_branch": "main",
-  "drift_sensitivity": 0.5,
   "style_preference": "professional",
   "file_ignore_patterns": null,
   "last_synced_at": null,
@@ -139,7 +137,6 @@ Update repository configuration.
 {
   "docs_root_path": "/docs",
   "target_branch": "main",
-  "drift_sensitivity": 0.7,
   "style_preference": "technical",
   "file_ignore_patterns": ["*.test.js", "*.spec.ts"]
 }
@@ -155,7 +152,6 @@ Update repository configuration.
   "avatar_url": "repo avatar url",
   "docs_root_path": "/docs",
   "target_branch": "main",
-  "drift_sensitivity": 0.7,
   "style_preference": "technical",
   "file_ignore_patterns": ["*.test.js", "*.spec.ts"],
   "last_synced_at": null,

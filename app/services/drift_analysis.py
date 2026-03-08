@@ -7,7 +7,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
-from app.db.base import DriftEvent, CodeChange
+from app.db.base import DriftEvent, DriftFinding, CodeChange
+from app.core.queue import task_queue
 from app.services.git_service import get_local_repo_path, pull_branches
 from app.services.github_api import update_github_check_run, get_installation_access_token
 from app.services.notification_service import create_notification
@@ -135,6 +136,26 @@ def run_drift_analysis(drift_event_id: str):
         drift_event.started_at = datetime.now(timezone.utc)
         session.commit()
 
+        # Update GH check run to in_progress
+        if (
+            drift_event.check_run_id
+            and drift_event.repository
+            and drift_event.repository.installation
+        ):
+            try:
+                asyncio.run(
+                    update_github_check_run(
+                        repo_full_name=drift_event.repository.repo_name,
+                        check_run_id=drift_event.check_run_id,
+                        installation_id=drift_event.repository.installation_id,
+                        status="in_progress",
+                        title="Delta Drift Analysis",
+                        summary="Analysing PR for documentation drift...",
+                    )
+                )
+            except Exception as e:
+                print(f"Failed to update check run to in_progress: {e}")
+
         _extract_and_save_code_changes(session, drift_event)
 
         repo_path = get_local_repo_path(drift_event.repository.repo_name)
@@ -160,10 +181,39 @@ def run_drift_analysis(drift_event_id: str):
         print(f"ERROR: {e}")
         session.rollback()
 
-        # Mark the event as failed and notify the user
+        # Retry logic on first 3 failures, then is marked as failed
         try:
             drift_event = session.query(DriftEvent).filter(DriftEvent.id == drift_event_id).first()
             if drift_event:
+                if drift_event.retry_count < 3:
+                    # Clear stale findings and code changes from the failed run
+                    session.query(DriftFinding).filter(
+                        DriftFinding.drift_event_id == drift_event.id
+                    ).delete(synchronize_session=False)
+                    session.query(CodeChange).filter(
+                        CodeChange.drift_event_id == drift_event.id
+                    ).delete(synchronize_session=False)
+
+                    # Increment retry count and reset to a clean queued state
+                    drift_event.retry_count += 1
+                    drift_event.processing_phase = "queued"
+                    drift_event.drift_result = "pending"
+                    drift_event.overall_drift_score = None
+                    drift_event.summary = None
+                    drift_event.agent_logs = None
+                    drift_event.error_message = str(e)
+                    drift_event.started_at = None
+                    drift_event.completed_at = None
+                    session.commit()
+
+                    print(
+                        f"Retrying drift analysis for event {drift_event_id} "
+                        f"(attempt {drift_event.retry_count}/3)..."
+                    )
+                    task_queue.enqueue(run_drift_analysis, drift_event_id)
+                    return
+
+                # if retry_count >= 3, mark as permanently failed and notify the user
                 drift_event.processing_phase = "failed"
                 drift_event.drift_result = "error"
                 drift_event.error_message = str(e)
@@ -199,7 +249,7 @@ def run_drift_analysis(drift_event_id: str):
 
                 session.commit()
         except Exception as inner_e:
-            print(f"Failed to mark drift event as failed: {inner_e}")
+            print(f"Failed to handle drift event failure: {inner_e}")
             session.rollback()
 
         raise
