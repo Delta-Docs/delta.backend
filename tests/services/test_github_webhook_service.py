@@ -1054,3 +1054,201 @@ async def test_pr_synchronize_check_run_uses_new_head_sha():
 
     args, _ = mock_check_run.call_args
     assert args[3] == "latest_sha"
+
+
+# Test notification is sent when new changes are pushed to an open PR
+@pytest.mark.asyncio
+async def test_notification_on_pr_synchronize():
+    user_id = uuid.uuid4()
+
+    mock_repo = MagicMock()
+    mock_repo.id = uuid.uuid4()
+    mock_repo.is_active = True
+    mock_repo.target_branch = "main"
+
+    drift_event = MagicMock()
+    drift_event.id = uuid.uuid4()
+
+    mock_installation = MagicMock()
+    mock_installation.user_id = user_id
+
+    mock_db = MagicMock()
+
+    def query_side_effect(model):
+        m = MagicMock()
+        if model == Repository:
+            m.filter.return_value.first.return_value = mock_repo
+        elif model == DriftEvent:
+            m.filter.return_value.order_by.return_value.first.return_value = drift_event
+        elif model == Installation:
+            m.filter.return_value.first.return_value = mock_installation
+        else:
+            m.filter.return_value.delete.return_value = None
+            m.filter.return_value.first.return_value = None
+        return m
+
+    mock_db.query.side_effect = query_side_effect
+    payload = _make_sync_payload(pr_number=15, repo_full_name="owner/repo")
+
+    with (
+        patch(
+            "app.services.github_webhook_service.get_installation_access_token",
+            new_callable=AsyncMock,
+        ),
+        patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock),
+        patch(
+            "app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock
+        ),
+        patch("app.services.github_webhook_service.task_queue"),
+        patch("app.services.github_webhook_service.create_notification") as mock_notif,
+    ):
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+
+    mock_notif.assert_called_once()
+    _, notif_user_id, content = mock_notif.call_args[0]
+    assert notif_user_id == user_id
+    assert "PR #15" in content
+    assert "owner/repo" in content
+    assert "new changes" in content
+
+
+# Test no notification on PR synchronize when no user_id
+@pytest.mark.asyncio
+async def test_no_notification_on_pr_synchronize_when_no_user_id():
+    mock_repo = MagicMock()
+    mock_repo.id = uuid.uuid4()
+    mock_repo.is_active = True
+    mock_repo.target_branch = "main"
+
+    drift_event = MagicMock()
+    drift_event.id = uuid.uuid4()
+
+    mock_installation = MagicMock()
+    mock_installation.user_id = None
+
+    mock_db = MagicMock()
+
+    def query_side_effect(model):
+        m = MagicMock()
+        if model == Repository:
+            m.filter.return_value.first.return_value = mock_repo
+        elif model == DriftEvent:
+            m.filter.return_value.order_by.return_value.first.return_value = drift_event
+        elif model == Installation:
+            m.filter.return_value.first.return_value = mock_installation
+        else:
+            m.filter.return_value.delete.return_value = None
+            m.filter.return_value.first.return_value = None
+        return m
+
+    mock_db.query.side_effect = query_side_effect
+    payload = _make_sync_payload()
+
+    with (
+        patch(
+            "app.services.github_webhook_service.get_installation_access_token",
+            new_callable=AsyncMock,
+        ),
+        patch("app.services.github_webhook_service.pull_branches", new_callable=AsyncMock),
+        patch(
+            "app.services.github_webhook_service.create_github_check_run", new_callable=AsyncMock
+        ),
+        patch("app.services.github_webhook_service.task_queue"),
+        patch("app.services.github_webhook_service.create_notification") as mock_notif,
+    ):
+        await github_webhook_service.handle_github_event(mock_db, "pull_request", payload)
+
+    mock_notif.assert_not_called()
+
+
+# Test notification is sent when drift analysis is re-queued via check suite re-request
+@pytest.mark.asyncio
+async def test_notification_on_check_suite_rerequested():
+    user_id = uuid.uuid4()
+
+    drift_event = MagicMock()
+    drift_event.id = uuid.uuid4()
+    drift_event.pr_number = 22
+    drift_event.head_sha = "sha999"
+
+    mock_installation = MagicMock()
+    mock_installation.user_id = user_id
+
+    mock_db = MagicMock()
+
+    def query_side_effect(model):
+        m = MagicMock()
+        if model == DriftEvent:
+            m.join.return_value.filter.return_value.order_by.return_value.first.return_value = (
+                drift_event
+            )
+        elif model == Installation:
+            m.filter.return_value.first.return_value = mock_installation
+        else:
+            m.filter.return_value.delete.return_value = None
+            m.filter.return_value.first.return_value = None
+        return m
+
+    mock_db.query.side_effect = query_side_effect
+    payload = _make_check_suite_payload(
+        head_sha="sha999", repo_full_name="owner/repo", installation_id=100
+    )
+
+    with (
+        patch(
+            "app.services.github_webhook_service.create_github_check_run",
+            new_callable=AsyncMock,
+        ),
+        patch("app.services.github_webhook_service.task_queue"),
+        patch("app.services.github_webhook_service.create_notification") as mock_notif,
+    ):
+        await github_webhook_service.handle_github_event(mock_db, "check_suite", payload)
+
+    mock_notif.assert_called_once()
+    _, notif_user_id, content = mock_notif.call_args[0]
+    assert notif_user_id == user_id
+    assert "PR #22" in content
+    assert "owner/repo" in content
+    assert "re-queued" in content
+
+
+# Test no notification on check suite rerequested when no user_id
+@pytest.mark.asyncio
+async def test_no_notification_on_check_suite_rerequested_when_no_user_id():
+    drift_event = MagicMock()
+    drift_event.id = uuid.uuid4()
+    drift_event.pr_number = 22
+    drift_event.head_sha = "sha999"
+
+    mock_installation = MagicMock()
+    mock_installation.user_id = None
+
+    mock_db = MagicMock()
+
+    def query_side_effect(model):
+        m = MagicMock()
+        if model == DriftEvent:
+            m.join.return_value.filter.return_value.order_by.return_value.first.return_value = (
+                drift_event
+            )
+        elif model == Installation:
+            m.filter.return_value.first.return_value = mock_installation
+        else:
+            m.filter.return_value.delete.return_value = None
+            m.filter.return_value.first.return_value = None
+        return m
+
+    mock_db.query.side_effect = query_side_effect
+    payload = _make_check_suite_payload()
+
+    with (
+        patch(
+            "app.services.github_webhook_service.create_github_check_run",
+            new_callable=AsyncMock,
+        ),
+        patch("app.services.github_webhook_service.task_queue"),
+        patch("app.services.github_webhook_service.create_notification") as mock_notif,
+    ):
+        await github_webhook_service.handle_github_event(mock_db, "check_suite", payload)
+
+    mock_notif.assert_not_called()
