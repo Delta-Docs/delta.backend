@@ -1,12 +1,13 @@
 from unittest.mock import MagicMock, patch
 from app.agents.nodes.doc_gen_nodes import plan_updates, rewrite_docs, apply_changes
+from app.agents.state import DriftAnalysisState
 
 
 # ----- plan_updates tests -----
 
 
 def test_plan_updates_empty_findings():
-    state = {
+    state: DriftAnalysisState = {
         "drift_event_id": "evt-1",
         "base_sha": "base",
         "head_sha": "head",
@@ -45,7 +46,7 @@ def test_plan_updates_returns_target_files(tmp_path):
     mock_structured.invoke.return_value = mock_plan
     mock_llm_instance.with_structured_output.return_value = mock_structured
 
-    state = {
+    state: DriftAnalysisState = {
         "drift_event_id": "evt-1",
         "base_sha": "base",
         "head_sha": "head",
@@ -84,7 +85,7 @@ def test_plan_updates_llm_error_returns_empty():
     mock_structured.invoke.side_effect = Exception("LLM error")
     mock_llm_instance.with_structured_output.return_value = mock_structured
 
-    state = {
+    state: DriftAnalysisState = {
         "drift_event_id": "evt-1",
         "base_sha": "base",
         "head_sha": "head",
@@ -119,7 +120,7 @@ def test_plan_updates_llm_error_returns_empty():
 
 
 def test_rewrite_docs_empty_targets():
-    state = {
+    state: DriftAnalysisState = {
         "drift_event_id": "evt-1",
         "base_sha": "base",
         "head_sha": "head",
@@ -151,7 +152,7 @@ def test_rewrite_docs_rewrites_file(tmp_path):
     mock_llm_instance = MagicMock()
     mock_llm_instance.invoke.return_value = mock_llm_response
 
-    state = {
+    state: DriftAnalysisState = {
         "drift_event_id": "evt-1",
         "base_sha": "base",
         "head_sha": "head",
@@ -196,7 +197,7 @@ def test_rewrite_docs_strips_code_fences(tmp_path):
     mock_llm_instance = MagicMock()
     mock_llm_instance.invoke.return_value = mock_llm_response
 
-    state = {
+    state: DriftAnalysisState = {
         "drift_event_id": "evt-1",
         "base_sha": "base",
         "head_sha": "head",
@@ -232,7 +233,7 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
 
     mock_llm_instance = MagicMock()
 
-    state = {
+    state: DriftAnalysisState = {
         "drift_event_id": "evt-1",
         "base_sha": "base",
         "head_sha": "head",
@@ -263,7 +264,7 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
 
 
 def test_apply_changes_writes_files(tmp_path):
-    state = {
+    state: DriftAnalysisState = {
         "drift_event_id": "evt-1",
         "base_sha": "base",
         "head_sha": "head",
@@ -291,7 +292,7 @@ def test_apply_changes_writes_files(tmp_path):
 
 
 def test_apply_changes_blocks_path_traversal(tmp_path):
-    state = {
+    state: DriftAnalysisState = {
         "drift_event_id": "evt-1",
         "base_sha": "base",
         "head_sha": "head",
@@ -319,7 +320,7 @@ def test_apply_changes_blocks_path_traversal(tmp_path):
 
 
 def test_apply_changes_skips_non_markdown(tmp_path):
-    state = {
+    state: DriftAnalysisState = {
         "drift_event_id": "evt-1",
         "base_sha": "base",
         "head_sha": "head",
