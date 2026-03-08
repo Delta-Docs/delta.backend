@@ -159,7 +159,7 @@ Update repository configuration.
 ```
 
 ### GET `/repos/{repo_id}/drift-events`
-Get all drift events for a repository, ordered by most recent first. Returns minimal data optimized for list views.
+Get basic details for all drift events in a repository, ordered by most recent first.
 
 **Response:**
 ```json
@@ -179,7 +179,7 @@ Get all drift events for a repository, ordered by most recent first. Returns min
 ```
 
 ### GET `/repos/{repo_id}/drift-events/{event_id}`
-Get detailed information for a specific drift event, including all findings and code changes.
+Get all information for a specific drift event, including all drift findings and code changes.
 
 **Response:**
 ```json
