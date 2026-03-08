@@ -37,5 +37,37 @@ class DriftEventResponse(BaseModel):
     started_at: Optional[datetime]
     completed_at: Optional[datetime]
     created_at: datetime
+    docs_pr_number: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Schema for drift event detail with agent logs
+class DriftEventDetailResponse(DriftEventResponse):
+    agent_logs: Optional[dict] = None
+
+
+# Schema for drift finding response
+class DriftFindingResponse(BaseModel):
+    id: uuid.UUID
+    code_path: str
+    doc_file_path: Optional[str]
+    change_type: Optional[str]
+    drift_type: Optional[str]
+    drift_score: Optional[float]
+    explanation: Optional[str]
+    confidence: Optional[float]
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Schema for code change response
+class CodeChangeResponse(BaseModel):
+    id: uuid.UUID
+    file_path: str
+    change_type: Optional[str]
+    is_code: Optional[bool]
+    is_ignored: bool
 
     model_config = ConfigDict(from_attributes=True)
