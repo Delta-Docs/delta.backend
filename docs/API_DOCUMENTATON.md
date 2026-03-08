@@ -191,7 +191,6 @@ Get detailed information for a specific drift event, including all findings and 
   "processing_phase": "completed",
   "drift_result": "drift_detected",
   "overall_drift_score": 0.8,
-  "summary": "Authentication flow was updated but related docs were not.",
   "error_message": null,
   "started_at": "2026-02-28T19:59:19.752504Z",
   "completed_at": "2026-02-28T19:59:22.853917Z",
