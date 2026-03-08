@@ -706,6 +706,7 @@ def test_run_drift_analysis_in_progress_failure_doesnt_abort():
 
 # ── wildcard pattern matching (existing test, unchanged) ─────────────────────
 
+
 # Test wildcard pattern matching (e.g. *.cfg and directory prefix patterns)
 def test_extract_and_save_code_changes_wildcard_pattern():
     drift_event = _make_drift_event(file_ignore_patterns=["*.cfg", "config/*"])

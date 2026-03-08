@@ -122,7 +122,11 @@ def run_drift_analysis(drift_event_id: str):
         session.commit()
 
         # Update GH check run to in_progress
-        if drift_event.check_run_id and drift_event.repository and drift_event.repository.installation:
+        if (
+            drift_event.check_run_id
+            and drift_event.repository
+            and drift_event.repository.installation
+        ):
             try:
                 asyncio.run(
                     update_github_check_run(

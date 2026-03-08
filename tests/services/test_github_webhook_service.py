@@ -622,6 +622,7 @@ async def test_drift_event_id_passed_as_string():
         assert args[1] == str(drift_id)
         assert isinstance(args[1], str)
 
+
 # Helper function to create a check_suite rerequested payload
 def _make_check_suite_payload(head_sha="sha999", repo_full_name="owner/repo", installation_id=100):
     return {
@@ -636,11 +637,7 @@ def _make_check_suite_payload(head_sha="sha999", repo_full_name="owner/repo", in
 def _make_check_suite_db(drift_event):
     mock_db = MagicMock()
     (
-        mock_db.query.return_value
-        .join.return_value
-        .filter.return_value
-        .order_by.return_value
-        .first.return_value
+        mock_db.query.return_value.join.return_value.filter.return_value.order_by.return_value.first.return_value
     ) = drift_event
     return mock_db
 
@@ -731,8 +728,12 @@ async def test_check_suite_rerequested_clears_stale_findings_and_changes():
 
     def track_deletes(model):
         m = MagicMock()
-        m.filter.return_value.delete = MagicMock(side_effect=lambda **kw: deleted_models.append(model))
-        m.join.return_value.filter.return_value.order_by.return_value.first.return_value = drift_event
+        m.filter.return_value.delete = MagicMock(
+            side_effect=lambda **kw: deleted_models.append(model)
+        )
+        m.join.return_value.filter.return_value.order_by.return_value.first.return_value = (
+            drift_event
+        )
         return m
 
     mock_db.query.side_effect = track_deletes
