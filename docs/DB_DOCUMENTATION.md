@@ -66,6 +66,8 @@ CREATE TABLE drift_events (
     base_sha VARCHAR NOT NULL,
     head_sha VARCHAR NOT NULL,
     check_run_id BIGINT,
+    docs_pr_number INTEGER,
+    retry_count INTEGER DEFAULT 0 NOT NULL,
     processing_phase VARCHAR DEFAULT 'queued',
     drift_result VARCHAR DEFAULT 'pending',
     overall_drift_score FLOAT,
@@ -82,6 +84,10 @@ CREATE TABLE drift_events (
 CREATE INDEX idx_drift_active_runs ON drift_events (repo_id) 
 WHERE processing_phase NOT IN ('completed', 'failed');
 ```
+
+**New Columns:**
+- `docs_pr_number`: Stores the PR number of the documentation update PR created by Delta (nullable)
+- `retry_count`: Tracks the number of times this drift event has been retried (default: 0)
 
 ### Drift Findings Table
 ```sql
