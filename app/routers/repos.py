@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.installation import Installation
 from app.models.repository import Repository
 from app.schemas.drift import (
+    DriftEventListResponse,
     DriftEventResponse,
     DriftEventDetailResponse,
     DriftFindingResponse,
@@ -88,8 +89,8 @@ def toggle_repo_activation(
     return repo
 
 
-# Endpoint to get all drift events for a repo
-@router.get("/{repo_id}/drift-events", response_model=list[DriftEventResponse])
+# Endpoint to get all drift events for a repo (minimal data for list view)
+@router.get("/{repo_id}/drift-events", response_model=list[DriftEventListResponse])
 def get_drift_events(
     repo_id: UUID,
     db: Session = Depends(get_db_connection),
@@ -106,7 +107,7 @@ def get_drift_events(
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
 
-    # Returning the drift events
+    # Returning the drift events with minimal data
     events = (
         db.query(DriftEvent)
         .filter(DriftEvent.repo_id == repo_id)
@@ -116,7 +117,7 @@ def get_drift_events(
     return events
 
 
-# Endpoint to get a single drift event with full details
+# Endpoint to get a single drift event with full details, findings, and code changes
 @router.get("/{repo_id}/drift-events/{event_id}", response_model=DriftEventDetailResponse)
 def get_drift_event_detail(
     repo_id: UUID,
@@ -145,85 +146,23 @@ def get_drift_event_detail(
     if not event:
         raise HTTPException(status_code=404, detail="Drift event not found")
 
-    return event
-
-
-# Endpoint to get all findings for a drift event
-@router.get(
-    "/{repo_id}/drift-events/{event_id}/findings", response_model=list[DriftFindingResponse]
-)
-def get_drift_findings(
-    repo_id: UUID,
-    event_id: UUID,
-    db: Session = Depends(get_db_connection),
-    current_user: User = Depends(get_current_user),
-):
-    # Verify user owns the repo
-    repo = (
-        db.query(Repository)
-        .join(Installation, Repository.installation_id == Installation.installation_id)
-        .filter(Repository.id == repo_id, Installation.user_id == current_user.id)
-        .first()
-    )
-
-    if not repo:
-        raise HTTPException(status_code=404, detail="Repository not found")
-
-    # Verify event exists for this repo
-    event = (
-        db.query(DriftEvent)
-        .filter(DriftEvent.id == event_id, DriftEvent.repo_id == repo_id)
-        .first()
-    )
-
-    if not event:
-        raise HTTPException(status_code=404, detail="Drift event not found")
-
-    # Get findings
+    # Get findings and code changes
     findings = (
         db.query(DriftFinding)
         .filter(DriftFinding.drift_event_id == event_id)
         .order_by(DriftFinding.created_at.desc())
         .all()
     )
-    return findings
 
-
-# Endpoint to get all code changes for a drift event
-@router.get(
-    "/{repo_id}/drift-events/{event_id}/code-changes", response_model=list[CodeChangeResponse]
-)
-def get_code_changes(
-    repo_id: UUID,
-    event_id: UUID,
-    db: Session = Depends(get_db_connection),
-    current_user: User = Depends(get_current_user),
-):
-    # Verify user owns the repo
-    repo = (
-        db.query(Repository)
-        .join(Installation, Repository.installation_id == Installation.installation_id)
-        .filter(Repository.id == repo_id, Installation.user_id == current_user.id)
-        .first()
-    )
-
-    if not repo:
-        raise HTTPException(status_code=404, detail="Repository not found")
-
-    # Verify event exists for this repo
-    event = (
-        db.query(DriftEvent)
-        .filter(DriftEvent.id == event_id, DriftEvent.repo_id == repo_id)
-        .first()
-    )
-
-    if not event:
-        raise HTTPException(status_code=404, detail="Drift event not found")
-
-    # Get code changes
-    changes = (
+    code_changes = (
         db.query(CodeChange)
         .filter(CodeChange.drift_event_id == event_id)
         .all()
     )
-    return changes
+
+    # Build response with nested data
+    return DriftEventDetailResponse(
+        **event.__dict__,
+        findings=[DriftFindingResponse(**f.__dict__) for f in findings],
+        code_changes=[CodeChangeResponse(**c.__dict__) for c in code_changes]
+    )
