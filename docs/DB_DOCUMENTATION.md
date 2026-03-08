@@ -69,6 +69,7 @@ CREATE TABLE drift_events (
     summary VARCHAR,
     agent_logs JSONB,
     error_message VARCHAR,
+    retry_count INTEGER DEFAULT 0 NOT NULL,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now(),
