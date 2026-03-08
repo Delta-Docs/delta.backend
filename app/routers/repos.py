@@ -3,11 +3,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.deps import get_db_connection, get_current_user
-from app.models.drift import DriftEvent
+from app.models.drift import DriftEvent, DriftFinding, CodeChange
 from app.models.user import User
 from app.models.installation import Installation
 from app.models.repository import Repository
-from app.schemas.drift import DriftEventResponse
+from app.schemas.drift import (
+    DriftEventListResponse,
+    DriftEventDetailResponse,
+    DriftFindingResponse,
+    CodeChangeResponse,
+)
 from app.schemas.repository import RepositorySettings, RepositoryActivation, RepositoryResponse
 
 router = APIRouter()
@@ -83,8 +88,8 @@ def toggle_repo_activation(
     return repo
 
 
-# Endpoint to get all drift events for a repo
-@router.get("/{repo_id}/drift-events", response_model=list[DriftEventResponse])
+# Endpoint to get all drift events for a repo (minimal data for list view)
+@router.get("/{repo_id}/drift-events", response_model=list[DriftEventListResponse])
 def get_drift_events(
     repo_id: UUID,
     db: Session = Depends(get_db_connection),
@@ -101,7 +106,7 @@ def get_drift_events(
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
 
-    # Returning the drift events
+    # Returning the drift events with minimal data
     events = (
         db.query(DriftEvent)
         .filter(DriftEvent.repo_id == repo_id)
@@ -109,3 +114,54 @@ def get_drift_events(
         .all()
     )
     return events
+
+
+# Endpoint to get a single drift event with full details, findings, and code changes
+@router.get("/{repo_id}/drift-events/{event_id}", response_model=DriftEventDetailResponse)
+def get_drift_event_detail(
+    repo_id: UUID,
+    event_id: UUID,
+    db: Session = Depends(get_db_connection),
+    current_user: User = Depends(get_current_user),
+):
+    # Verify user owns the repo
+    repo = (
+        db.query(Repository)
+        .join(Installation, Repository.installation_id == Installation.installation_id)
+        .filter(Repository.id == repo_id, Installation.user_id == current_user.id)
+        .first()
+    )
+
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    # Get the drift event
+    event = (
+        db.query(DriftEvent)
+        .filter(DriftEvent.id == event_id, DriftEvent.repo_id == repo_id)
+        .first()
+    )
+
+    if not event:
+        raise HTTPException(status_code=404, detail="Drift event not found")
+
+    # Get findings and code changes
+    findings = (
+        db.query(DriftFinding)
+        .filter(DriftFinding.drift_event_id == event_id)
+        .order_by(DriftFinding.created_at.desc())
+        .all()
+    )
+
+    code_changes = (
+        db.query(CodeChange)
+        .filter(CodeChange.drift_event_id == event_id)
+        .all()
+    )
+
+    # Build response with nested data
+    return DriftEventDetailResponse(
+        **event.__dict__,
+        findings=[DriftFindingResponse(**f.__dict__) for f in findings],
+        code_changes=[CodeChangeResponse(**c.__dict__) for c in code_changes]
+    )

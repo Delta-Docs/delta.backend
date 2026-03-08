@@ -44,7 +44,7 @@ def get_dashboard_stats(
         or 0
     )
 
-    # TODO: Implement logic to calculate the count of PRs raised for review
+    # TODO: Count PRs that are waiting for review
     pr_waiting_count = 0
 
     return {
