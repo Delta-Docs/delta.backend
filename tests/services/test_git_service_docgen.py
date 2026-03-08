@@ -45,7 +45,9 @@ async def test_checkout_docs_branch_already_exists_appends_timestamp():
         # The 5th call is checkout -b docs/drift-fix/... which should fail
         if call_count[0] == 5:
             mock_result.returncode = 1
-            mock_result.stderr = "fatal: A branch named 'docs/drift-fix/amr/update-auth' already exists"
+            mock_result.stderr = (
+                "fatal: A branch named 'docs/drift-fix/amr/update-auth' already exists"
+            )
         else:
             mock_result.returncode = 0
             mock_result.stdout = ""

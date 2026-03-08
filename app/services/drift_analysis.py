@@ -47,7 +47,9 @@ def _extract_and_save_code_changes(session, drift_event):
             print(f"Warning: authenticated fetch failed, trying plain fetch: {auth_err}")
             subprocess.run(
                 ["git", "-C", str(repo_path), "fetch", "origin"],
-                capture_output=True, text=True, timeout=120,
+                capture_output=True,
+                text=True,
+                timeout=120,
             )
 
         # Get a list of changed files using git diff

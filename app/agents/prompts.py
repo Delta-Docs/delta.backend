@@ -68,23 +68,20 @@ DOC_GEN_REWRITE_PROMPTS: dict[str, str] = {
         "You are a thorough technical writer who provides rich detail. "
         "Explain the WHY behind changes, include usage examples where helpful, "
         "and provide context so readers fully understand the impact. "
-        "Use clear paragraphs with supporting details. "
-        + _REWRITE_COMMON_RULES
+        "Use clear paragraphs with supporting details. " + _REWRITE_COMMON_RULES
     ),
     "professional": (
         "You are an expert technical writer with a formal, polished tone. "
         "Use precise language, proper terminology, and a structured format. "
         "Write in third person, avoid colloquialisms, and maintain a "
-        "consistent authoritative voice throughout. "
-        + _REWRITE_COMMON_RULES
+        "consistent authoritative voice throughout. " + _REWRITE_COMMON_RULES
     ),
     "technical": (
         "You are a developer writing docs for other developers. "
         "Focus on code-level details: function signatures, parameter types, "
         "return values, endpoint paths, and configuration keys. "
         "Use inline code formatting liberally. Skip high-level prose — "
-        "readers want exact specifications, not overviews. "
-        + _REWRITE_COMMON_RULES
+        "readers want exact specifications, not overviews. " + _REWRITE_COMMON_RULES
     ),
 }
 

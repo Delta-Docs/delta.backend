@@ -153,15 +153,11 @@ def get_drift_event_detail(
         .all()
     )
 
-    code_changes = (
-        db.query(CodeChange)
-        .filter(CodeChange.drift_event_id == event_id)
-        .all()
-    )
+    code_changes = db.query(CodeChange).filter(CodeChange.drift_event_id == event_id).all()
 
     # Build response with nested data
     return DriftEventDetailResponse(
         **event.__dict__,
         findings=[DriftFindingResponse(**f.__dict__) for f in findings],
-        code_changes=[CodeChangeResponse(**c.__dict__) for c in code_changes]
+        code_changes=[CodeChangeResponse(**c.__dict__) for c in code_changes],
     )

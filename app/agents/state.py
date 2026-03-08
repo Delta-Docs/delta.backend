@@ -17,4 +17,3 @@ class DriftAnalysisState(TypedDict):
     target_files: list[dict]
     rewrite_results: list[dict]
     style_preference: str
-

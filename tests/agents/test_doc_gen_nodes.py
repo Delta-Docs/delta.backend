@@ -209,7 +209,13 @@ def test_rewrite_docs_strips_code_fences(tmp_path):
         "findings": [],
         "repo_path": str(tmp_path),
         "target_files": [
-            {"doc_path": "docs/api.md", "section": "API", "action": "update", "description": "Update", "finding": {}}
+            {
+                "doc_path": "docs/api.md",
+                "section": "API",
+                "action": "update",
+                "description": "Update",
+                "finding": {},
+            }
         ],
         "rewrite_results": [],
     }
@@ -245,7 +251,13 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
         "findings": [],
         "repo_path": str(tmp_path / "repo"),  # repo is a subdir
         "target_files": [
-            {"doc_path": "../docs/api.md", "section": "API", "action": "update", "description": "Update", "finding": {}}
+            {
+                "doc_path": "../docs/api.md",
+                "section": "API",
+                "action": "update",
+                "description": "Update",
+                "finding": {},
+            }
         ],
         "rewrite_results": [],
     }

@@ -99,13 +99,21 @@ def commit_and_pr(state: DriftAnalysisState) -> dict[str, Any]:
     # Get the current branch name (the docs branch we checked out earlier)
     branch_result = subprocess.run(
         ["git", "-C", state["repo_path"], "rev-parse", "--abbrev-ref", "HEAD"],
-        capture_output=True, text=True, timeout=30,
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
-    docs_branch = branch_result.stdout.strip() if branch_result.returncode == 0 else f"docs/drift-fix/{original_branch}"
+    docs_branch = (
+        branch_result.stdout.strip()
+        if branch_result.returncode == 0
+        else f"docs/drift-fix/{original_branch}"
+    )
 
     # Create the docs PR targeting the original branch
     summary_lines = [f"- `{f.get('code_path', '?')}`: {f.get('explanation', '')}" for f in findings]
-    docs_summary = "\n".join(summary_lines) if summary_lines else "Auto-generated documentation fixes."
+    docs_summary = (
+        "\n".join(summary_lines) if summary_lines else "Auto-generated documentation fixes."
+    )
 
     docs_pr_number = asyncio.run(
         create_docs_pull_request(
