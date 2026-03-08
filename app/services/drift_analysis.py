@@ -9,8 +9,8 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from app.db.base import DriftEvent, DriftFinding, CodeChange
 from app.core.queue import task_queue
-from app.services.git_service import get_local_repo_path
-from app.services.github_api import update_github_check_run
+from app.services.git_service import get_local_repo_path, pull_branches
+from app.services.github_api import update_github_check_run, get_installation_access_token
 from app.services.notification_service import create_notification
 from app.agents.state import DriftAnalysisState
 from app.agents.graph import drift_analysis_graph
@@ -36,6 +36,20 @@ def _extract_and_save_code_changes(session, drift_event):
         raise Exception(f"Local repository not found at {repo_path}")
 
     try:
+        # Get a fresh access token and fetch all remote refs
+        try:
+            installation_id = drift_event.repository.installation_id
+            access_token = asyncio.run(get_installation_access_token(installation_id))
+            head_branch = drift_event.head_branch
+            base_branch = drift_event.base_branch
+            asyncio.run(pull_branches(repo_full_name, access_token, [base_branch, head_branch]))
+        except Exception as auth_err:
+            print(f"Warning: authenticated fetch failed, trying plain fetch: {auth_err}")
+            subprocess.run(
+                ["git", "-C", str(repo_path), "fetch", "origin"],
+                capture_output=True, text=True, timeout=120,
+            )
+
         # Get a list of changed files using git diff
         result = subprocess.run(
             ["git", "-C", str(repo_path), "diff", "--name-status", f"{base_sha}...{head_sha}"],
@@ -156,6 +170,9 @@ def run_drift_analysis(drift_event_id: str):
             "change_elements": [],
             "analysis_payloads": [],
             "findings": [],
+            "target_files": [],
+            "rewrite_results": [],
+            "style_preference": drift_event.repository.style_preference or "professional",
         }
 
         drift_analysis_graph.invoke(initial_state)
