@@ -148,7 +148,7 @@ make format
 It allows the user to interact and set up Delta. It is a React + Vite application that allows the user to:
  - Sign Up and access Delta
  - Link new repositories
- - Manage settings for linked repositories (drift sensitivity, target branch, etc.)
+ - Manage settings for linked repositories (file_ignore_patterns, target branch, etc.)
 
 [See delta.frontend code.](https://github.com/Delta-Docs/delta.frontend)
 

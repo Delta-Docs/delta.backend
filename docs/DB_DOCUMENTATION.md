@@ -46,7 +46,6 @@ CREATE TABLE repositories (
     avatar_url VARCHAR,
     docs_root_path VARCHAR DEFAULT '/docs',
     target_branch VARCHAR DEFAULT 'main',
-    drift_sensitivity FLOAT DEFAULT 0.5,
     style_preference VARCHAR DEFAULT 'professional',
     file_ignore_patterns VARCHAR[],
     last_synced_at TIMESTAMPTZ,
