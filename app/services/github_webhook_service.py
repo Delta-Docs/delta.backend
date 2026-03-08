@@ -376,9 +376,7 @@ async def _handle_pr_synchronize(db: Session, payload: dict):
         drift_event_id = str(new_event.id)
 
     # Create a fresh GH check run
-    await create_github_check_run(
-        db, drift_event_id, repo_full_name, new_head_sha, installation_id
-    )
+    await create_github_check_run(db, drift_event_id, repo_full_name, new_head_sha, installation_id)
 
     # Enqueue drift analysis job
     task_queue.enqueue(run_drift_analysis, drift_event_id)
