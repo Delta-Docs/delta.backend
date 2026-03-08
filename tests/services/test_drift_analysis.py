@@ -511,7 +511,7 @@ def test_run_drift_analysis_failure_updates_check_run():
         with pytest.raises(RuntimeError):
             run_drift_analysis(drift_event_id)
 
-    mock_update_check_run.assert_called_once_with(
+    mock_update_check_run.assert_any_call(
         repo_full_name="owner/repo",
         check_run_id=99999,
         installation_id=99,
@@ -520,7 +520,7 @@ def test_run_drift_analysis_failure_updates_check_run():
         title="Delta Drift Analysis",
         summary="Drift analysis failed due to an internal error.",
     )
-    mock_asyncio_run.assert_called_once()
+    assert mock_asyncio_run.call_count >= 1
 
 
 # Test that check run is NOT updated when check_run_id is None
@@ -618,6 +618,93 @@ def test_run_drift_analysis_failure_no_notification_when_no_user_id():
 
     mock_notif.assert_not_called()
 
+
+# ── in_progress check run update tests ──────────────────────────────────────
+
+
+# Test that update_github_check_run is called with in_progress at the start of analysis
+def test_run_drift_analysis_updates_check_run_to_in_progress():
+    session, drift_event = _setup_run_mocks()
+    drift_event.check_run_id = 77777
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch("app.services.drift_analysis._extract_and_save_code_changes"),
+        patch("app.services.drift_analysis.drift_analysis_graph") as mock_graph,
+        patch("app.services.drift_analysis.asyncio.run") as mock_asyncio_run,
+        patch(
+            "app.services.drift_analysis.update_github_check_run", new_callable=MagicMock
+        ) as mock_update,
+    ):
+        mock_path.return_value = Path("/repos/owner/repo")
+        mock_graph.invoke.return_value = {}
+
+        run_drift_analysis(str(drift_event.id))
+
+    mock_update.assert_called_once_with(
+        repo_full_name="owner/repo",
+        check_run_id=77777,
+        installation_id=99,
+        status="in_progress",
+        title="Delta Drift Analysis",
+        summary="Analysing PR for documentation drift...",
+    )
+    mock_asyncio_run.assert_called_once()
+
+
+# Test that in_progress update is skipped when check_run_id is None
+def test_run_drift_analysis_skips_in_progress_when_no_check_run_id():
+    session, drift_event = _setup_run_mocks()
+    drift_event.check_run_id = None
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch("app.services.drift_analysis._extract_and_save_code_changes"),
+        patch("app.services.drift_analysis.drift_analysis_graph") as mock_graph,
+        patch("app.services.drift_analysis.asyncio.run") as mock_asyncio_run,
+        patch(
+            "app.services.drift_analysis.update_github_check_run", new_callable=MagicMock
+        ) as mock_update,
+    ):
+        mock_path.return_value = Path("/repos/owner/repo")
+        mock_graph.invoke.return_value = {}
+
+        run_drift_analysis(str(drift_event.id))
+
+    mock_update.assert_not_called()
+    mock_asyncio_run.assert_not_called()
+
+
+# Test that a failing in_progress update does not abort the analysis
+def test_run_drift_analysis_in_progress_failure_doesnt_abort():
+    session, drift_event = _setup_run_mocks()
+    drift_event.check_run_id = 99999
+
+    with (
+        patch("app.services.drift_analysis._create_session", return_value=session),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch("app.services.drift_analysis._extract_and_save_code_changes") as mock_extract,
+        patch("app.services.drift_analysis.drift_analysis_graph") as mock_graph,
+        patch(
+            "app.services.drift_analysis.asyncio.run",
+            side_effect=Exception("GitHub API unavailable"),
+        ),
+        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock),
+    ):
+        mock_path.return_value = Path("/repos/owner/repo")
+        mock_graph.invoke.return_value = {}
+
+        # Should not raise — the in_progress failure is swallowed
+        run_drift_analysis(str(drift_event.id))
+
+    # Analysis still proceeds after the in_progress update failure
+    mock_extract.assert_called_once()
+    mock_graph.invoke.assert_called_once()
+
+
+# ── wildcard pattern matching (existing test, unchanged) ─────────────────────
 
 # Test wildcard pattern matching (e.g. *.cfg and directory prefix patterns)
 def test_extract_and_save_code_changes_wildcard_pattern():
