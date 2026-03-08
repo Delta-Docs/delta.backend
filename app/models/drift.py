@@ -35,6 +35,7 @@ class DriftEvent(Base):
     head_sha: Mapped[str] = mapped_column(String, nullable=False)
     check_run_id: Mapped[int | None] = mapped_column(BigInteger)
     docs_pr_number: Mapped[int | None] = mapped_column(Integer)
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     processing_phase: Mapped[str] = mapped_column(String, default="queued")
     drift_result: Mapped[str] = mapped_column(String, default="pending")
