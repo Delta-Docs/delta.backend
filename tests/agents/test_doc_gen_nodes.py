@@ -7,6 +7,14 @@ from app.agents.nodes.doc_gen_nodes import plan_updates, rewrite_docs, apply_cha
 
 def test_plan_updates_empty_findings():
     state = {
+        "drift_event_id": "evt-1",
+        "base_sha": "base",
+        "head_sha": "head",
+        "session": None,
+        "docs_root_path": "/docs",
+        "change_elements": [],
+        "analysis_payloads": [],
+        "style_preference": "professional",
         "findings": [],
         "repo_path": "/tmp/repos/owner/repo",
         "target_files": [],
@@ -38,6 +46,14 @@ def test_plan_updates_returns_target_files(tmp_path):
     mock_llm_instance.with_structured_output.return_value = mock_structured
 
     state = {
+        "drift_event_id": "evt-1",
+        "base_sha": "base",
+        "head_sha": "head",
+        "session": None,
+        "docs_root_path": "/docs",
+        "change_elements": [],
+        "analysis_payloads": [],
+        "style_preference": "professional",
         "findings": [
             {
                 "code_path": "app/auth.py",
@@ -69,6 +85,14 @@ def test_plan_updates_llm_error_returns_empty():
     mock_llm_instance.with_structured_output.return_value = mock_structured
 
     state = {
+        "drift_event_id": "evt-1",
+        "base_sha": "base",
+        "head_sha": "head",
+        "session": None,
+        "docs_root_path": "/docs",
+        "change_elements": [],
+        "analysis_payloads": [],
+        "style_preference": "professional",
         "findings": [
             {
                 "code_path": "app/auth.py",
@@ -96,6 +120,14 @@ def test_plan_updates_llm_error_returns_empty():
 
 def test_rewrite_docs_empty_targets():
     state = {
+        "drift_event_id": "evt-1",
+        "base_sha": "base",
+        "head_sha": "head",
+        "session": None,
+        "docs_root_path": "/docs",
+        "change_elements": [],
+        "analysis_payloads": [],
+        "style_preference": "professional",
         "findings": [],
         "repo_path": "/tmp/repos/owner/repo",
         "target_files": [],
@@ -120,6 +152,14 @@ def test_rewrite_docs_rewrites_file(tmp_path):
     mock_llm_instance.invoke.return_value = mock_llm_response
 
     state = {
+        "drift_event_id": "evt-1",
+        "base_sha": "base",
+        "head_sha": "head",
+        "session": None,
+        "docs_root_path": "/docs",
+        "change_elements": [],
+        "analysis_payloads": [],
+        "style_preference": "professional",
         "findings": [],
         "repo_path": str(tmp_path),
         "target_files": [
@@ -157,6 +197,14 @@ def test_rewrite_docs_strips_code_fences(tmp_path):
     mock_llm_instance.invoke.return_value = mock_llm_response
 
     state = {
+        "drift_event_id": "evt-1",
+        "base_sha": "base",
+        "head_sha": "head",
+        "session": None,
+        "docs_root_path": "/docs",
+        "change_elements": [],
+        "analysis_payloads": [],
+        "style_preference": "professional",
         "findings": [],
         "repo_path": str(tmp_path),
         "target_files": [
@@ -185,6 +233,14 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
     mock_llm_instance = MagicMock()
 
     state = {
+        "drift_event_id": "evt-1",
+        "base_sha": "base",
+        "head_sha": "head",
+        "session": None,
+        "docs_root_path": "/docs",
+        "change_elements": [],
+        "analysis_payloads": [],
+        "style_preference": "professional",
         "findings": [],
         "repo_path": str(tmp_path / "repo"),  # repo is a subdir
         "target_files": [
@@ -208,6 +264,14 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
 
 def test_apply_changes_writes_files(tmp_path):
     state = {
+        "drift_event_id": "evt-1",
+        "base_sha": "base",
+        "head_sha": "head",
+        "session": None,
+        "docs_root_path": "/docs",
+        "change_elements": [],
+        "analysis_payloads": [],
+        "style_preference": "professional",
         "findings": [],
         "repo_path": str(tmp_path),
         "target_files": [],
@@ -228,6 +292,14 @@ def test_apply_changes_writes_files(tmp_path):
 
 def test_apply_changes_blocks_path_traversal(tmp_path):
     state = {
+        "drift_event_id": "evt-1",
+        "base_sha": "base",
+        "head_sha": "head",
+        "session": None,
+        "docs_root_path": "/docs",
+        "change_elements": [],
+        "analysis_payloads": [],
+        "style_preference": "professional",
         "findings": [],
         "repo_path": str(tmp_path / "repo"),
         "target_files": [],
@@ -248,6 +320,14 @@ def test_apply_changes_blocks_path_traversal(tmp_path):
 
 def test_apply_changes_skips_non_markdown(tmp_path):
     state = {
+        "drift_event_id": "evt-1",
+        "base_sha": "base",
+        "head_sha": "head",
+        "session": None,
+        "docs_root_path": "/docs",
+        "change_elements": [],
+        "analysis_payloads": [],
+        "style_preference": "professional",
         "findings": [],
         "repo_path": str(tmp_path),
         "target_files": [],
