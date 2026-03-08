@@ -23,7 +23,22 @@ class LLMDriftFinding(BaseModel):
     )
 
 
-# Schema for the drift event response
+# Schema for drift event list response (minimal data for table view)
+class DriftEventListResponse(BaseModel):
+    id: uuid.UUID
+    pr_number: int
+    base_branch: str
+    head_branch: str
+    processing_phase: str
+    drift_result: str
+    overall_drift_score: Optional[float]
+    created_at: datetime
+    docs_pr_number: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Schema for full drift event response (all fields)
 class DriftEventResponse(BaseModel):
     id: uuid.UUID
     pr_number: int
@@ -40,11 +55,6 @@ class DriftEventResponse(BaseModel):
     docs_pr_number: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
-
-
-# Schema for drift event detail response
-class DriftEventDetailResponse(DriftEventResponse):
-    pass
 
 
 # Schema for drift finding response
@@ -69,5 +79,13 @@ class CodeChangeResponse(BaseModel):
     change_type: Optional[str]
     is_code: Optional[bool]
     is_ignored: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Schema for drift event detail with nested findings and code changes
+class DriftEventDetailResponse(DriftEventResponse):
+    findings: list[DriftFindingResponse] = []
+    code_changes: list[CodeChangeResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
