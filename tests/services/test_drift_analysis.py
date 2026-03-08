@@ -735,6 +735,7 @@ def test_extract_and_save_code_changes_wildcard_pattern():
     assert is_ignored_flags["config/settings.py"] is True
     assert is_ignored_flags["src/service.py"] is False
 
+
 # Helper function to create mocks for retry-path tests with a configurable retry_count
 def _setup_retry_mocks(retry_count=0):
     drift_event_id = str(uuid4())

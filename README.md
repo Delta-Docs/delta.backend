@@ -199,7 +199,7 @@ delta.backend/
    │   │   ├── nodes/                       # Agent nodes
    │   │   ├── graph.py                     # LangGraph workflow graph
    │   │   ├── prompts.py                   # Agent prompts
-   │   │   └──  state.py                    # Workflow state definitions
+   │   │   └── state.py                     # Workflow state definitions
    │   │
    │   ├── core/                            # Core functionality
    │   │         

@@ -169,7 +169,6 @@ def run_drift_analysis(drift_event_id: str):
             drift_event = session.query(DriftEvent).filter(DriftEvent.id == drift_event_id).first()
             if drift_event:
                 if drift_event.retry_count < 3:
-
                     # Clear stale findings and code changes from the failed run
                     session.query(DriftFinding).filter(
                         DriftFinding.drift_event_id == drift_event.id
