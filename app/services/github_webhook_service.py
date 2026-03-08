@@ -381,6 +381,17 @@ async def _handle_pr_synchronize(db: Session, payload: dict):
     # Enqueue drift analysis job
     task_queue.enqueue(run_drift_analysis, drift_event_id)
 
+    # Notify the user that new commits have been detected and drift analysis is re-queued
+    installation = (
+        db.query(Installation).filter(Installation.installation_id == installation_id).first()
+    )
+    if installation and installation.user_id:
+        create_notification(
+            db,
+            installation.user_id,
+            f"PR #{pr_number} in {repo_full_name} has new commits and has been re-queued for drift analysis.",
+        )
+
 
 # Handle when a user clicks "Re-run all checks" in the linked repo
 async def _handle_check_suite_rerequested(db: Session, payload: dict):
@@ -435,6 +446,17 @@ async def _handle_check_suite_rerequested(db: Session, payload: dict):
 
     # Re-enqueue the drift analysis job
     task_queue.enqueue(run_drift_analysis, drift_event_id)
+
+    # Notify the user that drift analysis has been re-queued on their request
+    installation = (
+        db.query(Installation).filter(Installation.installation_id == installation_id).first()
+    )
+    if installation and installation.user_id:
+        create_notification(
+            db,
+            installation.user_id,
+            f"PR #{drift_event.pr_number} in {repo_full_name} has been re-queued on request for drift analysis.",
+        )
 
 
 # Main Router to handle different types of GH webhook events
