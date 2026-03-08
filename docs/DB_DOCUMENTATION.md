@@ -73,7 +73,6 @@ CREATE TABLE drift_events (
     summary VARCHAR,
     agent_logs JSONB,
     error_message VARCHAR,
-    retry_count INTEGER DEFAULT 0 NOT NULL,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now(),
@@ -88,6 +87,8 @@ WHERE processing_phase NOT IN ('completed', 'failed');
 **New Columns:**
 - `docs_pr_number`: Stores the PR number of the documentation update PR created by Delta (nullable)
 - `retry_count`: Tracks the number of times this drift event has been retried (default: 0)
+
+**Note:** The `summary` field is stored in the database for internal use and GitHub Check Run display, but is not exposed via the API. The API returns structured `findings[]` array instead.
 
 ### Drift Findings Table
 ```sql
