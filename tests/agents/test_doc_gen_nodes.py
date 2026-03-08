@@ -7,7 +7,7 @@ from app.agents.nodes.doc_gen_nodes import plan_updates, rewrite_docs, apply_cha
 
 def test_plan_updates_empty_findings():
     state = {
-        "drift_findings": [],
+        "findings": [],
         "repo_path": "/tmp/repos/owner/repo",
         "target_files": [],
         "rewrite_results": [],
@@ -18,7 +18,12 @@ def test_plan_updates_empty_findings():
     assert result == {"target_files": []}
 
 
-def test_plan_updates_returns_target_files():
+def test_plan_updates_returns_target_files(tmp_path):
+    # Create a real .md file so the anti-hallucination scan finds it
+    doc_file = tmp_path / "docs" / "api.md"
+    doc_file.parent.mkdir(parents=True, exist_ok=True)
+    doc_file.write_text("# API Docs", encoding="utf-8")
+
     mock_plan = MagicMock()
     mock_update = MagicMock()
     mock_update.doc_path = "docs/api.md"
@@ -33,7 +38,7 @@ def test_plan_updates_returns_target_files():
     mock_llm_instance.with_structured_output.return_value = mock_structured
 
     state = {
-        "drift_findings": [
+        "findings": [
             {
                 "code_path": "app/auth.py",
                 "drift_type": "outdated_docs",
@@ -41,7 +46,7 @@ def test_plan_updates_returns_target_files():
                 "matched_doc_paths": ["docs/api.md"],
             }
         ],
-        "repo_path": "/tmp/repos/owner/repo",
+        "repo_path": str(tmp_path),
         "target_files": [],
         "rewrite_results": [],
     }
@@ -64,7 +69,7 @@ def test_plan_updates_llm_error_returns_empty():
     mock_llm_instance.with_structured_output.return_value = mock_structured
 
     state = {
-        "drift_findings": [
+        "findings": [
             {
                 "code_path": "app/auth.py",
                 "drift_type": "outdated_docs",
@@ -91,7 +96,7 @@ def test_plan_updates_llm_error_returns_empty():
 
 def test_rewrite_docs_empty_targets():
     state = {
-        "drift_findings": [],
+        "findings": [],
         "repo_path": "/tmp/repos/owner/repo",
         "target_files": [],
         "rewrite_results": [],
@@ -115,7 +120,7 @@ def test_rewrite_docs_rewrites_file(tmp_path):
     mock_llm_instance.invoke.return_value = mock_llm_response
 
     state = {
-        "drift_findings": [],
+        "findings": [],
         "repo_path": str(tmp_path),
         "target_files": [
             {
@@ -152,7 +157,7 @@ def test_rewrite_docs_strips_code_fences(tmp_path):
     mock_llm_instance.invoke.return_value = mock_llm_response
 
     state = {
-        "drift_findings": [],
+        "findings": [],
         "repo_path": str(tmp_path),
         "target_files": [
             {"doc_path": "docs/api.md", "section": "API", "action": "update", "description": "Update", "finding": {}}
@@ -180,7 +185,7 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
     mock_llm_instance = MagicMock()
 
     state = {
-        "drift_findings": [],
+        "findings": [],
         "repo_path": str(tmp_path / "repo"),  # repo is a subdir
         "target_files": [
             {"doc_path": "../docs/api.md", "section": "API", "action": "update", "description": "Update", "finding": {}}
@@ -203,7 +208,7 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
 
 def test_apply_changes_writes_files(tmp_path):
     state = {
-        "drift_findings": [],
+        "findings": [],
         "repo_path": str(tmp_path),
         "target_files": [],
         "rewrite_results": [
@@ -223,7 +228,7 @@ def test_apply_changes_writes_files(tmp_path):
 
 def test_apply_changes_blocks_path_traversal(tmp_path):
     state = {
-        "drift_findings": [],
+        "findings": [],
         "repo_path": str(tmp_path / "repo"),
         "target_files": [],
         "rewrite_results": [
@@ -243,7 +248,7 @@ def test_apply_changes_blocks_path_traversal(tmp_path):
 
 def test_apply_changes_skips_non_markdown(tmp_path):
     state = {
-        "drift_findings": [],
+        "findings": [],
         "repo_path": str(tmp_path),
         "target_files": [],
         "rewrite_results": [

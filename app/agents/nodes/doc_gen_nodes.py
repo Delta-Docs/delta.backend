@@ -4,10 +4,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 
 from app.core.config import settings
-from app.agents.state import DocGenState
+from app.agents.state import DriftAnalysisState
 from app.agents.prompts import (
     DOC_GEN_PLAN_SYSTEM_PROMPT,
-    DOC_GEN_REWRITE_SYSTEM_PROMPT,
+    get_rewrite_system_prompt,
     build_doc_gen_rewrite_prompt,
 )
 
@@ -25,10 +25,23 @@ class UpdatePlan(BaseModel):
 
 
 # Node analyses drift findings and maps them to specific doc files/sections
-def plan_updates(state: DocGenState) -> dict[str, Any]:
-    drift_findings: list[dict] = state["drift_findings"]
+def plan_updates(state: DriftAnalysisState) -> dict[str, Any]:
+    drift_findings: list[dict] = state["findings"]
+    repo_path: str = state["repo_path"]
 
     if not drift_findings:
+        return {"target_files": []}
+
+    # Discover actual .md files in the repo so the LLM doesn't hallucinate paths
+    repo_root = Path(repo_path)
+    existing_md_files = [
+        str(p.relative_to(repo_root)).replace("\\", "/")
+        for p in repo_root.rglob("*.md")
+        if ".git" not in p.parts
+    ]
+
+    if not existing_md_files:
+        print("plan_updates: no .md files found in repo")
         return {"target_files": []}
 
     # Initialise Gemini with structured output bound to UpdatePlan
@@ -39,7 +52,7 @@ def plan_updates(state: DocGenState) -> dict[str, Any]:
     )
     structured_llm = llm.with_structured_output(UpdatePlan)
 
-    # Build user prompt with all findings
+    # Build user prompt with all findings AND the list of real doc files
     findings_text = ""
     for i, finding in enumerate(drift_findings, 1):
         findings_text += (
@@ -49,10 +62,14 @@ def plan_updates(state: DocGenState) -> dict[str, Any]:
             f"   **Matched docs:** {finding.get('matched_doc_paths', [])}\n\n"
         )
 
+    md_files_list = "\n".join(f"- `{f}`" for f in existing_md_files)
+
     user_prompt = (
+        f"## Available Documentation Files\n{md_files_list}\n\n"
         f"## Drift Findings\n{findings_text}\n"
         f"Plan the documentation updates needed to resolve each finding above. "
-        f"Map each finding to the exact doc file path and section heading."
+        f"You MUST ONLY use doc_path values from the 'Available Documentation Files' list above. "
+        f"Do NOT invent or guess file paths."
     )
 
     try:
@@ -67,9 +84,14 @@ def plan_updates(state: DocGenState) -> dict[str, Any]:
         print(f"LLM error in plan_updates: {exc}")
         return {"target_files": []}
 
-    # Convert the structured plan into target_files dicts
+    # Convert the structured plan into target_files dicts, filtering invalid paths
     target_files = []
     for update in plan.updates:
+        # Reject paths the LLM hallucinated (not in actual repo files)
+        if update.doc_path not in existing_md_files:
+            print(f"plan_updates: skipping hallucinated path '{update.doc_path}'")
+            continue
+
         # Find the matching finding for context
         matched_finding = next(
             (
@@ -95,9 +117,10 @@ def plan_updates(state: DocGenState) -> dict[str, Any]:
 
 
 # Node rewrites each target doc file using the LLM
-def rewrite_docs(state: DocGenState) -> dict[str, Any]:
+def rewrite_docs(state: DriftAnalysisState) -> dict[str, Any]:
     target_files: list[dict] = state["target_files"]
     repo_path: str = state["repo_path"]
+    style_preference: str = state.get("style_preference", "professional")
 
     if not target_files:
         return {"rewrite_results": []}
@@ -152,7 +175,7 @@ def rewrite_docs(state: DocGenState) -> dict[str, Any]:
         try:
             result = llm.invoke(
                 [
-                    {"role": "system", "content": DOC_GEN_REWRITE_SYSTEM_PROMPT},
+                    {"role": "system", "content": get_rewrite_system_prompt(style_preference)},
                     {"role": "user", "content": user_prompt},
                 ]
             )
@@ -180,7 +203,7 @@ def rewrite_docs(state: DocGenState) -> dict[str, Any]:
 
 
 # Node writes the rewritten content to the local .md files
-def apply_changes(state: DocGenState) -> dict[str, Any]:
+def apply_changes(state: DriftAnalysisState) -> dict[str, Any]:
     rewrite_results: list[dict] = state["rewrite_results"]
     repo_path: str = state["repo_path"]
 

@@ -11,7 +11,7 @@ def test_start_worker_single():
     mock_redis_conn = MagicMock()
 
     with (
-        patch("workers.Worker", return_value=mock_worker) as mock_worker_class,
+        patch("workers.WorkerClass", return_value=mock_worker) as mock_worker_class,
         patch("workers.task_queue", mock_task_queue),
         patch("workers.redis_conn", mock_redis_conn),
     ):
@@ -35,7 +35,7 @@ def test_start_worker_with_custom_number():
     mock_redis_conn = MagicMock()
 
     with (
-        patch("workers.Worker", return_value=mock_worker) as mock_worker_class,
+        patch("workers.WorkerClass", return_value=mock_worker) as mock_worker_class,
         patch("workers.task_queue", mock_task_queue),
         patch("workers.redis_conn", mock_redis_conn),
     ):
@@ -117,7 +117,7 @@ def test_worker_listens_to_task_queue():
     mock_redis_conn = MagicMock()
 
     with (
-        patch("workers.Worker", return_value=mock_worker) as mock_worker_class,
+        patch("workers.WorkerClass", return_value=mock_worker) as mock_worker_class,
         patch("workers.task_queue", mock_task_queue),
         patch("workers.redis_conn", mock_redis_conn),
     ):
@@ -135,7 +135,7 @@ def test_worker_name_formatting():
     mock_worker = MagicMock(spec=Worker)
 
     with (
-        patch("workers.Worker", return_value=mock_worker) as mock_worker_class,
+        patch("workers.WorkerClass", return_value=mock_worker) as mock_worker_class,
         patch("workers.task_queue", MagicMock()),
         patch("workers.redis_conn", MagicMock()),
     ):
@@ -183,7 +183,7 @@ def test_worker_exception_during_work():
     mock_worker.work.side_effect = Exception("Worker error")
 
     with (
-        patch("workers.Worker", return_value=mock_worker),
+        patch("workers.WorkerClass", return_value=mock_worker),
         patch("workers.task_queue", MagicMock()),
         patch("workers.redis_conn", MagicMock()),
     ):
@@ -201,7 +201,7 @@ def test_redis_connection_shared():
     mock_redis_conn = MagicMock()
 
     with (
-        patch("workers.Worker", side_effect=[mock_worker1, mock_worker2]) as mock_worker_class,
+        patch("workers.WorkerClass", side_effect=[mock_worker1, mock_worker2]) as mock_worker_class,
         patch("workers.task_queue", MagicMock()),
         patch("workers.redis_conn", mock_redis_conn),
     ):
@@ -222,7 +222,7 @@ def test_task_queue_shared():
     mock_task_queue = MagicMock()
 
     with (
-        patch("workers.Worker", side_effect=[mock_worker1, mock_worker2]) as mock_worker_class,
+        patch("workers.WorkerClass", side_effect=[mock_worker1, mock_worker2]) as mock_worker_class,
         patch("workers.task_queue", mock_task_queue),
         patch("workers.redis_conn", MagicMock()),
     ):
