@@ -9,7 +9,6 @@ from app.models.installation import Installation
 from app.models.repository import Repository
 from app.schemas.drift import (
     DriftEventListResponse,
-    DriftEventResponse,
     DriftEventDetailResponse,
     DriftFindingResponse,
     CodeChangeResponse,
