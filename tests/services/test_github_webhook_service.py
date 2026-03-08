@@ -1109,7 +1109,7 @@ async def test_notification_on_pr_synchronize():
     assert notif_user_id == user_id
     assert "PR #15" in content
     assert "owner/repo" in content
-    assert "new changes" in content
+    assert "new commits" in content
 
 
 # Test no notification on PR synchronize when no user_id
