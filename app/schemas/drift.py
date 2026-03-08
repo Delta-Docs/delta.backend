@@ -47,7 +47,6 @@ class DriftEventResponse(BaseModel):
     processing_phase: str
     drift_result: str
     overall_drift_score: Optional[float]
-    summary: Optional[str]
     error_message: Optional[str]
     started_at: Optional[datetime]
     completed_at: Optional[datetime]
