@@ -38,6 +38,7 @@ def _checkout_docs(state: DriftAnalysisState) -> None:
     repo_full_name = repo.repo_name
     installation_id = repo.installation_id
     original_branch = drift_event.head_branch
+    pr_number = drift_event.pr_number
 
     access_token = asyncio.run(get_installation_access_token(installation_id))
     branch_name = asyncio.run(
@@ -46,6 +47,7 @@ def _checkout_docs(state: DriftAnalysisState) -> None:
             original_branch=original_branch,
             access_token=access_token,
             repo_full_name=repo_full_name,
+            pr_number=pr_number,
         )
     )
 

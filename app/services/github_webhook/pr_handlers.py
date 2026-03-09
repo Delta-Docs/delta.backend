@@ -50,7 +50,7 @@ async def _handle_pr_opened(db: Session, payload: dict):
 
     # Skip PR analysis for PR raised by Delta
     head_branch_opened = payload["pull_request"]["head"]["ref"]
-    if head_branch_opened.startswith("docs/drift-fix/"):
+    if head_branch_opened.startswith("docs/delta-fix/"):
         print(f"Skipping analysis for docs-fix PR #{payload['number']} in {repo_full_name}.")
         head_sha = payload["pull_request"]["head"]["sha"]
         await create_skipped_check_run(

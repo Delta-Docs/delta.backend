@@ -1,3 +1,4 @@
+import time
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -73,7 +74,7 @@ async def pull_branches(repo_full_name: str, access_token: str, branches: list[s
 
 # Creates a new branch for doc fixes
 async def create_docs_branch(
-    repo_path: str, original_branch: str, access_token: str, repo_full_name: str
+    repo_path: str, original_branch: str, access_token: str, repo_full_name: str, pr_number: int
 ) -> Optional[str]:
     try:
         path = Path(repo_path)
@@ -123,10 +124,10 @@ async def create_docs_branch(
             timeout=300,
         )
 
-        # Build the docs branch name
-        docs_branch = f"docs/drift-fix/{original_branch}"
+        # Build the docs branch name with PR number and timestamp for uniqueness
+        timestamp = int(time.time())
+        docs_branch = f"docs/delta-fix/{original_branch}-#{pr_number}-{timestamp}"
 
-        # Try to create the new branch; if it already exists append a timestamp
         result = subprocess.run(
             ["git", "-C", repo_path, "checkout", "-b", docs_branch],
             capture_output=True,
@@ -135,21 +136,8 @@ async def create_docs_branch(
         )
 
         if result.returncode != 0:
-            # Branch already exists - append a timestamp for uniqueness
-            import time
-
-            timestamp = int(time.time())
-            docs_branch = f"docs/drift-fix/{original_branch}-{timestamp}"
-            result = subprocess.run(
-                ["git", "-C", repo_path, "checkout", "-b", docs_branch],
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-
-            if result.returncode != 0:
-                print(f"Failed to create docs branch {docs_branch}: {result.stderr}")
-                return None
+            print(f"Failed to create docs branch {docs_branch}: {result.stderr}")
+            return None
 
         return docs_branch
 

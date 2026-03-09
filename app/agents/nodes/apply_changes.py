@@ -65,7 +65,7 @@ def _commit_and_pr(state: DriftAnalysisState) -> None:
     docs_branch = (
         branch_result.stdout.strip()
         if branch_result.returncode == 0
-        else f"docs/drift-fix/{original_branch}"
+        else f"docs/delta-fix/{original_branch}"
     )
 
     # Create the docs PR targeting the original branch
