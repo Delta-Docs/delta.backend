@@ -1253,6 +1253,7 @@ async def test_no_notification_on_check_suite_rerequested_when_no_user_id():
 
     mock_notif.assert_not_called()
 
+
 # Test that a PR opened from Delta's own docs-fix branch creates a skipped check run
 @pytest.mark.asyncio
 async def test_pr_opened_for_docs_fix_branch_creates_skipped_check_run():

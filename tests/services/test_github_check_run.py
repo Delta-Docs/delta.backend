@@ -367,7 +367,6 @@ async def test_create_skipped_check_run_api_failure():
         mock_client.__aexit__.return_value = None
 
         with patch("httpx.AsyncClient", return_value=mock_client):
-            
             # Should not raise errors
             await create_skipped_check_run("owner/repo", "sha123", 100, "reason")
 
@@ -435,9 +434,9 @@ async def test_create_success_check_run_api_failure():
         mock_client.__aexit__.return_value = None
 
         with patch("httpx.AsyncClient", return_value=mock_client):
-
             # Should not raise
             await create_success_check_run("owner/repo", "sha", 100, "Title", "Summary")
+
 
 # Test that get_commit returns commit data on success
 @pytest.mark.asyncio

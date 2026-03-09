@@ -289,6 +289,7 @@ def test_notification_not_sent_when_no_user_id():
 
     mock_notif.assert_not_called()
 
+
 # Test that when drift_event is not found, session.commit is still called and no exception raised
 def test_drift_event_not_found_in_db_still_commits():
     state = _make_state(findings=[])
