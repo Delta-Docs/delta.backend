@@ -1,0 +1,25 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y gcc
+
+# Install python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the source code
+COPY . .
+
+# Set default env variables for testing
+ENV POSTGRES_CONNECTION_URL="postgresql://test:1234@localhost/test"
+ENV SECRET_KEY="test_secret_key"
+ENV ALGORITHM="HS256"
+ENV ACCESS_TOKEN_EXPIRE_MINUTES="60"
+ENV REFRESH_TOKEN_EXPIRE_DAYS="15"
+ENV REDIS_URL="redis://localhost:6379/0"
+ENV NUM_WORKERS="1"
+
+# Command to execute tests
+CMD ["pytest", "-v"]
