@@ -220,7 +220,7 @@ async def _handle_pr_opened(db: Session, payload: dict):
         )
         return
 
-    # Skip PR analysis for PR raised by Delta 
+    # Skip PR analysis for PR raised by Delta
     head_branch_opened = payload["pull_request"]["head"]["ref"]
     if head_branch_opened.startswith("docs/drift-fix/"):
         print(f"Skipping analysis for docs-fix PR #{payload['number']} in {repo_full_name}.")
@@ -334,7 +334,11 @@ async def _handle_pr_synchronize(db: Session, payload: dict):
         .order_by(DriftEvent.created_at.desc())
         .first()
     )
-    if existing_event and existing_event.docs_pr_number and existing_event.processing_phase == "fix_pr_raised":
+    if (
+        existing_event
+        and existing_event.docs_pr_number
+        and existing_event.processing_phase == "fix_pr_raised"
+    ):
         try:
             commit = await get_commit(installation_id, repo_full_name, new_head_sha)
             if commit:
@@ -350,7 +354,7 @@ async def _handle_pr_synchronize(db: Session, payload: dict):
                         new_head_sha,
                         installation_id,
                         "No Documentation Drift Detected",
-                        f"Delta's documentation fix (PR #{existing_event.docs_pr_number}) was successfully merged. No drift detected."
+                        f"Delta's documentation fix (PR #{existing_event.docs_pr_number}) was successfully merged. No drift detected.",
                     )
                     return
         except Exception as e:
@@ -501,6 +505,7 @@ async def _handle_check_suite_rerequested(db: Session, payload: dict):
             installation.user_id,
             f"PR #{drift_event.pr_number} in {repo_full_name} has been re-queued on request for drift analysis.",
         )
+
 
 # Main Router to handle different types of GH webhook events
 async def handle_github_event(db: Session, event_type: str, payload: dict):

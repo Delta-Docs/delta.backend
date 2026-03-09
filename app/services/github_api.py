@@ -152,6 +152,7 @@ async def create_skipped_check_run(
     except Exception as e:
         print(f"Exception in create_skipped_check_run: {str(e)}")
 
+
 # Creates a success check run
 async def create_success_check_run(
     repo_full_name: str, head_sha: str, installation_id: int, title: str, summary: str
@@ -184,7 +185,6 @@ async def create_success_check_run(
 
     except Exception as e:
         print(f"Exception in create_success_check_run: {str(e)}")
-
 
 
 # Fetches a details for a specific commit
