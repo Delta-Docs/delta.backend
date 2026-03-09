@@ -44,7 +44,9 @@ def test_valid_paragraph_passes():
 
 # Tests that valid mixed format policy text passes through unchanged.
 def test_valid_mixed_format_passes():
-    policies = "Always use present tense.\n\nSection rules:\n- H2 for each endpoint\n- H3 for parameters"
+    policies = (
+        "Always use present tense.\n\nSection rules:\n- H2 for each endpoint\n- H3 for parameters"
+    )
     result = validate_and_sanitize_policies(policies)
     assert result == policies
 

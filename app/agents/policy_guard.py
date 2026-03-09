@@ -16,7 +16,7 @@ _INJECTION_PATTERNS: list[re.Pattern[str]] = [
         r"your\s+new\s+(role|instructions?|persona)",
         r"override\s+(the\s+)?(system|instructions?|rules?)",
         r"\bsystem\s*:",
-        r"\buser\s*:", 
+        r"\buser\s*:",
         r"\bassistant\s*:",
         r"<\s*/?(?:script|iframe|object|embed|form|input|style)[^>]*>",
         r"```\s*system",
@@ -29,6 +29,7 @@ _INJECTION_PATTERNS: list[re.Pattern[str]] = [
         r"\bdan\b.*\bmode\b",
     ]
 ]
+
 
 # Run the docs_policies through checks and sanitise it before passing to the graph
 def validate_and_sanitize_policies(raw_policies: str | None) -> str | None:

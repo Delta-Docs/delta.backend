@@ -67,7 +67,10 @@ def rewrite_docs(state: DriftAnalysisState) -> dict[str, Any]:
         try:
             result = llm.invoke(
                 [
-                    {"role": "system", "content": get_rewrite_system_prompt(style_preference, docs_policies)},
+                    {
+                        "role": "system",
+                        "content": get_rewrite_system_prompt(style_preference, docs_policies),
+                    },
                     {"role": "user", "content": user_prompt},
                 ]
             )

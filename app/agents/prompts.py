@@ -130,6 +130,7 @@ def build_doc_gen_rewrite_prompt(
         f"Return the full updated markdown content."
     )
 
+
 # Builds the user prompt for the doc updates summary node, including list of changed files and change desc
 def build_doc_updates_summary_prompt(file_changes: list[dict]) -> str:
     lines = []
@@ -144,6 +145,7 @@ def build_doc_updates_summary_prompt(file_changes: list[dict]) -> str:
         f"For each file, produce the one-two line summary of what changed.\n\n"
         f"{files_block}"
     )
+
 
 # Builds the user prompt for the plan_updates node, including list of real doc files, drift findings and docs policies if set. Instructs the LLM to ONLY use the provided doc files and not hallucinate new paths.
 def build_doc_gen_plan_user_prompt(
@@ -161,11 +163,7 @@ def build_doc_gen_plan_user_prompt(
         )
 
     md_files_list = "\n".join(f"- `{f}`" for f in existing_md_files)
-    policies_block = (
-        f"## Documentation Policies\n{docs_policies}\n\n"
-        if docs_policies
-        else ""
-    )
+    policies_block = f"## Documentation Policies\n{docs_policies}\n\n" if docs_policies else ""
     return (
         f"## Available Documentation Files\n{md_files_list}\n\n"
         f"{policies_block}"

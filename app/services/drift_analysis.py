@@ -165,9 +165,7 @@ def run_drift_analysis(drift_event_id: str):
         repo_path = get_local_repo_path(drift_event.repository.repo_name)
 
         # Run docs_policies through a guardrail before passing to the graph
-        docs_policies = validate_and_sanitize_policies(
-            drift_event.repository.docs_policies
-        )
+        docs_policies = validate_and_sanitize_policies(drift_event.repository.docs_policies)
 
         initial_state: DriftAnalysisState = {
             "drift_event_id": str(drift_event.id),
@@ -182,7 +180,7 @@ def run_drift_analysis(drift_event_id: str):
             "target_files": [],
             "rewrite_results": [],
             "style_preference": drift_event.repository.style_preference or "professional",
-            **(  {"docs_policies": docs_policies} if docs_policies else {}),
+            **({"docs_policies": docs_policies} if docs_policies else {}),
         }
 
         drift_analysis_graph.invoke(initial_state)

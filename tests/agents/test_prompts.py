@@ -142,7 +142,7 @@ def test_plan_prompt_empty_findings_still_builds():
 def test_plan_prompt_finding_with_missing_fields_uses_defaults():
     # Finding with no keys — all .get() defaults should kick in
     result = build_doc_gen_plan_user_prompt(_FILES, [{}])
-    assert "?" in result   # code_path and drift_type default to "?"
+    assert "?" in result  # code_path and drift_type default to "?"
     assert "N/A" in result  # explanation defaults to "N/A"
 
 
@@ -159,8 +159,12 @@ def test_plan_prompt_sections_appear_in_correct_order():
 # Tests that multiple findings are numbered sequentially in the prompt.
 def test_plan_prompt_findings_numbered_sequentially():
     findings = [
-        {"code_path": f"app/m{i}.py", "drift_type": "outdated_docs",
-         "explanation": "changed", "matched_doc_paths": []}
+        {
+            "code_path": f"app/m{i}.py",
+            "drift_type": "outdated_docs",
+            "explanation": "changed",
+            "matched_doc_paths": [],
+        }
         for i in range(3)
     ]
     result = build_doc_gen_plan_user_prompt(_FILES, findings)
@@ -336,26 +340,32 @@ def test_rewrite_prompt_empty_descriptions_renders():
 
 # Tests that the doc file path is included in the summary prompt.
 def test_summary_prompt_contains_doc_path():
-    result = build_doc_updates_summary_prompt([
-        {"doc_path": "docs/api.md", "descriptions": ["Updated auth section"]},
-    ])
+    result = build_doc_updates_summary_prompt(
+        [
+            {"doc_path": "docs/api.md", "descriptions": ["Updated auth section"]},
+        ]
+    )
     assert "docs/api.md" in result
 
 
 # Tests that all change descriptions are included in the summary prompt.
 def test_summary_prompt_contains_descriptions():
-    result = build_doc_updates_summary_prompt([
-        {"doc_path": "docs/api.md", "descriptions": ["Updated route", "Removed param"]},
-    ])
+    result = build_doc_updates_summary_prompt(
+        [
+            {"doc_path": "docs/api.md", "descriptions": ["Updated route", "Removed param"]},
+        ]
+    )
     assert "Updated route" in result
     assert "Removed param" in result
 
 
 # Tests that multiple descriptions for one file are joined with a semicolon.
 def test_summary_prompt_joins_multiple_descriptions_with_semicolon():
-    result = build_doc_updates_summary_prompt([
-        {"doc_path": "docs/api.md", "descriptions": ["Change A", "Change B"]},
-    ])
+    result = build_doc_updates_summary_prompt(
+        [
+            {"doc_path": "docs/api.md", "descriptions": ["Change A", "Change B"]},
+        ]
+    )
     assert "Change A; Change B" in result
 
 
@@ -380,8 +390,10 @@ def test_summary_prompt_empty_list_still_renders():
 
 # Tests that a single description does not produce a spurious semicolon in the output.
 def test_summary_prompt_single_description_no_semicolon():
-    result = build_doc_updates_summary_prompt([
-        {"doc_path": "docs/api.md", "descriptions": ["Only one change"]},
-    ])
+    result = build_doc_updates_summary_prompt(
+        [
+            {"doc_path": "docs/api.md", "descriptions": ["Only one change"]},
+        ]
+    )
     assert ";" not in result
     assert "Only one change" in result
