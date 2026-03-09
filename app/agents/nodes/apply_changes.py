@@ -132,7 +132,6 @@ def _commit_and_pr(state: DriftAnalysisState) -> None:
             )
 
     session.commit()
-    print(f"Docs PR #{docs_pr_number} created for event {drift_event_id}")
 
 
 # Node writes the rewritten content to the local .md files
@@ -151,10 +150,10 @@ def apply_changes(state: DriftAnalysisState) -> dict[str, Any]:
             resolved = full_path.resolve()
             repo_resolved = Path(repo_path).resolve()
             if not str(resolved).startswith(str(repo_resolved)):
-                print(f"SECURITY: Path traversal blocked for {doc_path}")
+                print(f"Path traversal blocked for {doc_path}")
                 continue
         except Exception:
-            print(f"SECURITY: Could not resolve path {doc_path}")
+            print(f"Could not resolve path {doc_path}")
             continue
 
         # Only write .md files

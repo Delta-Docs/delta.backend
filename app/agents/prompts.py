@@ -8,27 +8,6 @@ DEEP_ANALYZE_SYSTEM_PROMPT = (
     "If the documentation is accurate and complete, set drift_detected to false."
 )
 
-
-def build_deep_analyze_user_prompt(
-    code_path: str,
-    change_type: str,
-    elements: list[str],
-    old_elements: list[str],
-    diff: str,
-    matched_doc_snippets: str,
-) -> str:
-    return (
-        f"## Code Change\n"
-        f"**File:** `{code_path}` ({change_type})\n"
-        f"**New elements:** {elements}\n"
-        f"**Old elements:** {old_elements}\n\n"
-        f"### Git Diff\n```diff\n{diff}\n```\n\n"
-        f"### Current Documentation Snippets\n{matched_doc_snippets}\n\n"
-        f"Analyze whether the documentation above accurately reflects the "
-        f"NEW state of the code after this diff. Focus on any discrepancies."
-    )
-
-
 # System prompt that instructs the LLM to plan documentation updates
 DOC_GEN_PLAN_SYSTEM_PROMPT = (
     "You are a documentation update planner. Given a list of drift findings "
@@ -41,10 +20,7 @@ DOC_GEN_PLAN_SYSTEM_PROMPT = (
 )
 
 
-# ── Style-specific rewrite system prompts ──────────────────────────────
-# Each prompt guides the LLM to modify existing content or add missing
-# documentation based on the detected drift, in the chosen writing style.
-
+# Common system prompt that instructs LLM on how to write docs
 _REWRITE_COMMON_RULES = (
     "You will receive the current contents of a markdown documentation file "
     "along with a description of code changes that caused documentation drift. "
@@ -57,6 +33,7 @@ _REWRITE_COMMON_RULES = (
     "with ONLY the necessary edits applied."
 )
 
+# System prompts for different writing styles
 DOC_GEN_REWRITE_PROMPTS: dict[str, str] = {
     "concise": (
         "You are a technical writer who values brevity above all else. "
@@ -85,12 +62,31 @@ DOC_GEN_REWRITE_PROMPTS: dict[str, str] = {
     ),
 }
 
-# Backwards-compatible alias (used if no style is specified)
+# By default returns with professional style
 DOC_GEN_REWRITE_SYSTEM_PROMPT = DOC_GEN_REWRITE_PROMPTS["professional"]
 
+def build_deep_analyze_user_prompt(
+    code_path: str,
+    change_type: str,
+    elements: list[str],
+    old_elements: list[str],
+    diff: str,
+    matched_doc_snippets: str,
+) -> str:
+    return (
+        f"## Code Change\n"
+        f"**File:** `{code_path}` ({change_type})\n"
+        f"**New elements:** {elements}\n"
+        f"**Old elements:** {old_elements}\n\n"
+        f"### Git Diff\n```diff\n{diff}\n```\n\n"
+        f"### Current Documentation Snippets\n{matched_doc_snippets}\n\n"
+        f"Analyze whether the documentation above accurately reflects the "
+        f"NEW state of the code after this diff. Focus on any discrepancies."
+    )
 
+
+# Returns the rewrite system prompt for the given style
 def get_rewrite_system_prompt(style_preference: str | None) -> str:
-    """Return the rewrite system prompt for the given style, defaulting to professional."""
     key = (style_preference or "professional").lower().strip()
     return DOC_GEN_REWRITE_PROMPTS.get(key, DOC_GEN_REWRITE_PROMPTS["professional"])
 
@@ -109,4 +105,27 @@ def build_doc_gen_rewrite_prompt(
         f"Rewrite the document above to accurately reflect these code changes. "
         f"Edit the existing text in-place - do NOT append new sections or duplicate content. "
         f"Return the full updated markdown content."
+    )
+
+
+def build_doc_gen_plan_user_prompt(
+    existing_md_files: list[str],
+    drift_findings: list[dict],
+) -> str:
+    findings_text = ""
+    for i, finding in enumerate(drift_findings, 1):
+        findings_text += (
+            f"{i}. **Code file:** `{finding.get('code_path', '?')}`\n"
+            f"   **Drift type:** {finding.get('drift_type', '?')}\n"
+            f"   **Explanation:** {finding.get('explanation', 'N/A')}\n"
+            f"   **Matched docs:** {finding.get('matched_doc_paths', [])}\n\n"
+        )
+
+    md_files_list = "\n".join(f"- `{f}`" for f in existing_md_files)
+    return (
+        f"## Available Documentation Files\n{md_files_list}\n\n"
+        f"## Drift Findings\n{findings_text}\n"
+        f"Plan the documentation updates needed to resolve each finding above. "
+        f"You MUST ONLY use doc_path values from the 'Available Documentation Files' list above. "
+        f"Do NOT invent or guess file paths."
     )

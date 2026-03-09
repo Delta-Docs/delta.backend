@@ -1,14 +1,14 @@
 import asyncio
 from pathlib import Path
 from typing import Any, cast
-from langchain_google_genai import ChatGoogleGenerativeAI
-from app.core.config import settings
-from app.agents.state import DriftAnalysisState
-from app.agents.prompts import DOC_GEN_PLAN_SYSTEM_PROMPT
-from app.services.git_service import create_docs_branch
-from app.services.github_api import get_installation_access_token
 from app.db.base import DriftEvent
 from app.schemas.llm import UpdatePlan
+from app.core.config import settings
+from app.agents.state import DriftAnalysisState
+from app.services.git_service import create_docs_branch
+from langchain_google_genai import ChatGoogleGenerativeAI
+from app.agents.prompts import DOC_GEN_PLAN_SYSTEM_PROMPT
+from app.services.github_api import get_installation_access_token
 
 
 # Creates a docs branch off the original PR branch
@@ -43,8 +43,6 @@ def _checkout_docs(state: DriftAnalysisState) -> None:
 
     drift_event.processing_phase = "generating"
     session.commit()
-
-    print(f"Checked out docs branch: {branch_name}")
 
 
 # Node analyses drift findings and maps them to specific doc files/sections
