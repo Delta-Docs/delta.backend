@@ -21,7 +21,7 @@ def should_generate_docs(state: DriftAnalysisState) -> str:
     return "__end__"
 
 
-# Build and compile the delta LangGraph workflow
+# Build and compile the Delta LangGraph workflow
 def build_drift_analysis_graph() -> CompiledStateGraph:
     graph = StateGraph(DriftAnalysisState)  # type: ignore[bad-specialization]
 

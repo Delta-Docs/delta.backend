@@ -2,26 +2,13 @@ import asyncio
 from pathlib import Path
 from typing import Any, cast
 from langchain_google_genai import ChatGoogleGenerativeAI
-from pydantic import BaseModel
-
 from app.core.config import settings
 from app.agents.state import DriftAnalysisState
 from app.agents.prompts import DOC_GEN_PLAN_SYSTEM_PROMPT
 from app.services.git_service import create_docs_branch
 from app.services.github_api import get_installation_access_token
 from app.db.base import DriftEvent
-
-
-# Structured output schema for the plan_updates LLM call
-class PlannedUpdate(BaseModel):
-    doc_path: str
-    section: str
-    action: str
-    description: str
-
-
-class UpdatePlan(BaseModel):
-    updates: list[PlannedUpdate]
+from app.schemas.llm import UpdatePlan
 
 
 # Creates a docs branch off the original PR branch
