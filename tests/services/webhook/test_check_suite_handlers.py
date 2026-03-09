@@ -6,6 +6,9 @@ from app.models.installation import Installation
 from app.models.drift import DriftEvent
 
 
+# =========== Helper Functions ===========
+
+
 # Helper function to create a check_suite rerequested payload
 def _make_check_suite_payload(head_sha="sha999", repo_full_name="owner/repo", installation_id=100):
     return {
@@ -23,6 +26,9 @@ def _make_check_suite_db(drift_event):
         mock_db.query.return_value.join.return_value.filter.return_value.order_by.return_value.first.return_value
     ) = drift_event
     return mock_db
+
+
+# =========== Tests ===========
 
 
 # Test that check_suite rerequested with valid payload resets drift event and re-enqueues analysis

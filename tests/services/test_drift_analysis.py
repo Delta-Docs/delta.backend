@@ -7,6 +7,9 @@ from uuid import uuid4
 from app.services.drift_analysis import _extract_and_save_code_changes, run_drift_analysis
 
 
+# =========== Helper Functions ===========
+
+
 # Helper to create a mock drift event with repository info
 def _make_drift_event(
     base_sha="abc123",
@@ -21,6 +24,69 @@ def _make_drift_event(
     drift_event.repository.repo_name = repo_name
     drift_event.repository.file_ignore_patterns = file_ignore_patterns
     return drift_event
+
+
+# Helper to set up a mock session with a drift event
+def _setup_run_mocks(drift_event_id=None, docs_root_path="/docs"):
+    drift_event_id = drift_event_id or str(uuid4())
+
+    drift_event = MagicMock()
+    drift_event.id = drift_event_id
+    drift_event.repository.repo_name = "owner/repo"
+    drift_event.repository.installation_id = 99
+    drift_event.repository.docs_root_path = docs_root_path
+    drift_event.check_run_id = 12345
+    drift_event.processing_phase = "queued"
+    drift_event.drift_result = "pending"
+    drift_event.retry_count = 3  # Setting to 3 directly to prevent retries in error-path tests
+
+    session = MagicMock()
+    session.query.return_value.filter.return_value.first.return_value = drift_event
+
+    return session, drift_event
+
+
+# Helper function to set up mocks specifically for failure-path tests in run_drift_analysis
+def _setup_failure_mocks(check_run_id=12345):
+    drift_event_id = str(uuid4())
+
+    drift_event = MagicMock()
+    drift_event.id = drift_event_id
+    drift_event.pr_number = 42
+    drift_event.check_run_id = check_run_id
+    drift_event.retry_count = 3  # Setting as 3 to triggers the final failure path
+    drift_event.repository.repo_name = "owner/repo"
+    drift_event.repository.installation_id = 99
+    drift_event.repository.docs_root_path = "/docs"
+    drift_event.repository.installation.user_id = uuid4()
+
+    session = MagicMock()
+    session.query.return_value.filter.return_value.first.return_value = drift_event
+
+    return session, drift_event, drift_event_id
+
+
+# Helper function to create mocks for retry-path tests with a configurable retry_count
+def _setup_retry_mocks(retry_count=0):
+    drift_event_id = str(uuid4())
+
+    drift_event = MagicMock()
+    drift_event.id = drift_event_id
+    drift_event.pr_number = 42
+    drift_event.check_run_id = 12345
+    drift_event.retry_count = retry_count
+    drift_event.repository.repo_name = "owner/repo"
+    drift_event.repository.installation_id = 99
+    drift_event.repository.docs_root_path = "/docs"
+    drift_event.repository.installation.user_id = uuid4()
+
+    session = MagicMock()
+    session.query.return_value.filter.return_value.first.return_value = drift_event
+
+    return session, drift_event, drift_event_id
+
+
+# =========== Tests ===========
 
 
 # Test extracting code changes with added, modified, and deleted files
@@ -228,26 +294,6 @@ def test_extract_and_save_code_changes_correct_git_command():
     assert args[5] == "sha_base...sha_head"
 
 
-# Helper to set up a mock session with a drift event
-def _setup_run_mocks(drift_event_id=None, docs_root_path="/docs"):
-    drift_event_id = drift_event_id or str(uuid4())
-
-    drift_event = MagicMock()
-    drift_event.id = drift_event_id
-    drift_event.repository.repo_name = "owner/repo"
-    drift_event.repository.installation_id = 99
-    drift_event.repository.docs_root_path = docs_root_path
-    drift_event.check_run_id = 12345
-    drift_event.processing_phase = "queued"
-    drift_event.drift_result = "pending"
-    drift_event.retry_count = 3  # Setting to 3 directly to prevent retries in error-path tests
-
-    session = MagicMock()
-    session.query.return_value.filter.return_value.first.return_value = drift_event
-
-    return session, drift_event
-
-
 # Test run_drift_analysis when drift event is not found
 def test_run_drift_analysis_event_not_found():
     session = MagicMock()
@@ -410,26 +456,6 @@ def test_extract_and_save_code_changes_no_ignore_patterns():
 
     added_changes = [c.args[0] for c in session.add.call_args_list]
     assert all(c.is_ignored is False for c in added_changes)
-
-
-# Helper function to set up mocks specifically for failure-path tests in run_drift_analysis
-def _setup_failure_mocks(check_run_id=12345):
-    drift_event_id = str(uuid4())
-
-    drift_event = MagicMock()
-    drift_event.id = drift_event_id
-    drift_event.pr_number = 42
-    drift_event.check_run_id = check_run_id
-    drift_event.retry_count = 3  # Setting as 3 to triggers the final failure path
-    drift_event.repository.repo_name = "owner/repo"
-    drift_event.repository.installation_id = 99
-    drift_event.repository.docs_root_path = "/docs"
-    drift_event.repository.installation.user_id = uuid4()
-
-    session = MagicMock()
-    session.query.return_value.filter.return_value.first.return_value = drift_event
-
-    return session, drift_event, drift_event_id
 
 
 # Test that failure marks the drift event phase, result and error message
@@ -734,26 +760,6 @@ def test_extract_and_save_code_changes_wildcard_pattern():
     assert is_ignored_flags["setup.cfg"] is True
     assert is_ignored_flags["config/settings.py"] is True
     assert is_ignored_flags["src/service.py"] is False
-
-
-# Helper function to create mocks for retry-path tests with a configurable retry_count
-def _setup_retry_mocks(retry_count=0):
-    drift_event_id = str(uuid4())
-
-    drift_event = MagicMock()
-    drift_event.id = drift_event_id
-    drift_event.pr_number = 42
-    drift_event.check_run_id = 12345
-    drift_event.retry_count = retry_count
-    drift_event.repository.repo_name = "owner/repo"
-    drift_event.repository.installation_id = 99
-    drift_event.repository.docs_root_path = "/docs"
-    drift_event.repository.installation.user_id = uuid4()
-
-    session = MagicMock()
-    session.query.return_value.filter.return_value.first.return_value = drift_event
-
-    return session, drift_event, drift_event_id
 
 
 # Test that failure with retry_count < 3 re-enqueues and does NOT raise

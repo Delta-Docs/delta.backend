@@ -5,6 +5,9 @@ from app.agents.nodes.aggregate_results import aggregate_results
 from app.agents.state import DriftAnalysisState
 
 
+# =========== Helper Functions ===========
+
+
 # Helper function to build a minimal state dictionary
 def _make_state(
     findings: list[dict] | None = None,
@@ -43,6 +46,9 @@ def _make_drift_event(
     event.pr_number = pr_number
     event.repository = repo
     return event
+
+
+# =========== Tests ===========
 
 
 # Tests that empty findings produce a clean result with score 0.0 and no DriftFinding rows.

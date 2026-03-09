@@ -7,6 +7,9 @@ from app.models.repository import Repository
 from app.models.drift import DriftEvent
 
 
+# =========== Helper Functions ===========
+
+
 # Helper function to create a pull_request synchronize payload
 def _make_sync_payload(
     pr_number=42,
@@ -47,6 +50,9 @@ def _make_sync_db(repo, drift_event=None):
 
     mock_db.query.side_effect = query_side_effect
     return mock_db
+
+
+# =========== Tests ===========
 
 
 # Test that PR opened creates a drift event
