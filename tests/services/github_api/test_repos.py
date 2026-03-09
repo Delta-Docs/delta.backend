@@ -200,7 +200,6 @@ async def test_create_docs_pull_request_success():
                 head_branch="docs/delta-fix/feature",
                 base_branch="feature",
                 pr_number=42,
-                changes_summary="Updated auth docs.",
             )
 
     assert result == 88
@@ -209,6 +208,111 @@ async def test_create_docs_pull_request_success():
     assert payload["head"] == "docs/delta-fix/feature"
     assert payload["base"] == "feature"
     assert "PR #42" in payload["title"]
+
+
+# Test that body includes drift summary section when drift_summary is provided
+@pytest.mark.asyncio
+async def test_create_docs_pull_request_with_drift_summary():
+    with patch(
+        "app.services.github_api.repos.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {"number": 10}
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await create_docs_pull_request(
+                installation_id=100,
+                repo_full_name="owner/repo",
+                head_branch="docs/delta-fix/feature",
+                base_branch="feature",
+                pr_number=42,
+                drift_summary="- `auth.md`: missing auth section",
+            )
+
+    assert result == 10
+    _, kwargs = mock_client.post.call_args
+    body = kwargs["json"]["body"]
+    assert "### Drift Summary" in body
+    assert "auth.md" in body
+    assert "### Documentation Updates Summary" not in body
+
+
+# Test that body includes updates summary section when updates_summary is provided
+@pytest.mark.asyncio
+async def test_create_docs_pull_request_with_updates_summary():
+    with patch(
+        "app.services.github_api.repos.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {"number": 11}
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await create_docs_pull_request(
+                installation_id=100,
+                repo_full_name="owner/repo",
+                head_branch="docs/delta-fix/feature",
+                base_branch="feature",
+                pr_number=42,
+                updates_summary="- `auth.md`: added authentication section",
+            )
+
+    assert result == 11
+    _, kwargs = mock_client.post.call_args
+    body = kwargs["json"]["body"]
+    assert "### Documentation Updates Summary" in body
+    assert "auth.md" in body
+    assert "### Drift Summary" not in body
+
+
+# Test that body includes both sections when both summaries are provided
+@pytest.mark.asyncio
+async def test_create_docs_pull_request_with_both_summaries():
+    with patch(
+        "app.services.github_api.repos.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {"number": 12}
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await create_docs_pull_request(
+                installation_id=100,
+                repo_full_name="owner/repo",
+                head_branch="docs/delta-fix/feature",
+                base_branch="feature",
+                pr_number=42,
+                drift_summary="- `auth.md`: missing section",
+                updates_summary="- `auth.md`: added section",
+            )
+
+    assert result == 12
+    _, kwargs = mock_client.post.call_args
+    body = kwargs["json"]["body"]
+    assert "### Drift Summary" in body
+    assert "### Documentation Updates Summary" in body
 
 
 # Test that create_docs_pull_request returns None when the PR already exists (422)
@@ -229,7 +333,7 @@ async def test_create_docs_pull_request_already_exists():
         mock_client.__aexit__.return_value = None
 
         with patch("httpx.AsyncClient", return_value=mock_client):
-            result = await create_docs_pull_request(100, "owner/repo", "docs/branch", "main", 1, "")
+            result = await create_docs_pull_request(100, "owner/repo", "docs/branch", "main", 1)
 
     assert result is None
 
@@ -252,7 +356,7 @@ async def test_create_docs_pull_request_api_error():
         mock_client.__aexit__.return_value = None
 
         with patch("httpx.AsyncClient", return_value=mock_client):
-            result = await create_docs_pull_request(100, "owner/repo", "docs/branch", "main", 1, "")
+            result = await create_docs_pull_request(100, "owner/repo", "docs/branch", "main", 1)
 
     assert result is None
 
@@ -265,6 +369,6 @@ async def test_create_docs_pull_request_exception():
         new_callable=AsyncMock,
         side_effect=Exception("Network error"),
     ):
-        result = await create_docs_pull_request(100, "owner/repo", "docs/branch", "main", 1, "")
+        result = await create_docs_pull_request(100, "owner/repo", "docs/branch", "main", 1)
 
     assert result is None
