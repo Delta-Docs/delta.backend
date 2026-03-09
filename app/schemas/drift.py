@@ -38,7 +38,6 @@ class DriftEventListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-
 # Schema for drift finding response
 class DriftFindingResponse(BaseModel):
     id: uuid.UUID
