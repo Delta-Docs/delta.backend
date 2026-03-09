@@ -5,7 +5,7 @@ import subprocess
 from app.services.git_service import checkout_docs_branch, commit_and_push_docs
 
 
-# ----- checkout_docs_branch tests -----
+# =========== checkout_docs_branch Tests ===========
 
 
 @pytest.mark.asyncio
@@ -147,7 +147,7 @@ async def test_checkout_docs_branch_timeout():
         assert result is None
 
 
-# ----- commit_and_push_docs tests -----
+# =========== commit_and_push_docs Tests ===========
 
 
 @pytest.mark.asyncio

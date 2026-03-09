@@ -28,7 +28,7 @@ def _make_check_suite_db(drift_event):
     return mock_db
 
 
-# =========== Tests ===========
+# =========== check_suite_rerequested Tests ===========
 
 
 # Test that check_suite rerequested with valid payload resets drift event and re-enqueues analysis
@@ -185,6 +185,8 @@ async def test_check_suite_non_rerequested_action_ignored():
 
     mock_task_queue.enqueue.assert_not_called()
 
+
+# =========== Notification Tests ===========
 
 # Test notification is sent when drift analysis is re-queued via check suite re-request
 @pytest.mark.asyncio

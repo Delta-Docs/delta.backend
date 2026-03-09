@@ -86,7 +86,7 @@ def _setup_retry_mocks(retry_count=0):
     return session, drift_event, drift_event_id
 
 
-# =========== Tests ===========
+# =========== _extract_and_save_code_changes Tests ===========
 
 
 # Test extracting code changes with added, modified, and deleted files
@@ -294,6 +294,109 @@ def test_extract_and_save_code_changes_correct_git_command():
     assert args[5] == "sha_base...sha_head"
 
 
+# Test files matching an ignore pattern are saved with is_ignored=True
+def test_extract_and_save_code_changes_ignores_pattern_match():
+    drift_event = _make_drift_event(file_ignore_patterns=["tests/*", "*.lock"])
+    session = MagicMock()
+
+    git_diff_output = "A\tsrc/main.py\nA\ttests/test_main.py\nA\tpoetry.lock\n"
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = git_diff_output
+
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+
+        _extract_and_save_code_changes(session, drift_event)
+
+    added_changes = [c.args[0] for c in session.add.call_args_list]
+    is_ignored_flags = {c.file_path: c.is_ignored for c in added_changes}
+
+    assert is_ignored_flags["src/main.py"] is False
+    assert is_ignored_flags["tests/test_main.py"] is True
+    assert is_ignored_flags["poetry.lock"] is True
+
+
+# Test files not matching any pattern are saved with is_ignored=False
+def test_extract_and_save_code_changes_no_match_not_ignored():
+    drift_event = _make_drift_event(file_ignore_patterns=["migrations/*"])
+    session = MagicMock()
+
+    git_diff_output = "M\tsrc/api.py\nM\tsrc/models.py\n"
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = git_diff_output
+
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+
+        _extract_and_save_code_changes(session, drift_event)
+
+    added_changes = [c.args[0] for c in session.add.call_args_list]
+    assert all(c.is_ignored is False for c in added_changes)
+
+
+# Test with no ignore patterns set (None), all files should be is_ignored=False
+def test_extract_and_save_code_changes_no_ignore_patterns():
+    drift_event = _make_drift_event(file_ignore_patterns=None)
+    session = MagicMock()
+
+    git_diff_output = "A\tsrc/app.py\nA\ttests/test_app.py\n"
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = git_diff_output
+
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+
+        _extract_and_save_code_changes(session, drift_event)
+
+    added_changes = [c.args[0] for c in session.add.call_args_list]
+    assert all(c.is_ignored is False for c in added_changes)
+
+
+# Test wildcard pattern matching (e.g. *.cfg and directory prefix patterns)
+def test_extract_and_save_code_changes_wildcard_pattern():
+    drift_event = _make_drift_event(file_ignore_patterns=["*.cfg", "config/*"])
+    session = MagicMock()
+
+    git_diff_output = "M\tsetup.cfg\nM\tconfig/settings.py\nM\tsrc/service.py\n"
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = git_diff_output
+
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+
+        _extract_and_save_code_changes(session, drift_event)
+
+    added_changes = [c.args[0] for c in session.add.call_args_list]
+    is_ignored_flags = {c.file_path: c.is_ignored for c in added_changes}
+
+    assert is_ignored_flags["setup.cfg"] is True
+    assert is_ignored_flags["config/settings.py"] is True
+    assert is_ignored_flags["src/service.py"] is False
+
+
+# =========== run_drift_analysis Event/Session Tests ===========
+
+
 # Test run_drift_analysis when drift event is not found
 def test_run_drift_analysis_event_not_found():
     session = MagicMock()
@@ -385,78 +488,92 @@ def test_run_drift_analysis_builds_initial_state():
         assert invoked_state["findings"] == []
 
 
-# Test files matching an ignore pattern are saved with is_ignored=True
-def test_extract_and_save_code_changes_ignores_pattern_match():
-    drift_event = _make_drift_event(file_ignore_patterns=["tests/*", "*.lock"])
-    session = MagicMock()
+# =========== run_drift_analysis Check Run Tests ===========
 
-    git_diff_output = "A\tsrc/main.py\nA\ttests/test_main.py\nA\tpoetry.lock\n"
 
-    mock_result = MagicMock()
-    mock_result.returncode = 0
-    mock_result.stdout = git_diff_output
+# Test that update_github_check_run is called with in_progress at the start of analysis
+def test_run_drift_analysis_updates_check_run_to_in_progress():
+    session, drift_event = _setup_run_mocks()
+    drift_event.check_run_id = 77777
 
     with (
-        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis._create_session", return_value=session),
         patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch("app.services.drift_analysis._extract_and_save_code_changes"),
+        patch("app.services.drift_analysis.drift_analysis_graph") as mock_graph,
+        patch("app.services.drift_analysis.asyncio.run") as mock_asyncio_run,
+        patch(
+            "app.services.drift_analysis.update_github_check_run", new_callable=MagicMock
+        ) as mock_update,
     ):
-        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+        mock_path.return_value = Path("/repos/owner/repo")
+        mock_graph.invoke.return_value = {}
 
-        _extract_and_save_code_changes(session, drift_event)
+        run_drift_analysis(str(drift_event.id))
 
-    added_changes = [c.args[0] for c in session.add.call_args_list]
-    is_ignored_flags = {c.file_path: c.is_ignored for c in added_changes}
+    mock_update.assert_called_once_with(
+        repo_full_name="owner/repo",
+        check_run_id=77777,
+        installation_id=99,
+        status="in_progress",
+        title="Delta Drift Analysis",
+        summary="Analysing PR for documentation drift...",
+    )
+    mock_asyncio_run.assert_called_once()
 
-    assert is_ignored_flags["src/main.py"] is False
-    assert is_ignored_flags["tests/test_main.py"] is True
-    assert is_ignored_flags["poetry.lock"] is True
 
-
-# Test files not matching any pattern are saved with is_ignored=False
-def test_extract_and_save_code_changes_no_match_not_ignored():
-    drift_event = _make_drift_event(file_ignore_patterns=["migrations/*"])
-    session = MagicMock()
-
-    git_diff_output = "M\tsrc/api.py\nM\tsrc/models.py\n"
-
-    mock_result = MagicMock()
-    mock_result.returncode = 0
-    mock_result.stdout = git_diff_output
+# Test that in_progress update is skipped when check_run_id is None
+def test_run_drift_analysis_skips_in_progress_when_no_check_run_id():
+    session, drift_event = _setup_run_mocks()
+    drift_event.check_run_id = None
 
     with (
-        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis._create_session", return_value=session),
         patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch("app.services.drift_analysis._extract_and_save_code_changes"),
+        patch("app.services.drift_analysis.drift_analysis_graph") as mock_graph,
+        patch("app.services.drift_analysis.asyncio.run") as mock_asyncio_run,
+        patch(
+            "app.services.drift_analysis.update_github_check_run", new_callable=MagicMock
+        ) as mock_update,
     ):
-        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+        mock_path.return_value = Path("/repos/owner/repo")
+        mock_graph.invoke.return_value = {}
 
-        _extract_and_save_code_changes(session, drift_event)
+        run_drift_analysis(str(drift_event.id))
 
-    added_changes = [c.args[0] for c in session.add.call_args_list]
-    assert all(c.is_ignored is False for c in added_changes)
+    mock_update.assert_not_called()
+    mock_asyncio_run.assert_not_called()
 
 
-# Test with no ignore patterns set (None), all files should be is_ignored=False
-def test_extract_and_save_code_changes_no_ignore_patterns():
-    drift_event = _make_drift_event(file_ignore_patterns=None)
-    session = MagicMock()
-
-    git_diff_output = "A\tsrc/app.py\nA\ttests/test_app.py\n"
-
-    mock_result = MagicMock()
-    mock_result.returncode = 0
-    mock_result.stdout = git_diff_output
+# Test that a failing in_progress update does not abort the analysis
+def test_run_drift_analysis_in_progress_failure_doesnt_abort():
+    session, drift_event = _setup_run_mocks()
+    drift_event.check_run_id = 99999
 
     with (
-        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis._create_session", return_value=session),
         patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch("app.services.drift_analysis._extract_and_save_code_changes") as mock_extract,
+        patch("app.services.drift_analysis.drift_analysis_graph") as mock_graph,
+        patch(
+            "app.services.drift_analysis.asyncio.run",
+            side_effect=Exception("GitHub API unavailable"),
+        ),
+        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock),
     ):
-        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+        mock_path.return_value = Path("/repos/owner/repo")
+        mock_graph.invoke.return_value = {}
 
-        _extract_and_save_code_changes(session, drift_event)
+        # Should not raise — the in_progress failure is swallowed
+        run_drift_analysis(str(drift_event.id))
 
-    added_changes = [c.args[0] for c in session.add.call_args_list]
-    assert all(c.is_ignored is False for c in added_changes)
+    # Analysis still proceeds after the in_progress update failure
+    mock_extract.assert_called_once()
+    mock_graph.invoke.assert_called_once()
 
+
+# =========== run_drift_analysis Failure Tests ===========
 
 # Test that failure marks the drift event phase, result and error message
 def test_run_drift_analysis_failure_marks_event_as_failed():
@@ -600,6 +717,9 @@ def test_run_drift_analysis_failure_check_run_error_doesnt_break_cleanup():
     session.commit.assert_called()
 
 
+# =========== Notification Tests ===========
+
+
 # Test notification is sent on failure with the correct content
 def test_run_drift_analysis_failure_sends_notification():
     session, drift_event, drift_event_id = _setup_failure_mocks()
@@ -647,119 +767,7 @@ def test_run_drift_analysis_failure_no_notification_when_no_user_id():
     mock_notif.assert_not_called()
 
 
-# ── in_progress check run update tests ──────────────────────────────────────
-
-
-# Test that update_github_check_run is called with in_progress at the start of analysis
-def test_run_drift_analysis_updates_check_run_to_in_progress():
-    session, drift_event = _setup_run_mocks()
-    drift_event.check_run_id = 77777
-
-    with (
-        patch("app.services.drift_analysis._create_session", return_value=session),
-        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
-        patch("app.services.drift_analysis._extract_and_save_code_changes"),
-        patch("app.services.drift_analysis.drift_analysis_graph") as mock_graph,
-        patch("app.services.drift_analysis.asyncio.run") as mock_asyncio_run,
-        patch(
-            "app.services.drift_analysis.update_github_check_run", new_callable=MagicMock
-        ) as mock_update,
-    ):
-        mock_path.return_value = Path("/repos/owner/repo")
-        mock_graph.invoke.return_value = {}
-
-        run_drift_analysis(str(drift_event.id))
-
-    mock_update.assert_called_once_with(
-        repo_full_name="owner/repo",
-        check_run_id=77777,
-        installation_id=99,
-        status="in_progress",
-        title="Delta Drift Analysis",
-        summary="Analysing PR for documentation drift...",
-    )
-    mock_asyncio_run.assert_called_once()
-
-
-# Test that in_progress update is skipped when check_run_id is None
-def test_run_drift_analysis_skips_in_progress_when_no_check_run_id():
-    session, drift_event = _setup_run_mocks()
-    drift_event.check_run_id = None
-
-    with (
-        patch("app.services.drift_analysis._create_session", return_value=session),
-        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
-        patch("app.services.drift_analysis._extract_and_save_code_changes"),
-        patch("app.services.drift_analysis.drift_analysis_graph") as mock_graph,
-        patch("app.services.drift_analysis.asyncio.run") as mock_asyncio_run,
-        patch(
-            "app.services.drift_analysis.update_github_check_run", new_callable=MagicMock
-        ) as mock_update,
-    ):
-        mock_path.return_value = Path("/repos/owner/repo")
-        mock_graph.invoke.return_value = {}
-
-        run_drift_analysis(str(drift_event.id))
-
-    mock_update.assert_not_called()
-    mock_asyncio_run.assert_not_called()
-
-
-# Test that a failing in_progress update does not abort the analysis
-def test_run_drift_analysis_in_progress_failure_doesnt_abort():
-    session, drift_event = _setup_run_mocks()
-    drift_event.check_run_id = 99999
-
-    with (
-        patch("app.services.drift_analysis._create_session", return_value=session),
-        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
-        patch("app.services.drift_analysis._extract_and_save_code_changes") as mock_extract,
-        patch("app.services.drift_analysis.drift_analysis_graph") as mock_graph,
-        patch(
-            "app.services.drift_analysis.asyncio.run",
-            side_effect=Exception("GitHub API unavailable"),
-        ),
-        patch("app.services.drift_analysis.update_github_check_run", new_callable=MagicMock),
-    ):
-        mock_path.return_value = Path("/repos/owner/repo")
-        mock_graph.invoke.return_value = {}
-
-        # Should not raise — the in_progress failure is swallowed
-        run_drift_analysis(str(drift_event.id))
-
-    # Analysis still proceeds after the in_progress update failure
-    mock_extract.assert_called_once()
-    mock_graph.invoke.assert_called_once()
-
-
-# ── wildcard pattern matching (existing test, unchanged) ─────────────────────
-
-
-# Test wildcard pattern matching (e.g. *.cfg and directory prefix patterns)
-def test_extract_and_save_code_changes_wildcard_pattern():
-    drift_event = _make_drift_event(file_ignore_patterns=["*.cfg", "config/*"])
-    session = MagicMock()
-
-    git_diff_output = "M\tsetup.cfg\nM\tconfig/settings.py\nM\tsrc/service.py\n"
-
-    mock_result = MagicMock()
-    mock_result.returncode = 0
-    mock_result.stdout = git_diff_output
-
-    with (
-        patch("subprocess.run", return_value=mock_result),
-        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
-    ):
-        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
-
-        _extract_and_save_code_changes(session, drift_event)
-
-    added_changes = [c.args[0] for c in session.add.call_args_list]
-    is_ignored_flags = {c.file_path: c.is_ignored for c in added_changes}
-
-    assert is_ignored_flags["setup.cfg"] is True
-    assert is_ignored_flags["config/settings.py"] is True
-    assert is_ignored_flags["src/service.py"] is False
+# =========== run_drift_analysis Retry Logic Tests ===========
 
 
 # Test that failure with retry_count < 3 re-enqueues and does NOT raise

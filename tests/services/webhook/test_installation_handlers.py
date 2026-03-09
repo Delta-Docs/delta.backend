@@ -6,6 +6,8 @@ from app.models.installation import Installation
 from app.models.repository import Repository
 
 
+# =========== handle_installation Tests ===========
+
 # Test that GH app installation creates installation and repo records
 @pytest.mark.asyncio
 async def test_handle_installation_created(mock_db_session):
@@ -65,6 +67,9 @@ async def test_handle_installation_unsuspend(mock_db_session):
     mock_db_session.query.return_value.filter.return_value.update.assert_called_once_with(
         {"is_suspended": False}
     )
+
+
+# =========== Notification Tests ===========
 
 
 # Test notification is sent when GitHub account is connected

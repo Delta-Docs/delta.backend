@@ -13,6 +13,9 @@ from app.models.drift import DriftEvent
 from app.services.webhook import handle_github_event
 
 
+# =========== create_github_check_run Tests ===========
+
+
 # Test that check runs are created successfully in GH
 @pytest.mark.asyncio
 async def test_create_check_run_success():
@@ -92,55 +95,7 @@ async def test_create_check_run_api_failure():
             mock_db.commit.assert_not_called()
 
 
-# Test that PR events trigger check run creation
-@pytest.mark.asyncio
-async def test_handle_pr_triggers_check_run():
-    mock_db = MagicMock()
-    payload = {
-        "action": "opened",
-        "number": 123,
-        "installation": {"id": 555},
-        "repository": {"full_name": "owner/repo"},
-        "pull_request": {
-            "base": {"sha": "base_sha", "ref": "main"},
-            "head": {"sha": "head_sha", "ref": "feature-branch"},
-        },
-    }
-
-    # Mock the linked repo lookup
-    mock_repo = MagicMock()
-    mock_repo.id = "uuid-repo-1"
-    mock_repo.target_branch = "main"
-    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
-
-    with (
-        patch(
-            "app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock
-        ) as mock_create_check,
-        patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
-            new_callable=AsyncMock,
-        ) as mock_get_token,
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_notification"),
-    ):
-        mock_create_check.return_value = 123456789
-        mock_get_token.return_value = "test_token"
-
-        await handle_github_event(mock_db, "pull_request", payload)
-
-        # Verify a drift event was created in DB
-        mock_db.add.assert_called_once()
-        mock_db.flush.assert_called_once()
-        mock_db.refresh.assert_called_once()
-
-        # Verify check run is created with correct params
-        mock_create_check.assert_called_once()
-        args, _ = mock_create_check.call_args
-        assert args[0] == mock_db
-        assert args[2] == "owner/repo"
-        assert args[3] == "head_sha"
-        assert args[4] == 555
+# =========== update_github_check_run Tests ===========
 
 
 # Test that check run updates successfully with in_progress status
@@ -317,6 +272,9 @@ async def test_update_check_run_api_failure():
             assert result is False
 
 
+# =========== create_skipped_check_run Tests ===========
+
+
 # Test that create_skipped_check_run posts a skipped check run to GH
 @pytest.mark.asyncio
 async def test_create_skipped_check_run_success():
@@ -383,6 +341,9 @@ async def test_create_skipped_check_run_exception():
         await create_skipped_check_run("owner/repo", "sha123", 100, "reason")
 
 
+# =========== create_success_check_run Tests ===========
+
+
 # Test that create_success_check_run posts a success check run to GH
 @pytest.mark.asyncio
 async def test_create_success_check_run_success():
@@ -436,6 +397,8 @@ async def test_create_success_check_run_api_failure():
         with patch("httpx.AsyncClient", return_value=mock_client):
             # Should not raise
             await create_success_check_run("owner/repo", "sha", 100, "Title", "Summary")
+
+ # =========== get_commit Tests ===========
 
 
 # Test that get_commit returns commit data on success
@@ -501,6 +464,9 @@ async def test_get_commit_exception():
     assert result is None
 
 
+# =========== request_pr_review Tests ===========
+
+
 # Test that request_pr_review returns True on success
 @pytest.mark.asyncio
 async def test_request_pr_review_success():
@@ -559,6 +525,9 @@ async def test_request_pr_review_exception():
         result = await request_pr_review(100, "owner/repo", 42, "reviewer")
 
     assert result is False
+
+
+# =========== create_docs_pull_request Tests ===========
 
 
 # Test that create_docs_pull_request returns the new PR number on success
@@ -653,3 +622,57 @@ async def test_create_docs_pull_request_exception():
         result = await create_docs_pull_request(100, "owner/repo", "docs/branch", "main", 1, "")
 
     assert result is None
+
+
+# =========== Webhook integration tests ===========
+
+
+# Test that PR events trigger check run creation
+@pytest.mark.asyncio
+async def test_handle_pr_triggers_check_run():
+    mock_db = MagicMock()
+    payload = {
+        "action": "opened",
+        "number": 123,
+        "installation": {"id": 555},
+        "repository": {"full_name": "owner/repo"},
+        "pull_request": {
+            "base": {"sha": "base_sha", "ref": "main"},
+            "head": {"sha": "head_sha", "ref": "feature-branch"},
+        },
+    }
+
+    # Mock the linked repo lookup
+    mock_repo = MagicMock()
+    mock_repo.id = "uuid-repo-1"
+    mock_repo.target_branch = "main"
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
+
+    with (
+        patch(
+            "app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock
+        ) as mock_create_check,
+        patch(
+            "app.services.webhook.pr_handlers.get_installation_access_token",
+            new_callable=AsyncMock,
+        ) as mock_get_token,
+        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.webhook.pr_handlers.create_notification"),
+    ):
+        mock_create_check.return_value = 123456789
+        mock_get_token.return_value = "test_token"
+
+        await handle_github_event(mock_db, "pull_request", payload)
+
+        # Verify a drift event was created in DB
+        mock_db.add.assert_called_once()
+        mock_db.flush.assert_called_once()
+        mock_db.refresh.assert_called_once()
+
+        # Verify check run is created with correct params
+        mock_create_check.assert_called_once()
+        args, _ = mock_create_check.call_args
+        assert args[0] == mock_db
+        assert args[2] == "owner/repo"
+        assert args[3] == "head_sha"
+        assert args[4] == 555

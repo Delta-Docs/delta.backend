@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from app.routers.dashboard import get_dashboard_stats, get_dashboard_repos
 
+# =========== Fixtures ===========
 
 # Test fixtures for mocking user and database
 @pytest.fixture
@@ -14,6 +15,9 @@ def mock_user():
 @pytest.fixture
 def mock_db():
     return MagicMock()
+
+
+# =========== get_dashboard_stats Tests ===========
 
 
 # Test that dashboard stats returns correct counts

@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from app.services.github_api import get_repo_details, get_installation_access_token
 
+# =========== Fixtures ===========
 
 # Auto mock settings (.env)
 @pytest.fixture(autouse=True)
@@ -27,6 +28,7 @@ def mock_jwt():
         mock.return_value = "dummy_jwt"
         yield mock
 
+# =========== get_installation_access_token Tests ===========
 
 # Test that we can get an installation token successfully
 @pytest.mark.asyncio
@@ -65,6 +67,8 @@ async def test_get_installation_access_token_error():
             await get_installation_access_token(123)
         assert "Token Error" in str(exc.value)
 
+
+# =========== get_repo_details Tests ===========
 
 # Test fetching repo details from GH API
 @pytest.mark.asyncio

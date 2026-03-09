@@ -10,6 +10,8 @@ from app.services.git_service import (
 )
 
 
+# =========== get_local_repo_path Tests ===========
+
 # Test returns correct path for a standard repo full name
 def test_get_local_repo_path_standard():
     with patch("app.services.git_service.settings") as mock_settings:
@@ -70,6 +72,8 @@ def test_get_local_repo_path_special_characters():
 
         assert result == Path("/tmp/repos/owner/my-repo.js")
 
+
+# =========== clone_repository Tests ===========
 
 # Test successful repository cloning
 @pytest.mark.asyncio
@@ -178,6 +182,8 @@ async def test_clone_repository_timeout():
         assert result is None
 
 
+# =========== remove_cloned_repository Tests ===========
+
 # Test successful repository removal
 def test_remove_cloned_repository_success():
     repo_full_name = "owner/repo"
@@ -219,6 +225,8 @@ def test_remove_cloned_repository_not_exists():
         # Verify rmtree was not called
         mock_rmtree.assert_not_called()
 
+
+# =========== pull_branches Tests ===========
 
 # Test successful branch pulling for multiple branches
 @pytest.mark.asyncio
