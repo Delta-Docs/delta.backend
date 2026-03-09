@@ -17,6 +17,7 @@ from app.services.github_api import (
     get_installation_access_token,
     create_docs_pull_request,
     request_pr_review,
+    update_github_check_run,
 )
 from app.services.notification_service import create_notification
 from app.db.base import DriftEvent
@@ -143,6 +144,29 @@ def commit_and_pr(state: DriftAnalysisState) -> dict[str, Any]:
                     reviewer=repo.reviewer,
                 )
             )
+
+        # Update the original check run to add Resolve link and add PR link to summary
+        if drift_event.check_run_id:
+            fix_pr_url = f"https://github.com/{repo_full_name}/pull/{docs_pr_number}"
+            updated_summary = (
+                (drift_event.summary or "")
+                + f"\n\n**Documentation Fixes:** [{repo_full_name}#{docs_pr_number}]({fix_pr_url})"
+            )
+            try:
+                asyncio.run(
+                    update_github_check_run(
+                        repo_full_name=repo_full_name,
+                        check_run_id=drift_event.check_run_id,
+                        installation_id=installation_id,
+                        status="completed",
+                        conclusion="action_required",
+                        title="Documentation Drift Detected",
+                        summary=updated_summary,
+                        details_url=fix_pr_url,
+                    )
+                )
+            except Exception as check_run_exc:
+                print(f"Failed to update check run with fix PR link: {check_run_exc}")
 
     # Notify the user
     user_id = repo.installation.user_id if repo.installation else None

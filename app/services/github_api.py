@@ -221,6 +221,7 @@ async def update_github_check_run(
     conclusion: str | None = None,
     title: str | None = None,
     summary: str | None = None,
+    details_url: str | None = None,
 ):
     try:
         access_token = await get_installation_access_token(installation_id)
@@ -238,6 +239,10 @@ async def update_github_check_run(
                 payload["output"]["title"] = title
             if summary:
                 payload["output"]["summary"] = summary
+
+        # Link the Resolve button to Fix PR url if provided
+        if details_url:
+            payload["details_url"] = details_url
 
         async with httpx.AsyncClient() as client:
             res = await client.patch(
