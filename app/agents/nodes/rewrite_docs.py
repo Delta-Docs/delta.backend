@@ -34,7 +34,7 @@ def rewrite_docs(state: DriftAnalysisState) -> dict[str, Any]:
         # Read the current file content
         full_path = Path(repo_path) / doc_path
 
-        # Security check: ensure the path is within the repo
+        # Ensure the path is within the repo
         try:
             resolved = full_path.resolve()
             repo_resolved = Path(repo_path).resolve()

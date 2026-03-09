@@ -145,7 +145,7 @@ def apply_changes(state: DriftAnalysisState) -> dict[str, Any]:
 
         full_path = Path(repo_path) / doc_path
 
-        # Security check: prevent path traversal outside the repo directory
+        # Prevent path traversal outside the repo directory
         try:
             resolved = full_path.resolve()
             repo_resolved = Path(repo_path).resolve()

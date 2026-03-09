@@ -23,6 +23,7 @@ class DriftEventListResponse(BaseModel):
 class DriftFindingResponse(BaseModel):
     id: uuid.UUID
     code_path: str
+    doc_file_path: Optional[str] = None
     change_type: Optional[str]
     drift_type: Optional[str]
     drift_score: Optional[float]
