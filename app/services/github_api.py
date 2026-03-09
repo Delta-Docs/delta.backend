@@ -201,6 +201,37 @@ async def update_github_check_run(
         return False
 
 
+# Requests a review from a GH user on generated PR
+async def request_pr_review(
+    installation_id: int,
+    repo_full_name: str,
+    pr_number: int,
+    reviewer: str,
+) -> bool:
+    try:
+        access_token = await get_installation_access_token(installation_id)
+
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                f"https://api.github.com/repos/{repo_full_name}/pulls/{pr_number}/requested_reviewers",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                },
+                json={"reviewers": [reviewer]},
+            )
+
+            if res.status_code not in (200, 201):
+                print(f"Error requesting review from {reviewer}: {res.text}")
+                return False
+
+            return True
+
+    except Exception as e:
+        print(f"Exception in request_pr_review: {str(e)}")
+        return False
+
+
 # Creates a Pull Request for auto-generated documentation updates
 async def create_docs_pull_request(
     installation_id: int,

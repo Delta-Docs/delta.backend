@@ -16,6 +16,7 @@ from app.services.git_service import checkout_docs_branch, commit_and_push_docs
 from app.services.github_api import (
     get_installation_access_token,
     create_docs_pull_request,
+    request_pr_review,
 )
 from app.services.notification_service import create_notification
 from app.db.base import DriftEvent
@@ -68,6 +69,7 @@ def commit_and_pr(state: DriftAnalysisState) -> dict[str, Any]:
         return {}
 
     repo = drift_event.repository
+    session.refresh(repo)
     repo_full_name = repo.repo_name
     installation_id = repo.installation_id
     original_branch = drift_event.head_branch
@@ -126,9 +128,21 @@ def commit_and_pr(state: DriftAnalysisState) -> dict[str, Any]:
         )
     )
 
-    # Store the docs PR number in the drift event
+    # Store the docs PR number in the drift event and update processing phase
     if docs_pr_number:
         drift_event.docs_pr_number = docs_pr_number
+        drift_event.processing_phase = "fix_pr_raised"
+
+        # Request review if a reviewer is configured for the repo
+        if repo.reviewer:
+            asyncio.run(
+                request_pr_review(
+                    installation_id=installation_id,
+                    repo_full_name=repo_full_name,
+                    pr_number=docs_pr_number,
+                    reviewer=repo.reviewer,
+                )
+            )
 
     # Notify the user
     user_id = repo.installation.user_id if repo.installation else None
