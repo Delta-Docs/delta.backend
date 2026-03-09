@@ -143,41 +143,6 @@ def test_missing_docs_result():
     assert state["session"].add.call_count == 2
 
 
-# Tests that when check_run_id exists, update_github_check_run is called.
-@patch("app.agents.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock)
-def test_check_run_updated(mock_update):
-    findings = [
-        {
-            "code_path": "src/api.py",
-            "change_type": "modified",
-            "drift_type": "outdated_docs",
-            "drift_score": 0.8,
-            "explanation": "API changed",
-            "confidence": 0.9,
-        },
-    ]
-    state = _make_state(findings=findings)
-    drift_event = _make_drift_event(check_run_id=999)
-    state["session"].query.return_value.filter.return_value.first.return_value = drift_event
-
-    with patch("app.agents.nodes.aggregate_results.DriftFinding") as mock_finding_cls:
-        mock_finding_cls.return_value = MagicMock()
-        aggregate_results(state)
-
-    mock_update.assert_called_once()
-
-
-# Tests that when there is no check_run_id, the update helper is not called.
-@patch("app.agents.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock)
-def test_check_run_skipped_when_none(mock_update):
-    state = _make_state(findings=[])
-    drift_event = _make_drift_event(check_run_id=None)
-    state["session"].query.return_value.filter.return_value.first.return_value = drift_event
-
-    aggregate_results(state)
-
-    mock_update.assert_not_called()
-
 
 # Tests that the agent_logs JSONB field is populated.
 def test_agent_logs_populated():
@@ -203,6 +168,59 @@ def test_agent_logs_populated():
     assert "b.py" in logs["Scouting"]
     assert "clean" in logs["Result"]
 
+
+# Test that when drift_event is not found, session.commit is still called and no exception raised
+def test_drift_event_not_found_in_db_still_commits():
+    state = _make_state(findings=[])
+
+    # Simulating DriftEvent query returning None
+    state["session"].query.return_value.filter.return_value.first.return_value = None
+
+    result = aggregate_results(state)
+
+    assert result == {"findings": []}
+    state["session"].commit.assert_called_once()
+
+    # No DriftFinding rows should be added
+    state["session"].add.assert_not_called()
+
+
+
+# Test that overall_drift_score is the maximum across all findings
+def test_overall_drift_score_is_maximum():
+    findings = [
+        {
+            "code_path": "src/a.py",
+            "change_type": "modified",
+            "drift_type": "outdated_docs",
+            "drift_score": 0.5,
+            "explanation": "Minor change",
+            "confidence": 0.8,
+        },
+        {
+            "code_path": "src/b.py",
+            "change_type": "added",
+            "drift_type": "missing_docs",
+            "drift_score": 0.95,
+            "explanation": "New code undocumented",
+            "confidence": 1.0,
+        },
+    ]
+    state = _make_state(findings=findings)
+    drift_event = _make_drift_event()
+    state["session"].query.return_value.filter.return_value.first.return_value = drift_event
+
+    with (
+        patch("app.agents.nodes.aggregate_results.DriftFinding"),
+        patch("app.agents.nodes.aggregate_results.create_notification"),
+    ):
+        aggregate_results(state)
+
+    assert drift_event.overall_drift_score == 0.95
+
+
+
+# =========== Notifications Tests ===========
 
 # Test notification content when result is clean
 def test_notification_content_clean():
@@ -296,20 +314,43 @@ def test_notification_not_sent_when_no_user_id():
     mock_notif.assert_not_called()
 
 
-# Test that when drift_event is not found, session.commit is still called and no exception raised
-def test_drift_event_not_found_in_db_still_commits():
+# =========== GH Check Run Tests ===========
+
+
+# Tests that when check_run_id exists, update_github_check_run is called.
+@patch("app.agents.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock)
+def test_check_run_updated(mock_update):
+    findings = [
+        {
+            "code_path": "src/api.py",
+            "change_type": "modified",
+            "drift_type": "outdated_docs",
+            "drift_score": 0.8,
+            "explanation": "API changed",
+            "confidence": 0.9,
+        },
+    ]
+    state = _make_state(findings=findings)
+    drift_event = _make_drift_event(check_run_id=999)
+    state["session"].query.return_value.filter.return_value.first.return_value = drift_event
+
+    with patch("app.agents.nodes.aggregate_results.DriftFinding") as mock_finding_cls:
+        mock_finding_cls.return_value = MagicMock()
+        aggregate_results(state)
+
+    mock_update.assert_called_once()
+
+
+# Tests that when there is no check_run_id, the update helper is not called.
+@patch("app.agents.nodes.aggregate_results.update_github_check_run", new_callable=AsyncMock)
+def test_check_run_skipped_when_none(mock_update):
     state = _make_state(findings=[])
+    drift_event = _make_drift_event(check_run_id=None)
+    state["session"].query.return_value.filter.return_value.first.return_value = drift_event
 
-    # Simulating DriftEvent query returning None
-    state["session"].query.return_value.filter.return_value.first.return_value = None
+    aggregate_results(state)
 
-    result = aggregate_results(state)
-
-    assert result == {"findings": []}
-    state["session"].commit.assert_called_once()
-
-    # No DriftFinding rows should be added
-    state["session"].add.assert_not_called()
+    mock_update.assert_not_called()
 
 
 # Test that the check run conclusion is "success" when drift_result is "clean"
@@ -364,36 +405,3 @@ def test_check_run_update_exception_is_swallowed(mock_update):
     result = aggregate_results(state)
 
     assert result == {"findings": []}
-
-
-# Test that overall_drift_score is the maximum across all findings
-def test_overall_drift_score_is_maximum():
-    findings = [
-        {
-            "code_path": "src/a.py",
-            "change_type": "modified",
-            "drift_type": "outdated_docs",
-            "drift_score": 0.5,
-            "explanation": "Minor change",
-            "confidence": 0.8,
-        },
-        {
-            "code_path": "src/b.py",
-            "change_type": "added",
-            "drift_type": "missing_docs",
-            "drift_score": 0.95,
-            "explanation": "New code undocumented",
-            "confidence": 1.0,
-        },
-    ]
-    state = _make_state(findings=findings)
-    drift_event = _make_drift_event()
-    state["session"].query.return_value.filter.return_value.first.return_value = drift_event
-
-    with (
-        patch("app.agents.nodes.aggregate_results.DriftFinding"),
-        patch("app.agents.nodes.aggregate_results.create_notification"),
-    ):
-        aggregate_results(state)
-
-    assert drift_event.overall_drift_score == 0.95

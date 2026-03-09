@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
-from app.agents.nodes.doc_gen_nodes import plan_updates, rewrite_docs, apply_changes
+from app.agents.nodes.plan_updates import plan_updates
+from app.agents.nodes.rewrite_docs import rewrite_docs
+from app.agents.nodes.apply_changes import apply_changes
 from app.agents.state import DriftAnalysisState
 
 
@@ -22,7 +24,8 @@ def test_plan_updates_empty_findings():
         "rewrite_results": [],
     }
 
-    result = plan_updates(state)
+    with patch("app.agents.nodes.plan_updates._checkout_docs"):
+        result = plan_updates(state)
 
     assert result == {"target_files": []}
 
@@ -68,8 +71,8 @@ def test_plan_updates_returns_target_files(tmp_path):
         "rewrite_results": [],
     }
 
-    with patch(
-        "app.agents.nodes.doc_gen_nodes.ChatGoogleGenerativeAI",
+    with patch("app.agents.nodes.plan_updates._checkout_docs"), patch(
+        "app.agents.nodes.plan_updates.ChatGoogleGenerativeAI",
         return_value=mock_llm_instance,
     ):
         result = plan_updates(state)
@@ -107,8 +110,8 @@ def test_plan_updates_llm_error_returns_empty():
         "rewrite_results": [],
     }
 
-    with patch(
-        "app.agents.nodes.doc_gen_nodes.ChatGoogleGenerativeAI",
+    with patch("app.agents.nodes.plan_updates._checkout_docs"), patch(
+        "app.agents.nodes.plan_updates.ChatGoogleGenerativeAI",
         return_value=mock_llm_instance,
     ):
         result = plan_updates(state)
@@ -176,7 +179,7 @@ def test_rewrite_docs_rewrites_file(tmp_path):
     }
 
     with patch(
-        "app.agents.nodes.doc_gen_nodes.ChatGoogleGenerativeAI",
+        "app.agents.nodes.rewrite_docs.ChatGoogleGenerativeAI",
         return_value=mock_llm_instance,
     ):
         result = rewrite_docs(state)
@@ -221,7 +224,7 @@ def test_rewrite_docs_strips_code_fences(tmp_path):
     }
 
     with patch(
-        "app.agents.nodes.doc_gen_nodes.ChatGoogleGenerativeAI",
+        "app.agents.nodes.rewrite_docs.ChatGoogleGenerativeAI",
         return_value=mock_llm_instance,
     ):
         result = rewrite_docs(state)
@@ -263,7 +266,7 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
     }
 
     with patch(
-        "app.agents.nodes.doc_gen_nodes.ChatGoogleGenerativeAI",
+        "app.agents.nodes.rewrite_docs.ChatGoogleGenerativeAI",
         return_value=mock_llm_instance,
     ):
         result = rewrite_docs(state)
@@ -296,7 +299,8 @@ def test_apply_changes_writes_files(tmp_path):
         ],
     }
 
-    result = apply_changes(state)
+    with patch("app.agents.nodes.apply_changes._commit_and_pr"):
+        result = apply_changes(state)
 
     assert result == {}
     written = (tmp_path / "docs" / "api.md").read_text(encoding="utf-8")
@@ -324,7 +328,8 @@ def test_apply_changes_blocks_path_traversal(tmp_path):
         ],
     }
 
-    result = apply_changes(state)
+    with patch("app.agents.nodes.apply_changes._commit_and_pr"):
+        result = apply_changes(state)
 
     assert result == {}
     # File should NOT have been created
@@ -352,7 +357,8 @@ def test_apply_changes_skips_non_markdown(tmp_path):
         ],
     }
 
-    result = apply_changes(state)
+    with patch("app.agents.nodes.apply_changes._commit_and_pr"):
+        result = apply_changes(state)
 
     assert result == {}
     # Non-markdown file should NOT have been written

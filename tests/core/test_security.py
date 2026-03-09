@@ -1,6 +1,7 @@
 from datetime import timedelta
 from app.core import security
 
+# =========== Tests ===========
 
 # Test password hashing and verification
 def test_hash_password():
