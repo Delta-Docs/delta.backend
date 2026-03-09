@@ -55,7 +55,7 @@ class DriftEvent(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "processing_phase IN ('queued', 'scouting', 'analyzing', 'generating', 'verifying', 'completed', 'failed', 'fix_pr_raised')",
+            "processing_phase IN ('queued', 'scouting', 'analyzing', 'generating', 'verifying', 'completed', 'failed', 'fix_pr_raised', 'fix_pr_merged')",
             name="check_processing_phase",
         ),
         CheckConstraint(
