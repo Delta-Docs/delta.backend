@@ -149,9 +149,8 @@ def commit_and_pr(state: DriftAnalysisState) -> dict[str, Any]:
         if drift_event.check_run_id:
             fix_pr_url = f"https://github.com/{repo_full_name}/pull/{docs_pr_number}"
             updated_summary = (
-                (drift_event.summary or "")
-                + f"\n\n**Documentation Fixes:** [{repo_full_name}#{docs_pr_number}]({fix_pr_url})"
-            )
+                drift_event.summary or ""
+            ) + f"\n\n**Documentation Fixes:** [{repo_full_name}#{docs_pr_number}]({fix_pr_url})"
             try:
                 asyncio.run(
                     update_github_check_run(

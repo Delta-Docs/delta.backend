@@ -235,7 +235,7 @@ def run_drift_analysis(drift_event_id: str):
                                     status="completed",
                                     conclusion="failure",
                                     title="Delta Drift Analysis",
-                                    summary="Drift analysis could not be completed due to an internal error. Please try again after some time by clicking **Re-run all checks**."
+                                    summary="Drift analysis could not be completed due to an internal error. Please try again after some time by clicking **Re-run all checks**.",
                                 )
                             )
                         except Exception as check_run_e:
