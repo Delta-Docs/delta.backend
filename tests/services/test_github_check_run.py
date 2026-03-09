@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 from app.services.github_api import (
-    create_github_check_run,
+    create_queued_check_run,
     create_skipped_check_run,
     create_success_check_run,
     get_commit,
@@ -13,7 +13,7 @@ from app.models.drift import DriftEvent
 from app.services.webhook import handle_github_event
 
 
-# =========== create_github_check_run Tests ===========
+# =========== create_queued_check_run Tests ===========
 
 
 # Test that check runs are created successfully in GH
@@ -41,7 +41,7 @@ async def test_create_check_run_success():
         mock_client.__aexit__.return_value = None
 
         with patch("httpx.AsyncClient", return_value=mock_client):
-            result = await create_github_check_run(
+            result = await create_queued_check_run(
                 mock_db, drift_event_id, repo_full_name, head_sha, installation_id
             )
 
@@ -86,7 +86,7 @@ async def test_create_check_run_api_failure():
         mock_client.__aexit__.return_value = None
 
         with patch("httpx.AsyncClient", return_value=mock_client):
-            result = await create_github_check_run(
+            result = await create_queued_check_run(
                 mock_db, drift_event_id, repo_full_name, head_sha, installation_id
             )
 
@@ -651,7 +651,7 @@ async def test_handle_pr_triggers_check_run():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock
+            "app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
         ) as mock_create_check,
         patch(
             "app.services.webhook.pr_handlers.get_installation_access_token",

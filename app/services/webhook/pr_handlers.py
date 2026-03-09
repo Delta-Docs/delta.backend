@@ -4,7 +4,7 @@ from app.models.installation import Installation
 from app.models.repository import Repository
 from app.models.drift import DriftEvent, DriftFinding, CodeChange
 from app.services.github_api import (
-    create_github_check_run,
+    create_queued_check_run,
     create_skipped_check_run,
     create_success_check_run,
     get_commit,
@@ -95,7 +95,7 @@ async def _handle_pr_opened(db: Session, payload: dict):
     drift_event_id = str(new_event.id)
 
     # Create a GH check run to show status in PR
-    await create_github_check_run(
+    await create_queued_check_run(
         db, drift_event_id, repo_full_name, new_event.head_sha, installation_id
     )
 
@@ -252,7 +252,7 @@ async def _handle_pr_synchronize(db: Session, payload: dict):
         drift_event_id = str(new_event.id)
 
     # Create a fresh GH check run
-    await create_github_check_run(db, drift_event_id, repo_full_name, new_head_sha, installation_id)
+    await create_queued_check_run(db, drift_event_id, repo_full_name, new_head_sha, installation_id)
 
     # Enqueue drift analysis job
     task_queue.enqueue(run_drift_analysis, drift_event_id)

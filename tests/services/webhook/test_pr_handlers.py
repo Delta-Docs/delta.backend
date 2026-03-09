@@ -77,7 +77,7 @@ async def test_handle_pr_opened_success():
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
 
     with (
-        patch("app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock),
+        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch(
             "app.services.webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
@@ -193,7 +193,7 @@ async def test_drift_event_id_passed_as_string():
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
 
     with (
-        patch("app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock),
+        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch(
             "app.services.webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
@@ -250,7 +250,7 @@ async def test_pr_opened_enqueues_task():
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
 
     with (
-        patch("app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock),
+        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch(
             "app.services.webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
@@ -442,7 +442,7 @@ async def test_pr_synchronize_resets_existing_event():
         ),
         patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
         patch(
-            "app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock
+            "app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
         ) as mock_check_run,
         patch("app.services.webhook.pr_handlers.task_queue") as mock_queue,
         patch("app.services.webhook.pr_handlers.run_drift_analysis") as mock_run,
@@ -502,7 +502,7 @@ async def test_pr_synchronize_clears_stale_data():
             new_callable=AsyncMock,
         ),
         patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock),
+        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch("app.services.webhook.pr_handlers.task_queue"),
     ):
         await handle_github_event(mock_db, "pull_request", payload)
@@ -528,7 +528,7 @@ async def test_pr_synchronize_creates_new_event_if_none_exists():
             new_callable=AsyncMock,
         ),
         patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock),
+        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch("app.services.webhook.pr_handlers.task_queue") as mock_queue,
         patch("app.services.webhook.pr_handlers.run_drift_analysis"),
     ):
@@ -624,7 +624,7 @@ async def test_pr_synchronize_check_run_uses_new_head_sha():
         ),
         patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
         patch(
-            "app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock
+            "app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
         ) as mock_check_run,
         patch("app.services.webhook.pr_handlers.task_queue"),
     ):
@@ -706,7 +706,7 @@ async def test_pr_synchronize_docs_fix_not_a_merge_commit_falls_through():
         ),
         patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
         patch(
-            "app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock
+            "app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
         ) as mock_check_run,
         patch("app.services.webhook.pr_handlers.task_queue") as mock_queue,
         patch("app.services.webhook.pr_handlers.run_drift_analysis"),
@@ -751,7 +751,7 @@ async def test_pr_synchronize_docs_fix_merge_wrong_pr_number_falls_through():
             new_callable=AsyncMock,
         ),
         patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock),
+        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch("app.services.webhook.pr_handlers.task_queue") as mock_queue,
         patch("app.services.webhook.pr_handlers.run_drift_analysis"),
     ):
@@ -803,7 +803,7 @@ async def test_notification_on_pr_queued():
     mock_db.query.side_effect = mock_query
 
     with (
-        patch("app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock),
+        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch(
             "app.services.webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
@@ -861,7 +861,7 @@ async def test_notification_on_pr_synchronize():
             new_callable=AsyncMock,
         ),
         patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock),
+        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch("app.services.webhook.pr_handlers.task_queue"),
         patch("app.services.webhook.pr_handlers.create_notification") as mock_notif,
     ):
@@ -913,7 +913,7 @@ async def test_no_notification_on_pr_synchronize_when_no_user_id():
             new_callable=AsyncMock,
         ),
         patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_github_check_run", new_callable=AsyncMock),
+        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch("app.services.webhook.pr_handlers.task_queue"),
         patch("app.services.webhook.pr_handlers.create_notification") as mock_notif,
     ):

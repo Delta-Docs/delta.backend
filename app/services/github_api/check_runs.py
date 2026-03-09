@@ -6,7 +6,7 @@ from app.services.github_api.auth import get_installation_access_token
 
 
 # Creates a GitHub Check Run for a PR
-async def create_github_check_run(
+async def create_queued_check_run(
     db: Session, drift_event_id, repo_full_name: str, head_sha: str, installation_id: int
 ):
     try:
@@ -47,7 +47,7 @@ async def create_github_check_run(
             return check_run_id
 
     except Exception as e:
-        print(f"Exception in create_github_check_run: {str(e)}")
+        print(f"Exception in create_queued_check_run: {str(e)}")
         return None
 
 

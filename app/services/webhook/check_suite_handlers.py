@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.models.installation import Installation
 from app.models.drift import DriftEvent, DriftFinding, CodeChange
-from app.services.github_api import create_github_check_run
+from app.services.github_api import create_queued_check_run
 from app.core.queue import task_queue
 from app.services.drift_analysis import run_drift_analysis
 from app.services.notification_service import create_notification
@@ -55,7 +55,7 @@ async def _handle_check_suite_rerequested(db: Session, payload: dict):
     db.flush()
 
     # Create a fresh GitHub check run
-    await create_github_check_run(
+    await create_queued_check_run(
         db, drift_event_id, repo_full_name, drift_event.head_sha, installation_id
     )
 

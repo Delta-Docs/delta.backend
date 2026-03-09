@@ -42,7 +42,7 @@ async def test_check_suite_rerequested_resets_and_requeues():
 
     with (
         patch(
-            "app.services.webhook.check_suite_handlers.create_github_check_run",
+            "app.services.webhook.check_suite_handlers.create_queued_check_run",
             new_callable=AsyncMock,
         ) as mock_create_check_run,
         patch("app.services.webhook.check_suite_handlers.task_queue") as mock_task_queue,
@@ -129,7 +129,7 @@ async def test_check_suite_rerequested_clears_stale_findings_and_changes():
 
     with (
         patch(
-            "app.services.webhook.check_suite_handlers.create_github_check_run",
+            "app.services.webhook.check_suite_handlers.create_queued_check_run",
             new_callable=AsyncMock,
         ),
         patch("app.services.webhook.check_suite_handlers.task_queue"),
@@ -150,7 +150,7 @@ async def test_check_suite_rerequested_resets_drift_event_fields():
 
     with (
         patch(
-            "app.services.webhook.check_suite_handlers.create_github_check_run",
+            "app.services.webhook.check_suite_handlers.create_queued_check_run",
             new_callable=AsyncMock,
         ),
         patch("app.services.webhook.check_suite_handlers.task_queue"),
@@ -224,7 +224,7 @@ async def test_notification_on_check_suite_rerequested():
 
     with (
         patch(
-            "app.services.webhook.check_suite_handlers.create_github_check_run",
+            "app.services.webhook.check_suite_handlers.create_queued_check_run",
             new_callable=AsyncMock,
         ),
         patch("app.services.webhook.check_suite_handlers.task_queue"),
@@ -271,7 +271,7 @@ async def test_no_notification_on_check_suite_rerequested_when_no_user_id():
 
     with (
         patch(
-            "app.services.webhook.check_suite_handlers.create_github_check_run",
+            "app.services.webhook.check_suite_handlers.create_queued_check_run",
             new_callable=AsyncMock,
         ),
         patch("app.services.webhook.check_suite_handlers.task_queue"),
