@@ -10,5 +10,5 @@ __all__ = [
     "pull_branches",
     "create_docs_branch",
     "commit_and_push_docs_branch",
-    "settings"
+    "settings",
 ]

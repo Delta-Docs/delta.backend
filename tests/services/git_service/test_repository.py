@@ -6,6 +6,7 @@ from app.services.git_service.repository import clone_repository, remove_cloned_
 
 # =========== clone_repository Tests ===========
 
+
 # Test successful repository cloning
 @pytest.mark.asyncio
 async def test_clone_repository_success():
@@ -44,6 +45,7 @@ async def test_clone_repository_success():
         assert "x-access-token" in args[4]
         assert repo_full_name in args[4]
 
+
 # Test repository cloning with different branch
 @pytest.mark.asyncio
 async def test_clone_repository_custom_branch():
@@ -66,6 +68,7 @@ async def test_clone_repository_custom_branch():
         # Verify custom branch is used
         args = mock_run.call_args[0][0]
         assert args[3] == "develop"
+
 
 # Test failure in repository cloning
 @pytest.mark.asyncio
@@ -90,6 +93,7 @@ async def test_clone_repository_failure():
         # Verify it returns None on failure
         assert result is None
 
+
 # Test repository cloning timeout
 @pytest.mark.asyncio
 async def test_clone_repository_timeout():
@@ -109,7 +113,9 @@ async def test_clone_repository_timeout():
         # Verify it returns None on timeout
         assert result is None
 
+
 # =========== remove_cloned_repository Tests ===========
+
 
 # Test successful repository removal
 def test_remove_cloned_repository_success():
@@ -130,6 +136,7 @@ def test_remove_cloned_repository_success():
 
         # Verify rmtree was called
         mock_rmtree.assert_called_once()
+
 
 # Test repository removal when path doesn't exist
 def test_remove_cloned_repository_not_exists():

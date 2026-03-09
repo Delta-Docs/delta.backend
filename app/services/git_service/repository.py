@@ -2,6 +2,7 @@ import subprocess
 from typing import Optional
 from app.services.git_service.utils import get_local_repo_path
 
+
 # Clones the repository to repo base path
 async def clone_repository(
     repo_full_name: str, access_token: str, target_branch: str = "main"
@@ -36,6 +37,7 @@ async def clone_repository(
     except Exception as e:
         print(f"Error cloning repository {repo_full_name}: {str(e)}")
         return None
+
 
 # Remove the cloned respository repo base path
 def remove_cloned_repository(repo_full_name: str) -> bool:

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 from app.services.git_service.utils import get_local_repo_path
 
+
 # Pulls the specified branches from the remote repository
 async def pull_branches(repo_full_name: str, access_token: str, branches: list[str]) -> bool:
     try:
@@ -68,6 +69,7 @@ async def pull_branches(repo_full_name: str, access_token: str, branches: list[s
     except Exception as e:
         print(f"Error pulling branches for repository {repo_full_name}: {str(e)}")
         return False
+
 
 # Creates a new branch for doc fixes
 async def create_docs_branch(
@@ -157,6 +159,7 @@ async def create_docs_branch(
     except Exception as e:
         print(f"Error creating docs branch: {str(e)}")
         return None
+
 
 # Commits and pushes the docs branch to the remote repository
 async def commit_and_push_docs_branch(

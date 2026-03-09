@@ -6,6 +6,7 @@ from app.services.git_service.branches import pull_branches
 
 # =========== pull_branches Tests ===========
 
+
 # Tests that successful branch pulling works for multiple branches
 @pytest.mark.asyncio
 async def test_pull_branches_success():
@@ -31,6 +32,7 @@ async def test_pull_branches_success():
         # Verify git commands were called (Expected calls- set-url, fetch, checkout main, pull main, checkout feature-branch, pull feature-branch)
         assert mock_run.call_count == 6
 
+
 # Tests that branch pulling fails when repository doesn't exist
 @pytest.mark.asyncio
 async def test_pull_branches_repo_not_exists():
@@ -48,6 +50,7 @@ async def test_pull_branches_repo_not_exists():
 
         # Verify it returns False when repo doesn't exist
         assert result is False
+
 
 # Tests that branch pulling fails with remote URL set failure
 @pytest.mark.asyncio
@@ -71,6 +74,7 @@ async def test_pull_branches_set_url_failure():
 
         # Verify it returns False when set-url fails
         assert result is False
+
 
 # Tests that branch pulling fails with fetch failure
 @pytest.mark.asyncio
@@ -102,6 +106,7 @@ async def test_pull_branches_fetch_failure():
 
         # Verify it returns False when fetch fails
         assert result is False
+
 
 # Tests that branch pulling continues with other branches upon checkout failure
 @pytest.mark.asyncio
@@ -142,6 +147,7 @@ async def test_pull_branches_checkout_failure():
         # Verify it still returns True (since it is supposed to continue even on failure)
         assert result is True
 
+
 # Tests that branch pulling returns false on timeout
 @pytest.mark.asyncio
 async def test_pull_branches_timeout():
@@ -161,6 +167,7 @@ async def test_pull_branches_timeout():
         # Verify it returns False on timeout
         assert result is False
 
+
 # Tests that branch pulling returns false on general exception
 @pytest.mark.asyncio
 async def test_pull_branches_exception():
@@ -179,6 +186,7 @@ async def test_pull_branches_exception():
 
         # Verify it returns False on exception
         assert result is False
+
 
 # Tests that branch pulling verifies access token is in remote URL
 @pytest.mark.asyncio
@@ -204,6 +212,8 @@ async def test_pull_branches_includes_access_token():
         assert "x-access-token" in str(set_url_call)
         assert access_token in str(set_url_call)
         assert result is True
+
+
 import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
@@ -212,6 +222,7 @@ from app.services.git_service import create_docs_branch, commit_and_push_docs_br
 
 
 # =========== create_docs_branch Tests ===========
+
 
 # Tests that checkout docs branch is successful
 @pytest.mark.asyncio
