@@ -174,13 +174,7 @@ def commit_and_pr(state: DriftAnalysisState) -> dict[str, Any]:
             create_notification(
                 session,
                 user_id,
-                f"Documentation PR #{docs_pr_number} created for {repo_full_name} to resolve drift found in PR #{pr_number}.",
-            )
-        else:
-            create_notification(
-                session,
-                user_id,
-                f"Document generation for PR #{pr_number} in {repo_full_name} completed but PR creation failed.",
+                f"Documentation PR #{docs_pr_number} raised for {repo_full_name} to resolve drift found in PR #{pr_number}.",
             )
 
     session.commit()

@@ -1,6 +1,14 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
-from app.services.github_api import create_github_check_run, update_github_check_run
+from app.services.github_api import (
+    create_github_check_run,
+    create_skipped_check_run,
+    create_success_check_run,
+    get_commit,
+    request_pr_review,
+    create_docs_pull_request,
+    update_github_check_run,
+)
 from app.models.drift import DriftEvent
 from app.services.github_webhook_service import handle_github_event
 
@@ -307,3 +315,342 @@ async def test_update_check_run_api_failure():
 
             # Should return False on failure
             assert result is False
+
+
+# Test that create_skipped_check_run posts a skipped check run to GH
+@pytest.mark.asyncio
+async def test_create_skipped_check_run_success():
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            await create_skipped_check_run(
+                repo_full_name="owner/repo",
+                head_sha="sha123",
+                installation_id=100,
+                reason="Analysis disabled for this repo.",
+            )
+
+        mock_client.post.assert_called_once()
+        _, kwargs = mock_client.post.call_args
+        payload = kwargs["json"]
+        assert payload["status"] == "completed"
+        assert payload["conclusion"] == "skipped"
+        assert payload["output"]["summary"] == "Analysis disabled for this repo."
+
+
+# Test that create_skipped_check_run handles API failures
+@pytest.mark.asyncio
+async def test_create_skipped_check_run_api_failure():
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.text = "Server Error"
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            
+            # Should not raise errors
+            await create_skipped_check_run("owner/repo", "sha123", 100, "reason")
+
+
+# Test that create_skipped_check_run doesnt raise unexpected exceptions
+@pytest.mark.asyncio
+async def test_create_skipped_check_run_exception():
+    with patch(
+        "app.services.github_api.get_installation_access_token",
+        new_callable=AsyncMock,
+        side_effect=Exception("Network error"),
+    ):
+        # Should not raise
+        await create_skipped_check_run("owner/repo", "sha123", 100, "reason")
+
+
+# Test that create_success_check_run posts a success check run to GH
+@pytest.mark.asyncio
+async def test_create_success_check_run_success():
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            await create_success_check_run(
+                repo_full_name="owner/repo",
+                head_sha="sha456",
+                installation_id=100,
+                title="Docs Resolved",
+                summary="Documentation drift resolved.",
+            )
+
+        _, kwargs = mock_client.post.call_args
+        payload = kwargs["json"]
+        assert payload["status"] == "completed"
+        assert payload["conclusion"] == "success"
+        assert payload["output"]["title"] == "Docs Resolved"
+        assert payload["output"]["summary"] == "Documentation drift resolved."
+
+
+# Test that create_success_check_run handles API failures
+@pytest.mark.asyncio
+async def test_create_success_check_run_api_failure():
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 422
+        mock_response.text = "Validation error"
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+
+            # Should not raise
+            await create_success_check_run("owner/repo", "sha", 100, "Title", "Summary")
+
+# Test that get_commit returns commit data on success
+@pytest.mark.asyncio
+async def test_get_commit_success():
+    commit_data = {"sha": "abc123", "commit": {"message": "feat: add endpoint"}, "parents": [{}]}
+
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = commit_data
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await get_commit(100, "owner/repo", "abc123")
+
+    assert result is not None
+    assert result == commit_data
+    assert result["sha"] == "abc123"
+
+
+# Test that get_commit returns None when GH returns a non-200 status
+@pytest.mark.asyncio
+async def test_get_commit_not_found():
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.text = "Not Found"
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await get_commit(100, "owner/repo", "bad_sha")
+
+    assert result is None
+
+
+# Test that get_commit returns None when an exception occurs
+@pytest.mark.asyncio
+async def test_get_commit_exception():
+    with patch(
+        "app.services.github_api.get_installation_access_token",
+        new_callable=AsyncMock,
+        side_effect=Exception("Network error"),
+    ):
+        result = await get_commit(100, "owner/repo", "sha123")
+
+    assert result is None
+
+
+# Test that request_pr_review returns True on success
+@pytest.mark.asyncio
+async def test_request_pr_review_success():
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await request_pr_review(100, "owner/repo", 42, "reviewer_login")
+
+    assert result is True
+    _, kwargs = mock_client.post.call_args
+    assert kwargs["json"]["reviewers"] == ["reviewer_login"]
+
+
+# Test that request_pr_review returns False when GH returns an error
+@pytest.mark.asyncio
+async def test_request_pr_review_failure():
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 422
+        mock_response.text = "Reviewer not found"
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await request_pr_review(100, "owner/repo", 42, "bad_reviewer")
+
+    assert result is False
+
+
+# Test that request_pr_review returns False when an exception occurs
+@pytest.mark.asyncio
+async def test_request_pr_review_exception():
+    with patch(
+        "app.services.github_api.get_installation_access_token",
+        new_callable=AsyncMock,
+        side_effect=Exception("Network error"),
+    ):
+        result = await request_pr_review(100, "owner/repo", 42, "reviewer")
+
+    assert result is False
+
+
+# Test that create_docs_pull_request returns the new PR number on success
+@pytest.mark.asyncio
+async def test_create_docs_pull_request_success():
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {"number": 88}
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await create_docs_pull_request(
+                installation_id=100,
+                repo_full_name="owner/repo",
+                head_branch="docs/drift-fix/feature",
+                base_branch="feature",
+                pr_number=42,
+                changes_summary="Updated auth docs.",
+            )
+
+    assert result == 88
+    _, kwargs = mock_client.post.call_args
+    payload = kwargs["json"]
+    assert payload["head"] == "docs/drift-fix/feature"
+    assert payload["base"] == "feature"
+    assert "PR #42" in payload["title"]
+
+
+# Test that create_docs_pull_request returns None when the PR already exists (422)
+@pytest.mark.asyncio
+async def test_create_docs_pull_request_already_exists():
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 422
+        mock_response.text = "Validation Failed"
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await create_docs_pull_request(100, "owner/repo", "docs/branch", "main", 1, "")
+
+    assert result is None
+
+
+# Test that create_docs_pull_request returns None on unexpected API errors
+@pytest.mark.asyncio
+async def test_create_docs_pull_request_api_error():
+    with patch(
+        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+    ) as mock_get_token:
+        mock_get_token.return_value = "mock_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.text = "Internal Server Error"
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await create_docs_pull_request(100, "owner/repo", "docs/branch", "main", 1, "")
+
+    assert result is None
+
+
+# Test that create_docs_pull_request returns None when an exception occurs
+@pytest.mark.asyncio
+async def test_create_docs_pull_request_exception():
+    with patch(
+        "app.services.github_api.get_installation_access_token",
+        new_callable=AsyncMock,
+        side_effect=Exception("Network error"),
+    ):
+        result = await create_docs_pull_request(100, "owner/repo", "docs/branch", "main", 1, "")
+
+    assert result is None
