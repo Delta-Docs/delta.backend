@@ -72,9 +72,12 @@ def test_plan_updates_returns_target_files(tmp_path):
         "rewrite_results": [],
     }
 
-    with patch("app.agents.nodes.plan_updates._checkout_docs"), patch(
-        "app.agents.nodes.plan_updates.ChatGoogleGenerativeAI",
-        return_value=mock_llm_instance,
+    with (
+        patch("app.agents.nodes.plan_updates._checkout_docs"),
+        patch(
+            "app.agents.nodes.plan_updates.ChatGoogleGenerativeAI",
+            return_value=mock_llm_instance,
+        ),
     ):
         result = plan_updates(state)
 
@@ -112,9 +115,12 @@ def test_plan_updates_llm_error_returns_empty():
         "rewrite_results": [],
     }
 
-    with patch("app.agents.nodes.plan_updates._checkout_docs"), patch(
-        "app.agents.nodes.plan_updates.ChatGoogleGenerativeAI",
-        return_value=mock_llm_instance,
+    with (
+        patch("app.agents.nodes.plan_updates._checkout_docs"),
+        patch(
+            "app.agents.nodes.plan_updates.ChatGoogleGenerativeAI",
+            return_value=mock_llm_instance,
+        ),
     ):
         result = plan_updates(state)
 

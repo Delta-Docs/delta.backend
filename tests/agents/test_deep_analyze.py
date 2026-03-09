@@ -10,6 +10,7 @@ from app.agents.state import DriftAnalysisState
 
 # =========== Helper Functions ===========
 
+
 # Helper function to build a minimal state dictionary
 def _make_state(
     analysis_payloads: list[dict] | None = None,
@@ -52,6 +53,7 @@ def _mock_drift_finding(drift_detected: bool, **kwargs) -> LLMDriftFinding:
 
 
 # =========== Tests ===========
+
 
 # Tests that when the LLM returns drift_detected=True, a finding dict is appended.
 @patch("app.agents.nodes.deep_analyze._get_git_diff")
@@ -117,6 +119,7 @@ def test_no_drift_skipped(mock_llm_class, mock_get_diff):
 
     assert result["findings"] == []
 
+
 # Tests that no analysis payloads results in an immediate return with empty findings.
 def test_empty_payloads_returns_empty():
     state = _make_state(analysis_payloads=[])
@@ -124,7 +127,6 @@ def test_empty_payloads_returns_empty():
     result = deep_analyze(state)
 
     assert result == {"findings": []}
-
 
 
 # Tests that when the git diff returns None, the payload is skipped.

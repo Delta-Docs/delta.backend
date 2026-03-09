@@ -5,6 +5,7 @@ import redis
 
 # =========== Tests ===========
 
+
 # Test that Redis connection is properly initialized
 def test_redis_connection_initialization():
     with (

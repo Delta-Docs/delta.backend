@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch
 from pathlib import Path
 from app.services.git_service.utils import get_local_repo_path

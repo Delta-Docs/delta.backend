@@ -136,6 +136,7 @@ def _commit_and_pr(state: DriftAnalysisState) -> None:
     session.commit()
     print(f"Docs PR #{docs_pr_number} created for event {drift_event_id}")
 
+
 # Node writes the rewritten content to the local .md files
 def apply_changes(state: DriftAnalysisState) -> dict[str, Any]:
     rewrite_results: list[dict] = state["rewrite_results"]
@@ -173,4 +174,3 @@ def apply_changes(state: DriftAnalysisState) -> dict[str, Any]:
 
     _commit_and_pr(state)
     return {}
-

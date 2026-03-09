@@ -143,7 +143,6 @@ def test_missing_docs_result():
     assert state["session"].add.call_count == 2
 
 
-
 # Tests that the agent_logs JSONB field is populated.
 def test_agent_logs_populated():
     state = _make_state(
@@ -185,7 +184,6 @@ def test_drift_event_not_found_in_db_still_commits():
     state["session"].add.assert_not_called()
 
 
-
 # Test that overall_drift_score is the maximum across all findings
 def test_overall_drift_score_is_maximum():
     findings = [
@@ -219,8 +217,8 @@ def test_overall_drift_score_is_maximum():
     assert drift_event.overall_drift_score == 0.95
 
 
-
 # =========== Notifications Tests ===========
+
 
 # Test notification content when result is clean
 def test_notification_content_clean():

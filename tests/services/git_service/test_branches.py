@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 from pathlib import Path
 import subprocess
 from app.services.git_service.branches import pull_branches
+from app.services.git_service import create_docs_branch, commit_and_push_docs_branch
 
 # =========== pull_branches Tests ===========
 
@@ -212,13 +213,6 @@ async def test_pull_branches_includes_access_token():
         assert "x-access-token" in str(set_url_call)
         assert access_token in str(set_url_call)
         assert result is True
-
-
-import pytest
-from unittest.mock import MagicMock, patch
-from pathlib import Path
-import subprocess
-from app.services.git_service import create_docs_branch, commit_and_push_docs_branch
 
 
 # =========== create_docs_branch Tests ===========
