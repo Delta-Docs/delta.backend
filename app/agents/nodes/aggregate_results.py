@@ -13,8 +13,6 @@ def aggregate_results(state: DriftAnalysisState) -> dict[str, Any]:
     session = state["session"]
     drift_event_id = state["drift_event_id"]
     findings: list[dict] = state["findings"]
-    change_elements: list[dict] = state["change_elements"]
-    analysis_payloads: list[dict] = state["analysis_payloads"]
 
     # Determine overall drift score and conclusion from all findings
     if not findings:
