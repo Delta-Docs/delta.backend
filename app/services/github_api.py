@@ -119,7 +119,7 @@ async def create_github_check_run(
         return None
 
 
-# Creates a skipped check run if the linked repo is inactive
+# Creates a skipped check run if the linked repo is inactive and if PR raised by Delta
 async def create_skipped_check_run(
     repo_full_name: str, head_sha: str, installation_id: int, reason: str
 ):
@@ -151,6 +151,65 @@ async def create_skipped_check_run(
 
     except Exception as e:
         print(f"Exception in create_skipped_check_run: {str(e)}")
+
+# Creates a success check run
+async def create_success_check_run(
+    repo_full_name: str, head_sha: str, installation_id: int, title: str, summary: str
+):
+    try:
+        access_token = await get_installation_access_token(installation_id)
+
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                f"https://api.github.com/repos/{repo_full_name}/check-runs",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                },
+                json={
+                    "name": "Delta Docs",
+                    "head_sha": head_sha,
+                    "status": "completed",
+                    "conclusion": "success",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "output": {
+                        "title": title,
+                        "summary": summary,
+                    },
+                },
+            )
+
+            if res.status_code != 201:
+                print(f"Error creating success check run: {res.text}")
+
+    except Exception as e:
+        print(f"Exception in create_success_check_run: {str(e)}")
+
+
+
+# Fetches a details for a specific commit
+async def get_commit(installation_id: int, repo_full_name: str, sha: str) -> dict | None:
+    try:
+        access_token = await get_installation_access_token(installation_id)
+
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                f"https://api.github.com/repos/{repo_full_name}/commits/{sha}",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                },
+            )
+
+            if res.status_code != 200:
+                print(f"Error fetching commit {sha}: {res.text}")
+                return None
+
+            return res.json()
+
+    except Exception as e:
+        print(f"Exception in get_commit: {str(e)}")
+        return None
 
 
 # Updates the GitHub Check Run status and output
