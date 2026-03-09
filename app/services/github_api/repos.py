@@ -30,6 +30,7 @@ async def get_repo_details(installation_id: int, owner: str, repo_name: str):
             "avatar_url": (data.get("owner") or {}).get("avatar_url"),
         }
 
+
 # Creates a Pull Request for auto-generated documentation updates
 async def create_docs_pull_request(
     installation_id: int,
@@ -45,7 +46,9 @@ async def create_docs_pull_request(
 
         title = f"Docs: Resolve Documentation Drift for PR #{pr_number}"
         drift_summary_section = f"### Drift Summary\n{drift_summary}\n\n" if drift_summary else ""
-        updates_summary_section = f"### Documentation Updates Summary\n{updates_summary}\n\n" if updates_summary else ""
+        updates_summary_section = (
+            f"### Documentation Updates Summary\n{updates_summary}\n\n" if updates_summary else ""
+        )
         body = (
             f"## Delta Documentation Update\n\n"
             f"Documentation drift was found in #{pr_number}\n\n"

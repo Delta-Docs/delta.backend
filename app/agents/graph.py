@@ -13,7 +13,7 @@ from app.agents.nodes import (
 )
 
 
-# Conditional edge - route to doc gen if drift was found, otherwise end
+# Route to doc gen if drift is found else end the graph execution
 def should_generate_docs(state: DriftAnalysisState) -> str:
     findings = state.get("findings", [])
     if findings:
@@ -21,7 +21,7 @@ def should_generate_docs(state: DriftAnalysisState) -> str:
     return "__end__"
 
 
-# Build and compile the drift analysis + document generation LangGraph workflow
+# Build and compile the delta LangGraph workflow
 def build_drift_analysis_graph() -> CompiledStateGraph:
     graph = StateGraph(DriftAnalysisState)  # type: ignore[bad-specialization]
 
