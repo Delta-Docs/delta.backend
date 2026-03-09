@@ -268,7 +268,7 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
     ):
         result = rewrite_docs(state)
 
-    # Should be blocked — no results
+    # Should be blocked - no results
     assert result == {"rewrite_results": []}
 
 

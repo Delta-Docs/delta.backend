@@ -565,7 +565,7 @@ def test_run_drift_analysis_in_progress_failure_doesnt_abort():
         mock_path.return_value = Path("/repos/owner/repo")
         mock_graph.invoke.return_value = {}
 
-        # Should not raise — the in_progress failure is swallowed
+        # Should not raise
         run_drift_analysis(str(drift_event.id))
 
     # Analysis still proceeds after the in_progress update failure
