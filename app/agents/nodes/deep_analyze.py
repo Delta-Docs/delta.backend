@@ -83,8 +83,8 @@ def deep_analyze(state: DriftAnalysisState) -> dict[str, Any]:
             )
             result = cast(LLMDriftFinding, raw_result)
         except Exception as exc:
-            print(f"LLM error: {exc}")
-            continue
+            print(f"LLM error on payload {i}/{len(analysis_payloads)}: {exc}")
+            raise
 
         # Record findings where the LLM confirms actual drift
         if result.drift_detected:
