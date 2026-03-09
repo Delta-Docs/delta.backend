@@ -80,7 +80,7 @@ def commit_and_pr(state: DriftAnalysisState) -> dict[str, Any]:
 
     # If no docs were actually rewritten, skip commit/push/PR entirely
     if not rewrite_results:
-        print(f"commit_and_pr: no rewrite results — skipping for event {drift_event_id}")
+        print(f"commit_and_pr: no rewrite results - skipping for event {drift_event_id}")
         return {}
 
     access_token = asyncio.run(get_installation_access_token(installation_id))

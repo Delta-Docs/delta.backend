@@ -1,72 +1,9 @@
 import subprocess
 from pathlib import Path
 from typing import Optional
-from app.core.config import settings
+from app.services.git_service.utils import get_local_repo_path
 
-
-# Utility function to get local path for a cloned repository
-def get_local_repo_path(repo_full_name: str) -> Path:
-    owner, repo_name = repo_full_name.split("/")
-    repos_base = Path(settings.REPOS_BASE_PATH)
-    return repos_base / owner / repo_name
-
-
-# Clones a repository on linking a repository
-async def clone_repository(
-    repo_full_name: str, access_token: str, target_branch: str = "main"
-) -> Optional[str]:
-    try:
-        repo_path = get_local_repo_path(repo_full_name)
-        owner_dir = repo_path.parent
-
-        # Ensure the owner directory exists
-        owner_dir.mkdir(parents=True, exist_ok=True)
-
-        # Construct the clone URL with the access token for authentication
-        clone_url = f"https://x-access-token:{access_token}@github.com/{repo_full_name}.git"
-
-        # Clone the repository using subprocess to call git
-        result = subprocess.run(
-            ["git", "clone", "--branch", target_branch, clone_url, str(repo_path)],
-            capture_output=True,
-            text=True,
-            timeout=1000,
-        )
-
-        if result.returncode == 0:
-            return str(repo_path)
-        else:
-            print(f"Failed to clone repository {repo_full_name}: {result.stderr}")
-            return None
-
-    except subprocess.TimeoutExpired:
-        print(f"Timeout while cloning repository: {repo_full_name}")
-        return None
-    except Exception as e:
-        print(f"Error cloning repository {repo_full_name}: {str(e)}")
-        return None
-
-
-# Removes a cloned repository when a repository is unlinked
-def remove_cloned_repository(repo_full_name: str) -> bool:
-    try:
-        repo_path = get_local_repo_path(repo_full_name)
-
-        # Remove the cloned repository directory if it exists
-        if repo_path.exists():
-            import shutil
-
-            shutil.rmtree(repo_path)
-            return True
-        else:
-            return False
-
-    except Exception as e:
-        print(f"Error removing cloned repository {repo_full_name}: {str(e)}")
-        return False
-
-
-# Pulls the latest changes for the specified branches in a cloned repository (on PR creation/update)
+# Pulls the specified branches from the remote repository
 async def pull_branches(repo_full_name: str, access_token: str, branches: list[str]) -> bool:
     try:
         repo_path = get_local_repo_path(repo_full_name)
@@ -132,8 +69,7 @@ async def pull_branches(repo_full_name: str, access_token: str, branches: list[s
         print(f"Error pulling branches for repository {repo_full_name}: {str(e)}")
         return False
 
-
-# Creates a docs branch from the original PR branch for doc generation
+# Creates a new branch for doc fixes
 async def checkout_docs_branch(
     repo_path: str, original_branch: str, access_token: str, repo_full_name: str
 ) -> Optional[str]:
@@ -197,7 +133,7 @@ async def checkout_docs_branch(
         )
 
         if result.returncode != 0:
-            # Branch already exists — append a timestamp for uniqueness
+            # Branch already exists - append a timestamp for uniqueness
             import time
 
             timestamp = int(time.time())
@@ -222,8 +158,7 @@ async def checkout_docs_branch(
         print(f"Error creating docs branch: {str(e)}")
         return None
 
-
-# Stages modified .md files, commits, and pushes for doc generation
+# Commits and pushes the docs branch to the remote repository
 async def commit_and_push_docs(
     repo_path: str, pr_number: int, access_token: str, repo_full_name: str
 ) -> bool:
@@ -261,7 +196,7 @@ async def commit_and_push_docs(
             timeout=30,
         )
         if result.returncode == 0:
-            # No staged changes — nothing to commit
+            # No staged changes - nothing to commit
             print("No .md changes to commit")
             return True
 

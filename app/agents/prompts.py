@@ -49,7 +49,7 @@ _REWRITE_COMMON_RULES = (
     "You will receive the current contents of a markdown documentation file "
     "along with a description of code changes that caused documentation drift. "
     "If the drift is about OUTDATED content, surgically edit the existing text "
-    "in-place — change values, names, descriptions, and parameters to match "
+    "in-place - change values, names, descriptions, and parameters to match "
     "the new code. DO NOT add new sections or duplicate content. "
     "If the drift is about MISSING documentation, add a concise new section "
     "in the most appropriate location within the existing document structure. "
@@ -80,7 +80,7 @@ DOC_GEN_REWRITE_PROMPTS: dict[str, str] = {
         "You are a developer writing docs for other developers. "
         "Focus on code-level details: function signatures, parameter types, "
         "return values, endpoint paths, and configuration keys. "
-        "Use inline code formatting liberally. Skip high-level prose — "
+        "Use inline code formatting liberally. Skip high-level prose - "
         "readers want exact specifications, not overviews. " + _REWRITE_COMMON_RULES
     ),
 }
@@ -107,6 +107,6 @@ def build_doc_gen_rewrite_prompt(
         f"### Current Content\n```markdown\n{current_content}\n```\n\n"
         f"### Required Changes\n{changes_block}\n\n"
         f"Rewrite the document above to accurately reflect these code changes. "
-        f"Edit the existing text in-place — do NOT append new sections or duplicate content. "
+        f"Edit the existing text in-place - do NOT append new sections or duplicate content. "
         f"Return the full updated markdown content."
     )

@@ -130,7 +130,7 @@ async def create_docs_pull_request(
                 data = res.json()
                 return data.get("number")
             elif res.status_code == 422:
-                # PR may already exist — log and return None instead of raising
+                # PR may already exist - log and return None instead of raising
                 print(f"PR already exists or validation error: {res.text}")
                 return None
             else:
