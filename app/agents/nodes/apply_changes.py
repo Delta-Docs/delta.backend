@@ -70,9 +70,7 @@ def _commit_and_pr(state: DriftAnalysisState) -> None:
 
     # Create the docs PR targeting the original branch
     summary_lines = [f"- `{f.get('code_path', '?')}`: {f.get('explanation', '')}" for f in findings]
-    docs_summary = (
-        "\n".join(summary_lines) if summary_lines else "Auto-generated documentation fixes."
-    )
+    drift_summary = "\n".join(summary_lines) if summary_lines else None
 
     docs_pr_number = asyncio.run(
         create_docs_pull_request(
@@ -81,7 +79,7 @@ def _commit_and_pr(state: DriftAnalysisState) -> None:
             head_branch=docs_branch,
             base_branch=original_branch,
             pr_number=pr_number,
-            changes_summary=docs_summary,
+            drift_summary=drift_summary,
         )
     )
 

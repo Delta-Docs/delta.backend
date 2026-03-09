@@ -192,7 +192,7 @@ async def commit_and_push_docs_branch(
             return True
 
         # Commit with the standardised message
-        commit_message = f"docs: auto-resolve drift findings for #{pr_number}"
+        commit_message = f"docs: resolve drift findings for #{pr_number}"
         result = subprocess.run(
             ["git", "-C", repo_path, "commit", "-m", commit_message],
             capture_output=True,
