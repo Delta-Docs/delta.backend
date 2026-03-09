@@ -42,7 +42,6 @@ class DriftEvent(Base):
 
     overall_drift_score: Mapped[float | None] = mapped_column(Float)
     summary: Mapped[str | None] = mapped_column(String)
-    agent_logs: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     error_message: Mapped[str | None] = mapped_column(String)
 
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -72,7 +72,6 @@ async def _handle_pr_opened(db: Session, payload: dict):
         head_sha=payload["pull_request"]["head"]["sha"],
         processing_phase="queued",
         drift_result="pending",
-        agent_logs={},
     )
     db.add(new_event)
     db.flush()
@@ -198,7 +197,6 @@ async def _handle_pr_synchronize(db: Session, payload: dict):
         drift_event.drift_result = "pending"
         drift_event.overall_drift_score = None
         drift_event.summary = None
-        drift_event.agent_logs = {}
         drift_event.error_message = None
         drift_event.started_at = None
         drift_event.completed_at = None
@@ -217,7 +215,6 @@ async def _handle_pr_synchronize(db: Session, payload: dict):
             head_sha=new_head_sha,
             processing_phase="queued",
             drift_result="pending",
-            agent_logs={},
         )
         db.add(new_event)
         db.flush()

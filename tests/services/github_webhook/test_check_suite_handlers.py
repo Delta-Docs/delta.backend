@@ -161,7 +161,6 @@ async def test_check_suite_rerequested_resets_drift_event_fields():
     assert drift_event.drift_result == "pending"
     assert drift_event.overall_drift_score is None
     assert drift_event.summary is None
-    assert drift_event.agent_logs == {}
     assert drift_event.error_message is None
     assert drift_event.started_at is None
     assert drift_event.completed_at is None

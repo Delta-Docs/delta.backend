@@ -71,7 +71,6 @@ CREATE TABLE drift_events (
     drift_result VARCHAR DEFAULT 'pending',
     overall_drift_score FLOAT,
     summary VARCHAR,
-    agent_logs JSONB,
     error_message VARCHAR,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,

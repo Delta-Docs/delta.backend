@@ -143,31 +143,6 @@ def test_missing_docs_result():
     assert state["session"].add.call_count == 2
 
 
-# Tests that the agent_logs JSONB field is populated.
-def test_agent_logs_populated():
-    state = _make_state(
-        findings=[],
-        change_elements=[
-            {"file_path": "a.py", "elements": ["Foo"], "old_elements": []},
-            {"file_path": "b.py", "elements": ["Bar"], "old_elements": []},
-        ],
-        analysis_payloads=[{"code_path": "a.py"}],
-    )
-    drift_event = _make_drift_event()
-    state["session"].query.return_value.filter.return_value.first.return_value = drift_event
-
-    aggregate_results(state)
-
-    logs = drift_event.agent_logs
-    assert "Scouting" in logs
-    assert "Retrieval" in logs
-    assert "Analysis" in logs
-    assert "Result" in logs
-    assert "a.py" in logs["Scouting"]
-    assert "b.py" in logs["Scouting"]
-    assert "clean" in logs["Result"]
-
-
 # Test that when drift_event is not found, session.commit is still called and no exception raised
 def test_drift_event_not_found_in_db_still_commits():
     state = _make_state(findings=[])

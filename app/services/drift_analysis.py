@@ -203,7 +203,6 @@ def run_drift_analysis(drift_event_id: str):
                     drift_event.drift_result = "pending"
                     drift_event.overall_drift_score = None
                     drift_event.summary = None
-                    drift_event.agent_logs = None
                     drift_event.error_message = str(e)
                     drift_event.started_at = None
                     drift_event.completed_at = None

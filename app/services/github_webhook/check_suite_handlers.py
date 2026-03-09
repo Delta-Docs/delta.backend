@@ -47,7 +47,6 @@ async def _handle_check_suite_rerequested(db: Session, payload: dict):
     drift_event.drift_result = "pending"
     drift_event.overall_drift_score = None
     drift_event.summary = None
-    drift_event.agent_logs = {}
     drift_event.error_message = None
     drift_event.started_at = None
     drift_event.completed_at = None

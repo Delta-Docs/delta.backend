@@ -970,7 +970,6 @@ def test_run_drift_analysis_retry_resets_state():
     assert drift_event.completed_at is None
     assert drift_event.overall_drift_score is None
     assert drift_event.summary is None
-    assert drift_event.agent_logs is None
 
 
 # Test that retry deletes stale DriftFinding and CodeChange records
