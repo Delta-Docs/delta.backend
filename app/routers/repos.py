@@ -157,12 +157,12 @@ def get_drift_event_detail(
 
     code_changes = db.query(CodeChange).filter(CodeChange.drift_event_id == event_id).all()
 
-
     # Strip the full repo clone base path from doc_file_path
     repo_clone_base = os.path.join(settings.REPOS_BASE_PATH, repo.repo_name)
+
     def strip_repo_clone_base(doc_path):
         if doc_path and doc_path.startswith(repo_clone_base):
-            return doc_path[len(repo_clone_base):].lstrip("/")
+            return doc_path[len(repo_clone_base) :].lstrip("/")
         return doc_path
 
     findings_response = []

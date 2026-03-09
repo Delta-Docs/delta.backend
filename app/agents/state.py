@@ -1,5 +1,5 @@
 import operator
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, NotRequired, TypedDict
 
 
 # Shared state passed between each node of the workflow
@@ -12,9 +12,9 @@ class DriftAnalysisState(TypedDict):
     docs_root_path: str
     change_elements: list[dict]
     analysis_payloads: list[dict]
-    
+
     findings: Annotated[list[dict], operator.add]
     target_files: list[dict]
     rewrite_results: list[dict]
-    doc_updates_summary: str
+    doc_updates_summary: NotRequired[str]
     style_preference: str
