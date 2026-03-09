@@ -88,7 +88,7 @@ def toggle_repo_activation(
     return repo
 
 
-# Endpoint to get all drift events for a repo (minimal data for list view)
+# Endpoint to get basic details of all drift events for a repo
 @router.get("/{repo_id}/drift-events", response_model=list[DriftEventListResponse])
 def get_drift_events(
     repo_id: UUID,
@@ -116,7 +116,7 @@ def get_drift_events(
     return events
 
 
-# Endpoint to get a single drift event with full details, findings, and code changes
+# Endpoint to get a single drift event with all details, drift findings, and code changes
 @router.get("/{repo_id}/drift-events/{event_id}", response_model=DriftEventDetailResponse)
 def get_drift_event_detail(
     repo_id: UUID,
@@ -145,8 +145,8 @@ def get_drift_event_detail(
     if not event:
         raise HTTPException(status_code=404, detail="Drift event not found")
 
-    # Get findings and code changes
-    findings = (
+    # Get drift findings and code changes
+    drift_findings = (
         db.query(DriftFinding)
         .filter(DriftFinding.drift_event_id == event_id)
         .order_by(DriftFinding.created_at.desc())
@@ -158,6 +158,6 @@ def get_drift_event_detail(
     # Build response with nested data
     return DriftEventDetailResponse(
         **event.__dict__,
-        findings=[DriftFindingResponse(**f.__dict__) for f in findings],
+        findings=[DriftFindingResponse(**f.__dict__) for f in drift_findings],
         code_changes=[CodeChangeResponse(**c.__dict__) for c in code_changes],
     )

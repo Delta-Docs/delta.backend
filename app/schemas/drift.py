@@ -38,29 +38,11 @@ class DriftEventListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# Schema for full drift event response (all fields)
-class DriftEventResponse(BaseModel):
-    id: uuid.UUID
-    pr_number: int
-    base_branch: str
-    head_branch: str
-    processing_phase: str
-    drift_result: str
-    overall_drift_score: Optional[float]
-    error_message: Optional[str]
-    started_at: Optional[datetime]
-    completed_at: Optional[datetime]
-    created_at: datetime
-    docs_pr_number: Optional[int] = None
-
-    model_config = ConfigDict(from_attributes=True)
-
 
 # Schema for drift finding response
 class DriftFindingResponse(BaseModel):
     id: uuid.UUID
     code_path: str
-    doc_file_path: Optional[str]
     change_type: Optional[str]
     drift_type: Optional[str]
     drift_score: Optional[float]
@@ -83,7 +65,10 @@ class CodeChangeResponse(BaseModel):
 
 
 # Schema for drift event detail with nested findings and code changes
-class DriftEventDetailResponse(DriftEventResponse):
+class DriftEventDetailResponse(DriftEventListResponse):
+    error_message: Optional[str]
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
     findings: list[DriftFindingResponse] = []
     code_changes: list[CodeChangeResponse] = []
 

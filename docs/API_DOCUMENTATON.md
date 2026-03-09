@@ -200,7 +200,6 @@ Get all information for a specific drift event, including all drift findings and
     {
       "id": "b1c2d3e4-5f6a-7b8c-9d0e-1f2a3b4c5d6e",
       "code_path": "src/auth/login.py",
-      "doc_file_path": "docs/authentication.md",
       "change_type": "modified",
       "drift_type": "outdated_docs",
       "drift_score": 0.85,
