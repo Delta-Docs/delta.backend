@@ -101,8 +101,13 @@ async def test_notification_on_installation_created():
             "app.services.github_webhook.repository_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.github_webhook.repository_handlers.clone_repository", new_callable=AsyncMock),
-        patch("app.services.github_webhook.installation_handlers.create_notification") as mock_notif,
+        patch(
+            "app.services.github_webhook.repository_handlers.clone_repository",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "app.services.github_webhook.installation_handlers.create_notification"
+        ) as mock_notif,
     ):
         await handle_github_event(mock_db, "installation", payload)
 
@@ -142,8 +147,13 @@ async def test_notification_on_installation_created_singular_repo():
             "app.services.github_webhook.repository_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.github_webhook.repository_handlers.clone_repository", new_callable=AsyncMock),
-        patch("app.services.github_webhook.installation_handlers.create_notification") as mock_notif,
+        patch(
+            "app.services.github_webhook.repository_handlers.clone_repository",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "app.services.github_webhook.installation_handlers.create_notification"
+        ) as mock_notif,
     ):
         await handle_github_event(mock_db, "installation", payload)
 
@@ -167,7 +177,9 @@ async def test_notification_on_installation_deleted():
     mock_installation.user_id = user_id
     mock_db.query.return_value.filter.return_value.first.return_value = mock_installation
 
-    with patch("app.services.github_webhook.installation_handlers.create_notification") as mock_notif:
+    with patch(
+        "app.services.github_webhook.installation_handlers.create_notification"
+    ) as mock_notif:
         await handle_github_event(mock_db, "installation", payload)
 
     mock_notif.assert_called_once()

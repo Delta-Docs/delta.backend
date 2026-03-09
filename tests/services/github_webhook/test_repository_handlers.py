@@ -59,7 +59,10 @@ async def test_notification_on_repos_added():
             "app.services.github_webhook.repository_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.github_webhook.repository_handlers.clone_repository", new_callable=AsyncMock),
+        patch(
+            "app.services.github_webhook.repository_handlers.clone_repository",
+            new_callable=AsyncMock,
+        ),
         patch("app.services.github_webhook.repository_handlers.create_notification") as mock_notif,
     ):
         await handle_github_event(mock_db, "installation_repositories", payload)

@@ -422,7 +422,8 @@ async def test_handle_pr_triggers_check_run():
 
     with (
         patch(
-            "app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
+            "app.services.github_webhook.pr_handlers.create_queued_check_run",
+            new_callable=AsyncMock,
         ) as mock_create_check,
         patch(
             "app.services.github_webhook.pr_handlers.get_installation_access_token",
