@@ -9,8 +9,9 @@ from app.models.drift import DriftEvent, DriftFinding, CodeChange
 from app.services.github_api import (
     create_github_check_run,
     create_skipped_check_run,
+    create_success_check_run,
+    get_commit,
     get_installation_access_token,
-    update_github_check_run,
 )
 from app.services.git_service import clone_repository, remove_cloned_repository, pull_branches
 from app.core.queue import task_queue
@@ -326,6 +327,35 @@ async def _handle_pr_synchronize(db: Session, payload: dict):
     new_base_sha = payload["pull_request"]["base"]["sha"]
     new_head_sha = payload["pull_request"]["head"]["sha"]
 
+    # Detecting if this synchronize was triggered by merging Delta's docs-fix PR
+    existing_event = (
+        db.query(DriftEvent)
+        .filter(DriftEvent.repo_id == repo.id, DriftEvent.pr_number == pr_number)
+        .order_by(DriftEvent.created_at.desc())
+        .first()
+    )
+    if existing_event and existing_event.docs_pr_number and existing_event.processing_phase == "fix_pr_raised":
+        try:
+            commit = await get_commit(installation_id, repo_full_name, new_head_sha)
+            if commit:
+                commit_message = commit.get("commit", {}).get("message", "")
+                parents = commit.get("parents", [])
+                is_merge_commit = len(parents) >= 2
+                mentions_docs_pr = f"#{existing_event.docs_pr_number}" in commit_message
+                if is_merge_commit and mentions_docs_pr:
+                    existing_event.processing_phase = "fix_pr_merged"
+                    db.flush()
+                    await create_success_check_run(
+                        repo_full_name,
+                        new_head_sha,
+                        installation_id,
+                        "No Documentation Drift Detected",
+                        f"Delta's documentation fix (PR #{existing_event.docs_pr_number}) was successfully merged. No drift detected."
+                    )
+                    return
+        except Exception as e:
+            print(f"Error detecting docs-fix merge for PR #{pr_number}: {str(e)}")
+
     # Pull the latest commits
     if base_branch == repo.target_branch:
         try:
@@ -471,7 +501,6 @@ async def _handle_check_suite_rerequested(db: Session, payload: dict):
             installation.user_id,
             f"PR #{drift_event.pr_number} in {repo_full_name} has been re-queued on request for drift analysis.",
         )
-
 
 # Main Router to handle different types of GH webhook events
 async def handle_github_event(db: Session, event_type: str, payload: dict):
