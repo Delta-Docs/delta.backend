@@ -3,11 +3,10 @@ from pathlib import Path
 from typing import Any, cast
 from app.db.base import DriftEvent
 from app.schemas.llm import UpdatePlan
-from app.core.config import settings
+from app.agents.llm import get_llm
 from app.agents.state import DriftAnalysisState
 from app.services.git_service import create_docs_branch
-from langchain_google_genai import ChatGoogleGenerativeAI
-from app.agents.prompts import DOC_GEN_PLAN_SYSTEM_PROMPT
+from app.agents.prompts import DOC_GEN_PLAN_SYSTEM_PROMPT, build_doc_gen_plan_user_prompt
 from app.services.github_api import get_installation_access_token
 
 
@@ -68,32 +67,10 @@ def plan_updates(state: DriftAnalysisState) -> dict[str, Any]:
         return {"target_files": []}
 
     # Initialise Gemini with structured output bound to UpdatePlan
-    llm = ChatGoogleGenerativeAI(
-        model=settings.LLM_MODEL,
-        google_api_key=settings.GEMINI_API_KEY,
-        temperature=0,
-    )
-    structured_llm = llm.with_structured_output(UpdatePlan)
+    structured_llm = get_llm().with_structured_output(UpdatePlan)
 
     # Build user prompt with all findings AND the list of real doc files
-    findings_text = ""
-    for i, finding in enumerate(drift_findings, 1):
-        findings_text += (
-            f"{i}. **Code file:** `{finding.get('code_path', '?')}`\n"
-            f"   **Drift type:** {finding.get('drift_type', '?')}\n"
-            f"   **Explanation:** {finding.get('explanation', 'N/A')}\n"
-            f"   **Matched docs:** {finding.get('matched_doc_paths', [])}\n\n"
-        )
-
-    md_files_list = "\n".join(f"- `{f}`" for f in existing_md_files)
-
-    user_prompt = (
-        f"## Available Documentation Files\n{md_files_list}\n\n"
-        f"## Drift Findings\n{findings_text}\n"
-        f"Plan the documentation updates needed to resolve each finding above. "
-        f"You MUST ONLY use doc_path values from the 'Available Documentation Files' list above. "
-        f"Do NOT invent or guess file paths."
-    )
+    user_prompt = build_doc_gen_plan_user_prompt(existing_md_files, drift_findings)
 
     try:
         raw_result = structured_llm.invoke(

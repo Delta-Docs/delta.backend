@@ -75,7 +75,7 @@ def test_plan_updates_returns_target_files(tmp_path):
     with (
         patch("app.agents.nodes.plan_updates._checkout_docs"),
         patch(
-            "app.agents.nodes.plan_updates.ChatGoogleGenerativeAI",
+            "app.agents.llm.ChatGoogleGenerativeAI",
             return_value=mock_llm_instance,
         ),
     ):
@@ -118,7 +118,7 @@ def test_plan_updates_llm_error_returns_empty():
     with (
         patch("app.agents.nodes.plan_updates._checkout_docs"),
         patch(
-            "app.agents.nodes.plan_updates.ChatGoogleGenerativeAI",
+            "app.agents.llm.ChatGoogleGenerativeAI",
             return_value=mock_llm_instance,
         ),
     ):

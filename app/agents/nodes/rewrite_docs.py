@@ -1,8 +1,7 @@
 from pathlib import Path
 from typing import Any
-from langchain_google_genai import ChatGoogleGenerativeAI
 
-from app.core.config import settings
+from app.agents.llm import get_llm
 from app.agents.state import DriftAnalysisState
 from app.agents.prompts import (
     get_rewrite_system_prompt,
@@ -20,11 +19,7 @@ def rewrite_docs(state: DriftAnalysisState) -> dict[str, Any]:
         return {"rewrite_results": []}
 
     # Initialise Gemini for rewriting
-    llm = ChatGoogleGenerativeAI(
-        model=settings.LLM_MODEL,
-        google_api_key=settings.GEMINI_API_KEY,
-        temperature=0.2,
-    )
+    llm = get_llm(temperature=0.2)
 
     rewrite_results: list[dict] = []
 

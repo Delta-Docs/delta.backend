@@ -65,7 +65,7 @@ def test_rewrite_docs_rewrites_file(tmp_path):
     }
 
     with patch(
-        "app.agents.nodes.rewrite_docs.ChatGoogleGenerativeAI",
+        "app.agents.llm.ChatGoogleGenerativeAI",
         return_value=mock_llm_instance,
     ):
         result = rewrite_docs(state)
@@ -111,7 +111,7 @@ def test_rewrite_docs_strips_code_fences(tmp_path):
     }
 
     with patch(
-        "app.agents.nodes.rewrite_docs.ChatGoogleGenerativeAI",
+        "app.agents.llm.ChatGoogleGenerativeAI",
         return_value=mock_llm_instance,
     ):
         result = rewrite_docs(state)
@@ -152,7 +152,7 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
     }
 
     with patch(
-        "app.agents.nodes.rewrite_docs.ChatGoogleGenerativeAI",
+        "app.agents.llm.ChatGoogleGenerativeAI",
         return_value=mock_llm_instance,
     ):
         result = rewrite_docs(state)
