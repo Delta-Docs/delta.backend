@@ -197,7 +197,7 @@ async def test_create_docs_pull_request_success():
             result = await create_docs_pull_request(
                 installation_id=100,
                 repo_full_name="owner/repo",
-                head_branch="docs/drift-fix/feature",
+                head_branch="docs/delta-fix/feature",
                 base_branch="feature",
                 pr_number=42,
                 changes_summary="Updated auth docs.",
@@ -206,7 +206,7 @@ async def test_create_docs_pull_request_success():
     assert result == 88
     _, kwargs = mock_client.post.call_args
     payload = kwargs["json"]
-    assert payload["head"] == "docs/drift-fix/feature"
+    assert payload["head"] == "docs/delta-fix/feature"
     assert payload["base"] == "feature"
     assert "PR #42" in payload["title"]
 

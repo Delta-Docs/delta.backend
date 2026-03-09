@@ -146,7 +146,7 @@ async def test_pr_opened_for_docs_fix_branch_creates_skipped_check_run():
         "repository": {"full_name": "owner/repo"},
         "pull_request": {
             "base": {"sha": "base123", "ref": "main"},
-            "head": {"sha": "head456", "ref": "docs/drift-fix/feature"},
+            "head": {"sha": "head456", "ref": "docs/delta-fix/feature"},
         },
     }
 

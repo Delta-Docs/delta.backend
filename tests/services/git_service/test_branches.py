@@ -238,16 +238,18 @@ async def test_create_docs_branch_success():
             original_branch="amr/update-auth",
             access_token="test_token",
             repo_full_name="owner/repo",
+            pr_number=42,
         )
 
-        assert result == "docs/drift-fix/amr/update-auth"
+        assert result is not None
+        assert result.startswith("docs/delta-fix/amr/update-auth-#42-")
         # Expected calls: set-url, fetch, checkout original, pull, checkout -b docs branch
         assert mock_run.call_count == 5
 
 
-# Tests that checkout docs branch appends timestamp if it already exists
+# Tests that checkout docs branch returns None when branch creation fails
 @pytest.mark.asyncio
-async def test_create_docs_branch_already_exists_appends_timestamp():
+async def test_create_docs_branch_creation_failure():
     call_count = [0]
 
     def mock_run_side_effect(*args, **kwargs):
@@ -258,7 +260,7 @@ async def test_create_docs_branch_already_exists_appends_timestamp():
         if call_count[0] == 5:
             mock_result.returncode = 1
             mock_result.stderr = (
-                "fatal: A branch named 'docs/drift-fix/amr/update-auth' already exists"
+                "fatal: A branch named 'docs/delta-fix/amr/update-auth-#42-...' already exists"
             )
         else:
             mock_result.returncode = 0
@@ -279,13 +281,13 @@ async def test_create_docs_branch_already_exists_appends_timestamp():
             original_branch="amr/update-auth",
             access_token="test_token",
             repo_full_name="owner/repo",
+            pr_number=42,
         )
 
-        # Should have appended timestamp
-        assert result is not None
-        assert result.startswith("docs/drift-fix/amr/update-auth-")
-        # 6 calls: set-url, fetch, checkout original, pull, checkout -b (fail), checkout -b with timestamp
-        assert mock_run.call_count == 6
+        # Should return None on failure
+        assert result is None
+        # 5 calls: set-url, fetch, checkout original, pull, checkout -b (fail)
+        assert mock_run.call_count == 5
 
 
 # Tests that checkout docs branch returns none if repo not found
@@ -302,6 +304,7 @@ async def test_create_docs_branch_repo_not_found():
             original_branch="main",
             access_token="test_token",
             repo_full_name="owner/repo",
+            pr_number=42,
         )
 
         assert result is None
@@ -337,6 +340,7 @@ async def test_create_docs_branch_fetch_failure():
             original_branch="main",
             access_token="test_token",
             repo_full_name="owner/repo",
+            pr_number=42,
         )
 
         assert result is None
@@ -357,6 +361,7 @@ async def test_create_docs_branch_timeout():
             original_branch="main",
             access_token="test_token",
             repo_full_name="owner/repo",
+            pr_number=42,
         )
 
         assert result is None
@@ -380,7 +385,7 @@ async def test_commit_and_push_docs_branch_success():
         # Call 5 is rev-parse: return branch name
         elif call_count[0] == 5:
             mock_result.returncode = 0
-            mock_result.stdout = "docs/drift-fix/amr/update-auth\n"
+            mock_result.stdout = "docs/delta-fix/amr/update-auth\n"
         else:
             mock_result.returncode = 0
             mock_result.stdout = ""
@@ -459,7 +464,7 @@ async def test_commit_and_push_docs_branch_push_failure():
             mock_result.returncode = 1  # changes exist
         elif call_count[0] == 5:
             mock_result.returncode = 0
-            mock_result.stdout = "docs/drift-fix/main\n"
+            mock_result.stdout = "docs/delta-fix/main\n"
         elif call_count[0] == 6:
             # push fails
             mock_result.returncode = 1
