@@ -4,9 +4,6 @@ from app.agents.nodes.rewrite_docs import rewrite_docs
 from app.agents.state import DriftAnalysisState
 
 
-# =========== Tests ===========
-
-
 # Tests that empty target_files returns early with no rewrite results.
 def test_rewrite_docs_empty_targets():
     state: DriftAnalysisState = {
@@ -22,6 +19,7 @@ def test_rewrite_docs_empty_targets():
         "repo_path": "/tmp/repos/owner/repo",
         "target_files": [],
         "rewrite_results": [],
+        "doc_updates_summary": "",
     }
 
     result = rewrite_docs(state)
@@ -62,6 +60,7 @@ def test_rewrite_docs_rewrites_file(tmp_path):
             }
         ],
         "rewrite_results": [],
+        "doc_updates_summary": "",
     }
 
     with patch(
@@ -108,6 +107,7 @@ def test_rewrite_docs_strips_code_fences(tmp_path):
             }
         ],
         "rewrite_results": [],
+        "doc_updates_summary": "",
     }
 
     with patch(
@@ -149,6 +149,7 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
             }
         ],
         "rewrite_results": [],
+        "doc_updates_summary": "",
     }
 
     with patch(
@@ -157,4 +158,4 @@ def test_rewrite_docs_blocks_path_traversal(tmp_path):
     ):
         result = rewrite_docs(state)
 
-    assert result == {"rewrite_results": []}
+    assert result == {"rewrite_results": [], "doc_updates_summary": ""}
