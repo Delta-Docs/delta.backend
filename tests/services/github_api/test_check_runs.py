@@ -7,7 +7,7 @@ from app.services.github_api import (
     update_github_check_run,
 )
 from app.models.drift import DriftEvent
-from app.services.webhook import handle_github_event
+from app.services.github_webhook import handle_github_event
 
 
 # =========== create_queued_check_run Tests ===========
@@ -422,14 +422,14 @@ async def test_handle_pr_triggers_check_run():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
+            "app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
         ) as mock_create_check,
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ) as mock_get_token,
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_notification"),
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_notification"),
     ):
         mock_create_check.return_value = 123456789
         mock_get_token.return_value = "test_token"

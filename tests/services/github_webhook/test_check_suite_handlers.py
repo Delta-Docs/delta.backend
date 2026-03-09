@@ -1,7 +1,7 @@
 import pytest
 import uuid
 from unittest.mock import MagicMock, patch, AsyncMock
-from app.services.webhook import handle_github_event
+from app.services.github_webhook import handle_github_event
 from app.models.installation import Installation
 from app.models.drift import DriftEvent
 
@@ -42,11 +42,11 @@ async def test_check_suite_rerequested_resets_and_requeues():
 
     with (
         patch(
-            "app.services.webhook.check_suite_handlers.create_queued_check_run",
+            "app.services.github_webhook.check_suite_handlers.create_queued_check_run",
             new_callable=AsyncMock,
         ) as mock_create_check_run,
-        patch("app.services.webhook.check_suite_handlers.task_queue") as mock_task_queue,
-        patch("app.services.webhook.check_suite_handlers.run_drift_analysis") as mock_run,
+        patch("app.services.github_webhook.check_suite_handlers.task_queue") as mock_task_queue,
+        patch("app.services.github_webhook.check_suite_handlers.run_drift_analysis") as mock_run,
     ):
         await handle_github_event(mock_db, "check_suite", payload)
 
@@ -66,7 +66,7 @@ async def test_check_suite_rerequested_missing_head_sha():
         "installation": {"id": 100},
     }
 
-    with patch("app.services.webhook.check_suite_handlers.task_queue") as mock_task_queue:
+    with patch("app.services.github_webhook.check_suite_handlers.task_queue") as mock_task_queue:
         await handle_github_event(mock_db, "check_suite", payload)
 
     mock_db.flush.assert_not_called()
@@ -83,7 +83,7 @@ async def test_check_suite_rerequested_missing_installation_id():
         "installation": {},  # no id
     }
 
-    with patch("app.services.webhook.check_suite_handlers.task_queue") as mock_task_queue:
+    with patch("app.services.github_webhook.check_suite_handlers.task_queue") as mock_task_queue:
         await handle_github_event(mock_db, "check_suite", payload)
 
     mock_db.flush.assert_not_called()
@@ -96,7 +96,7 @@ async def test_check_suite_rerequested_no_drift_event_found():
     mock_db = _make_check_suite_db(None)  # that is when first() returns None
     payload = _make_check_suite_payload()
 
-    with patch("app.services.webhook.check_suite_handlers.task_queue") as mock_task_queue:
+    with patch("app.services.github_webhook.check_suite_handlers.task_queue") as mock_task_queue:
         await handle_github_event(mock_db, "check_suite", payload)
 
     mock_db.flush.assert_not_called()
@@ -129,10 +129,10 @@ async def test_check_suite_rerequested_clears_stale_findings_and_changes():
 
     with (
         patch(
-            "app.services.webhook.check_suite_handlers.create_queued_check_run",
+            "app.services.github_webhook.check_suite_handlers.create_queued_check_run",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.check_suite_handlers.task_queue"),
+        patch("app.services.github_webhook.check_suite_handlers.task_queue"),
     ):
         await handle_github_event(mock_db, "check_suite", payload)
 
@@ -150,10 +150,10 @@ async def test_check_suite_rerequested_resets_drift_event_fields():
 
     with (
         patch(
-            "app.services.webhook.check_suite_handlers.create_queued_check_run",
+            "app.services.github_webhook.check_suite_handlers.create_queued_check_run",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.check_suite_handlers.task_queue"),
+        patch("app.services.github_webhook.check_suite_handlers.task_queue"),
     ):
         await handle_github_event(mock_db, "check_suite", payload)
 
@@ -180,7 +180,7 @@ async def test_check_suite_non_rerequested_action_ignored():
         "installation": {"id": 100},
     }
 
-    with patch("app.services.webhook.check_suite_handlers.task_queue") as mock_task_queue:
+    with patch("app.services.github_webhook.check_suite_handlers.task_queue") as mock_task_queue:
         await handle_github_event(mock_db, "check_suite", payload)
 
     mock_task_queue.enqueue.assert_not_called()
@@ -224,11 +224,11 @@ async def test_notification_on_check_suite_rerequested():
 
     with (
         patch(
-            "app.services.webhook.check_suite_handlers.create_queued_check_run",
+            "app.services.github_webhook.check_suite_handlers.create_queued_check_run",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.check_suite_handlers.task_queue"),
-        patch("app.services.webhook.check_suite_handlers.create_notification") as mock_notif,
+        patch("app.services.github_webhook.check_suite_handlers.task_queue"),
+        patch("app.services.github_webhook.check_suite_handlers.create_notification") as mock_notif,
     ):
         await handle_github_event(mock_db, "check_suite", payload)
 
@@ -271,11 +271,11 @@ async def test_no_notification_on_check_suite_rerequested_when_no_user_id():
 
     with (
         patch(
-            "app.services.webhook.check_suite_handlers.create_queued_check_run",
+            "app.services.github_webhook.check_suite_handlers.create_queued_check_run",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.check_suite_handlers.task_queue"),
-        patch("app.services.webhook.check_suite_handlers.create_notification") as mock_notif,
+        patch("app.services.github_webhook.check_suite_handlers.task_queue"),
+        patch("app.services.github_webhook.check_suite_handlers.create_notification") as mock_notif,
     ):
         await handle_github_event(mock_db, "check_suite", payload)
 

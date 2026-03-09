@@ -1,7 +1,7 @@
 import pytest
 import uuid
 from unittest.mock import MagicMock, patch, AsyncMock
-from app.services.webhook import handle_github_event
+from app.services.github_webhook import handle_github_event
 from app.models.installation import Installation
 from app.models.repository import Repository
 
@@ -98,11 +98,11 @@ async def test_notification_on_installation_created():
 
     with (
         patch(
-            "app.services.webhook.repository_handlers.get_installation_access_token",
+            "app.services.github_webhook.repository_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.repository_handlers.clone_repository", new_callable=AsyncMock),
-        patch("app.services.webhook.installation_handlers.create_notification") as mock_notif,
+        patch("app.services.github_webhook.repository_handlers.clone_repository", new_callable=AsyncMock),
+        patch("app.services.github_webhook.installation_handlers.create_notification") as mock_notif,
     ):
         await handle_github_event(mock_db, "installation", payload)
 
@@ -139,11 +139,11 @@ async def test_notification_on_installation_created_singular_repo():
 
     with (
         patch(
-            "app.services.webhook.repository_handlers.get_installation_access_token",
+            "app.services.github_webhook.repository_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.repository_handlers.clone_repository", new_callable=AsyncMock),
-        patch("app.services.webhook.installation_handlers.create_notification") as mock_notif,
+        patch("app.services.github_webhook.repository_handlers.clone_repository", new_callable=AsyncMock),
+        patch("app.services.github_webhook.installation_handlers.create_notification") as mock_notif,
     ):
         await handle_github_event(mock_db, "installation", payload)
 
@@ -167,7 +167,7 @@ async def test_notification_on_installation_deleted():
     mock_installation.user_id = user_id
     mock_db.query.return_value.filter.return_value.first.return_value = mock_installation
 
-    with patch("app.services.webhook.installation_handlers.create_notification") as mock_notif:
+    with patch("app.services.github_webhook.installation_handlers.create_notification") as mock_notif:
         await handle_github_event(mock_db, "installation", payload)
 
     mock_notif.assert_called_once()

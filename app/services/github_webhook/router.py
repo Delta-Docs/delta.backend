@@ -1,19 +1,19 @@
 from sqlalchemy.orm import Session
 
-from app.services.webhook.installation_handlers import (
+from app.services.github_webhook.installation_handlers import (
     _handle_installation_created,
     _handle_installation_deleted,
     _handle_installation_suspend,
 )
-from app.services.webhook.repository_handlers import (
+from app.services.github_webhook.repository_handlers import (
     _handle_repos_added,
     _handle_repos_removed,
 )
-from app.services.webhook.pr_handlers import (
+from app.services.github_webhook.pr_handlers import (
     _handle_pr_opened,
     _handle_pr_synchronize,
 )
-from app.services.webhook.check_suite_handlers import _handle_check_suite_rerequested
+from app.services.github_webhook.check_suite_handlers import _handle_check_suite_rerequested
 
 
 # Router to handle different types of GH webhook events

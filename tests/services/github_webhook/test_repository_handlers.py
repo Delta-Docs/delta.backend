@@ -1,7 +1,7 @@
 import pytest
 import uuid
 from unittest.mock import MagicMock, patch, AsyncMock
-from app.services.webhook import handle_github_event
+from app.services.github_webhook import handle_github_event
 from app.models.repository import Repository
 
 # =========== handle_repos Tests ===========
@@ -56,11 +56,11 @@ async def test_notification_on_repos_added():
 
     with (
         patch(
-            "app.services.webhook.repository_handlers.get_installation_access_token",
+            "app.services.github_webhook.repository_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.repository_handlers.clone_repository", new_callable=AsyncMock),
-        patch("app.services.webhook.repository_handlers.create_notification") as mock_notif,
+        patch("app.services.github_webhook.repository_handlers.clone_repository", new_callable=AsyncMock),
+        patch("app.services.github_webhook.repository_handlers.create_notification") as mock_notif,
     ):
         await handle_github_event(mock_db, "installation_repositories", payload)
 
@@ -87,8 +87,8 @@ async def test_notification_on_repos_removed():
     mock_db.query.return_value.filter.return_value.first.return_value = mock_installation
 
     with (
-        patch("app.services.webhook.repository_handlers.remove_cloned_repository"),
-        patch("app.services.webhook.repository_handlers.create_notification") as mock_notif,
+        patch("app.services.github_webhook.repository_handlers.remove_cloned_repository"),
+        patch("app.services.github_webhook.repository_handlers.create_notification") as mock_notif,
     ):
         await handle_github_event(mock_db, "installation_repositories", payload)
 

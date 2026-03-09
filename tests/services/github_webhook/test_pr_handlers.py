@@ -1,7 +1,7 @@
 import pytest
 import uuid
 from unittest.mock import MagicMock, patch, AsyncMock
-from app.services.webhook import handle_github_event
+from app.services.github_webhook import handle_github_event
 from app.models.installation import Installation
 from app.models.repository import Repository
 from app.models.drift import DriftEvent
@@ -77,13 +77,13 @@ async def test_handle_pr_opened_success():
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
 
     with (
-        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ) as mock_get_token,
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_notification"),
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_notification"),
     ):
         mock_get_token.return_value = "test_token"
         await handle_github_event(mock_db, "pull_request", payload)
@@ -153,9 +153,9 @@ async def test_pr_opened_for_docs_fix_branch_creates_skipped_check_run():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.create_skipped_check_run", new_callable=AsyncMock
+            "app.services.github_webhook.pr_handlers.create_skipped_check_run", new_callable=AsyncMock
         ) as mock_skip,
-        patch("app.services.webhook.pr_handlers.task_queue") as mock_queue,
+        patch("app.services.github_webhook.pr_handlers.task_queue") as mock_queue,
     ):
         await handle_github_event(mock_db, "pull_request", payload)
 
@@ -193,14 +193,14 @@ async def test_drift_event_id_passed_as_string():
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
 
     with (
-        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ) as mock_get_token,
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.task_queue") as mock_task_queue,
-        patch("app.services.webhook.pr_handlers.run_drift_analysis"),
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.task_queue") as mock_task_queue,
+        patch("app.services.github_webhook.pr_handlers.run_drift_analysis"),
     ):
         mock_get_token.return_value = "test_token"
 
@@ -250,14 +250,14 @@ async def test_pr_opened_enqueues_task():
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
 
     with (
-        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ) as mock_get_token,
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.task_queue") as mock_task_queue,
-        patch("app.services.webhook.pr_handlers.run_drift_analysis") as mock_run_drift_analysis,
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.task_queue") as mock_task_queue,
+        patch("app.services.github_webhook.pr_handlers.run_drift_analysis") as mock_run_drift_analysis,
     ):
         mock_get_token.return_value = "test_token"
 
@@ -297,7 +297,7 @@ async def test_pr_reopened_not_enqueued():
         },
     }
 
-    with patch("app.services.webhook.pr_handlers.task_queue") as mock_task_queue:
+    with patch("app.services.github_webhook.pr_handlers.task_queue") as mock_task_queue:
         await handle_github_event(mock_db, "pull_request", payload)
 
         # Verify that the task was not enqueued in this situation
@@ -317,7 +317,7 @@ async def test_pr_no_task_when_repo_not_found():
     # Mock no repo found
     mock_db.query.return_value.filter.return_value.first.return_value = None
 
-    with patch("app.services.webhook.pr_handlers.task_queue") as mock_task_queue:
+    with patch("app.services.github_webhook.pr_handlers.task_queue") as mock_task_queue:
         await handle_github_event(mock_db, "pull_request", payload)
 
         # Verify task was not enqueued
@@ -344,7 +344,7 @@ async def test_pr_no_task_when_repo_suspended():
     mock_repo.is_active = True
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
 
-    with patch("app.services.webhook.pr_handlers.task_queue") as mock_task_queue:
+    with patch("app.services.github_webhook.pr_handlers.task_queue") as mock_task_queue:
         await handle_github_event(mock_db, "pull_request", payload)
 
         # Verify task was not enqueued for suspended repo
@@ -372,8 +372,8 @@ async def test_pr_no_task_when_repo_deactivated():
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
 
     with (
-        patch("app.services.webhook.pr_handlers.task_queue") as mock_task_queue,
-        patch("app.services.webhook.pr_handlers.create_skipped_check_run", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.task_queue") as mock_task_queue,
+        patch("app.services.github_webhook.pr_handlers.create_skipped_check_run", new_callable=AsyncMock),
     ):
         await handle_github_event(mock_db, "pull_request", payload)
 
@@ -405,7 +405,7 @@ async def test_pr_skipped_check_run_when_repo_deactivated():
     mock_db.query.return_value.filter.return_value.first.return_value = mock_repo
 
     with patch(
-        "app.services.webhook.pr_handlers.create_skipped_check_run", new_callable=AsyncMock
+        "app.services.github_webhook.pr_handlers.create_skipped_check_run", new_callable=AsyncMock
     ) as mock_skipped_check_run:
         await handle_github_event(mock_db, "pull_request", payload)
 
@@ -437,15 +437,15 @@ async def test_pr_synchronize_resets_existing_event():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
         patch(
-            "app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
+            "app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
         ) as mock_check_run,
-        patch("app.services.webhook.pr_handlers.task_queue") as mock_queue,
-        patch("app.services.webhook.pr_handlers.run_drift_analysis") as mock_run,
+        patch("app.services.github_webhook.pr_handlers.task_queue") as mock_queue,
+        patch("app.services.github_webhook.pr_handlers.run_drift_analysis") as mock_run,
     ):
         await handle_github_event(mock_db, "pull_request", payload)
 
@@ -498,12 +498,12 @@ async def test_pr_synchronize_clears_stale_data():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.task_queue"),
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.task_queue"),
     ):
         await handle_github_event(mock_db, "pull_request", payload)
 
@@ -524,13 +524,13 @@ async def test_pr_synchronize_creates_new_event_if_none_exists():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.task_queue") as mock_queue,
-        patch("app.services.webhook.pr_handlers.run_drift_analysis"),
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.task_queue") as mock_queue,
+        patch("app.services.github_webhook.pr_handlers.run_drift_analysis"),
     ):
         await handle_github_event(mock_db, "pull_request", payload)
 
@@ -556,9 +556,9 @@ async def test_pr_synchronize_skipped_when_repo_deactivated():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.create_skipped_check_run", new_callable=AsyncMock
+            "app.services.github_webhook.pr_handlers.create_skipped_check_run", new_callable=AsyncMock
         ) as mock_skip,
-        patch("app.services.webhook.pr_handlers.task_queue") as mock_queue,
+        patch("app.services.github_webhook.pr_handlers.task_queue") as mock_queue,
     ):
         await handle_github_event(mock_db, "pull_request", payload)
 
@@ -585,7 +585,7 @@ async def test_pr_synchronize_missing_fields():
         },
     }
 
-    with patch("app.services.webhook.pr_handlers.task_queue") as mock_queue:
+    with patch("app.services.github_webhook.pr_handlers.task_queue") as mock_queue:
         await handle_github_event(mock_db, "pull_request", payload)
 
     mock_queue.enqueue.assert_not_called()
@@ -597,7 +597,7 @@ async def test_pr_synchronize_repo_not_found():
     mock_db = _make_sync_db(repo=None)
     payload = _make_sync_payload()
 
-    with patch("app.services.webhook.pr_handlers.task_queue") as mock_queue:
+    with patch("app.services.github_webhook.pr_handlers.task_queue") as mock_queue:
         await handle_github_event(mock_db, "pull_request", payload)
 
     mock_queue.enqueue.assert_not_called()
@@ -619,14 +619,14 @@ async def test_pr_synchronize_check_run_uses_new_head_sha():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
         patch(
-            "app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
+            "app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
         ) as mock_check_run,
-        patch("app.services.webhook.pr_handlers.task_queue"),
+        patch("app.services.github_webhook.pr_handlers.task_queue"),
     ):
         await handle_github_event(mock_db, "pull_request", payload)
 
@@ -657,12 +657,12 @@ async def test_pr_synchronize_docs_fix_merge_detected():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.get_commit", new_callable=AsyncMock
+            "app.services.github_webhook.pr_handlers.get_commit", new_callable=AsyncMock
         ) as mock_get_commit,
         patch(
-            "app.services.webhook.pr_handlers.create_success_check_run", new_callable=AsyncMock
+            "app.services.github_webhook.pr_handlers.create_success_check_run", new_callable=AsyncMock
         ) as mock_success,
-        patch("app.services.webhook.pr_handlers.task_queue") as mock_queue,
+        patch("app.services.github_webhook.pr_handlers.task_queue") as mock_queue,
     ):
         mock_get_commit.return_value = commit_data
         await handle_github_event(mock_db, "pull_request", payload)
@@ -698,18 +698,18 @@ async def test_pr_synchronize_docs_fix_not_a_merge_commit_falls_through():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.get_commit", new_callable=AsyncMock
+            "app.services.github_webhook.pr_handlers.get_commit", new_callable=AsyncMock
         ) as mock_get_commit,
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
         patch(
-            "app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
+            "app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock
         ) as mock_check_run,
-        patch("app.services.webhook.pr_handlers.task_queue") as mock_queue,
-        patch("app.services.webhook.pr_handlers.run_drift_analysis"),
+        patch("app.services.github_webhook.pr_handlers.task_queue") as mock_queue,
+        patch("app.services.github_webhook.pr_handlers.run_drift_analysis"),
     ):
         mock_get_commit.return_value = commit_data
         await handle_github_event(mock_db, "pull_request", payload)
@@ -744,16 +744,16 @@ async def test_pr_synchronize_docs_fix_merge_wrong_pr_number_falls_through():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.get_commit", new_callable=AsyncMock
+            "app.services.github_webhook.pr_handlers.get_commit", new_callable=AsyncMock
         ) as mock_get_commit,
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.task_queue") as mock_queue,
-        patch("app.services.webhook.pr_handlers.run_drift_analysis"),
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.task_queue") as mock_queue,
+        patch("app.services.github_webhook.pr_handlers.run_drift_analysis"),
     ):
         mock_get_commit.return_value = commit_data
         await handle_github_event(mock_db, "pull_request", payload)
@@ -803,13 +803,13 @@ async def test_notification_on_pr_queued():
     mock_db.query.side_effect = mock_query
 
     with (
-        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_notification") as mock_notif,
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_notification") as mock_notif,
     ):
         await handle_github_event(mock_db, "pull_request", payload)
 
@@ -857,13 +857,13 @@ async def test_notification_on_pr_synchronize():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.task_queue"),
-        patch("app.services.webhook.pr_handlers.create_notification") as mock_notif,
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.task_queue"),
+        patch("app.services.github_webhook.pr_handlers.create_notification") as mock_notif,
     ):
         await handle_github_event(mock_db, "pull_request", payload)
 
@@ -909,13 +909,13 @@ async def test_no_notification_on_pr_synchronize_when_no_user_id():
 
     with (
         patch(
-            "app.services.webhook.pr_handlers.get_installation_access_token",
+            "app.services.github_webhook.pr_handlers.get_installation_access_token",
             new_callable=AsyncMock,
         ),
-        patch("app.services.webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
-        patch("app.services.webhook.pr_handlers.task_queue"),
-        patch("app.services.webhook.pr_handlers.create_notification") as mock_notif,
+        patch("app.services.github_webhook.pr_handlers.pull_branches", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.create_queued_check_run", new_callable=AsyncMock),
+        patch("app.services.github_webhook.pr_handlers.task_queue"),
+        patch("app.services.github_webhook.pr_handlers.create_notification") as mock_notif,
     ):
         await handle_github_event(mock_db, "pull_request", payload)
 

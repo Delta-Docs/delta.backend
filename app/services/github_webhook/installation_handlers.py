@@ -6,7 +6,7 @@ from app.models.installation import Installation
 from app.models.repository import Repository
 from app.services.git_service import remove_cloned_repository
 from app.services.notification_service import create_notification
-from app.services.webhook.repository_handlers import _insert_repositories
+from app.services.github_webhook.repository_handlers import _insert_repositories
 
 
 # Handle when GH app is first installed on a GitHub account
