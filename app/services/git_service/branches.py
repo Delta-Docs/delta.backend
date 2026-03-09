@@ -70,7 +70,7 @@ async def pull_branches(repo_full_name: str, access_token: str, branches: list[s
         return False
 
 # Creates a new branch for doc fixes
-async def checkout_docs_branch(
+async def create_docs_branch(
     repo_path: str, original_branch: str, access_token: str, repo_full_name: str
 ) -> Optional[str]:
     try:
@@ -159,7 +159,7 @@ async def checkout_docs_branch(
         return None
 
 # Commits and pushes the docs branch to the remote repository
-async def commit_and_push_docs(
+async def commit_and_push_docs_branch(
     repo_path: str, pr_number: int, access_token: str, repo_full_name: str
 ) -> bool:
     try:

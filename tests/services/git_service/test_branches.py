@@ -208,14 +208,14 @@ import pytest
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 import subprocess
-from app.services.git_service import checkout_docs_branch, commit_and_push_docs
+from app.services.git_service import create_docs_branch, commit_and_push_docs_branch
 
 
-# =========== checkout_docs_branch Tests ===========
+# =========== create_docs_branch Tests ===========
 
 # Tests that checkout docs branch is successful
 @pytest.mark.asyncio
-async def test_checkout_docs_branch_success():
+async def test_create_docs_branch_success():
     mock_result = MagicMock()
     mock_result.returncode = 0
     mock_result.stdout = ""
@@ -228,7 +228,7 @@ async def test_checkout_docs_branch_success():
     ):
         mock_settings.REPOS_BASE_PATH = "/tmp/repos"
 
-        result = await checkout_docs_branch(
+        result = await create_docs_branch(
             repo_path="/tmp/repos/owner/repo",
             original_branch="amr/update-auth",
             access_token="test_token",
@@ -242,7 +242,7 @@ async def test_checkout_docs_branch_success():
 
 # Tests that checkout docs branch appends timestamp if it already exists
 @pytest.mark.asyncio
-async def test_checkout_docs_branch_already_exists_appends_timestamp():
+async def test_create_docs_branch_already_exists_appends_timestamp():
     call_count = [0]
 
     def mock_run_side_effect(*args, **kwargs):
@@ -269,7 +269,7 @@ async def test_checkout_docs_branch_already_exists_appends_timestamp():
     ):
         mock_settings.REPOS_BASE_PATH = "/tmp/repos"
 
-        result = await checkout_docs_branch(
+        result = await create_docs_branch(
             repo_path="/tmp/repos/owner/repo",
             original_branch="amr/update-auth",
             access_token="test_token",
@@ -285,14 +285,14 @@ async def test_checkout_docs_branch_already_exists_appends_timestamp():
 
 # Tests that checkout docs branch returns none if repo not found
 @pytest.mark.asyncio
-async def test_checkout_docs_branch_repo_not_found():
+async def test_create_docs_branch_repo_not_found():
     with (
         patch.object(Path, "exists", return_value=False),
         patch("app.services.git_service.utils.settings") as mock_settings,
     ):
         mock_settings.REPOS_BASE_PATH = "/tmp/repos"
 
-        result = await checkout_docs_branch(
+        result = await create_docs_branch(
             repo_path="/tmp/repos/owner/repo",
             original_branch="main",
             access_token="test_token",
@@ -304,7 +304,7 @@ async def test_checkout_docs_branch_repo_not_found():
 
 # Tests that checkout docs branch returns none on fetch failure
 @pytest.mark.asyncio
-async def test_checkout_docs_branch_fetch_failure():
+async def test_create_docs_branch_fetch_failure():
     call_count = [0]
 
     def mock_run_side_effect(*args, **kwargs):
@@ -327,7 +327,7 @@ async def test_checkout_docs_branch_fetch_failure():
     ):
         mock_settings.REPOS_BASE_PATH = "/tmp/repos"
 
-        result = await checkout_docs_branch(
+        result = await create_docs_branch(
             repo_path="/tmp/repos/owner/repo",
             original_branch="main",
             access_token="test_token",
@@ -339,7 +339,7 @@ async def test_checkout_docs_branch_fetch_failure():
 
 # Tests that checkout docs branch returns none on timeout
 @pytest.mark.asyncio
-async def test_checkout_docs_branch_timeout():
+async def test_create_docs_branch_timeout():
     with (
         patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 500)),
         patch.object(Path, "exists", return_value=True),
@@ -347,7 +347,7 @@ async def test_checkout_docs_branch_timeout():
     ):
         mock_settings.REPOS_BASE_PATH = "/tmp/repos"
 
-        result = await checkout_docs_branch(
+        result = await create_docs_branch(
             repo_path="/tmp/repos/owner/repo",
             original_branch="main",
             access_token="test_token",
@@ -357,12 +357,12 @@ async def test_checkout_docs_branch_timeout():
         assert result is None
 
 
-# =========== commit_and_push_docs Tests ===========
+# =========== commit_and_push_docs_branch Tests ===========
 
 
 # Tests that commit and push docs is successful
 @pytest.mark.asyncio
-async def test_commit_and_push_docs_success():
+async def test_commit_and_push_docs_branch_success():
     call_count = [0]
 
     def mock_run_side_effect(*args, **kwargs):
@@ -390,7 +390,7 @@ async def test_commit_and_push_docs_success():
     ):
         mock_settings.REPOS_BASE_PATH = "/tmp/repos"
 
-        result = await commit_and_push_docs(
+        result = await commit_and_push_docs_branch(
             repo_path="/tmp/repos/owner/repo",
             pr_number=42,
             access_token="test_token",
@@ -404,7 +404,7 @@ async def test_commit_and_push_docs_success():
 
 # Tests that commit and push docs handles nothing to commit gracefully
 @pytest.mark.asyncio
-async def test_commit_and_push_docs_nothing_to_commit():
+async def test_commit_and_push_docs_branch_nothing_to_commit():
     call_count = [0]
 
     def mock_run_side_effect(*args, **kwargs):
@@ -428,7 +428,7 @@ async def test_commit_and_push_docs_nothing_to_commit():
     ):
         mock_settings.REPOS_BASE_PATH = "/tmp/repos"
 
-        result = await commit_and_push_docs(
+        result = await commit_and_push_docs_branch(
             repo_path="/tmp/repos/owner/repo",
             pr_number=42,
             access_token="test_token",
@@ -443,7 +443,7 @@ async def test_commit_and_push_docs_nothing_to_commit():
 
 # Tests that commit and push docs returns false on push failure
 @pytest.mark.asyncio
-async def test_commit_and_push_docs_push_failure():
+async def test_commit_and_push_docs_branch_push_failure():
     call_count = [0]
 
     def mock_run_side_effect(*args, **kwargs):
@@ -473,7 +473,7 @@ async def test_commit_and_push_docs_push_failure():
     ):
         mock_settings.REPOS_BASE_PATH = "/tmp/repos"
 
-        result = await commit_and_push_docs(
+        result = await commit_and_push_docs_branch(
             repo_path="/tmp/repos/owner/repo",
             pr_number=42,
             access_token="test_token",
@@ -485,14 +485,14 @@ async def test_commit_and_push_docs_push_failure():
 
 # Tests that commit and push docs returns false if repo not found
 @pytest.mark.asyncio
-async def test_commit_and_push_docs_repo_not_found():
+async def test_commit_and_push_docs_branch_repo_not_found():
     with (
         patch.object(Path, "exists", return_value=False),
         patch("app.services.git_service.utils.settings") as mock_settings,
     ):
         mock_settings.REPOS_BASE_PATH = "/tmp/repos"
 
-        result = await commit_and_push_docs(
+        result = await commit_and_push_docs_branch(
             repo_path="/tmp/repos/owner/repo",
             pr_number=42,
             access_token="test_token",

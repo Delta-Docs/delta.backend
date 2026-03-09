@@ -12,7 +12,7 @@ from app.agents.nodes.deep_analyze import deep_analyze
 from app.agents.nodes.aggregate_results import aggregate_results
 from app.agents.nodes.doc_gen_nodes import plan_updates, rewrite_docs, apply_changes
 
-from app.services.git_service import checkout_docs_branch, commit_and_push_docs
+from app.services.git_service import create_docs_branch, commit_and_push_docs_branch
 from app.services.github_api import (
     get_installation_access_token,
     create_docs_pull_request,
@@ -40,7 +40,7 @@ def checkout_docs(state: DriftAnalysisState) -> dict[str, Any]:
 
     access_token = asyncio.run(get_installation_access_token(installation_id))
     branch_name = asyncio.run(
-        checkout_docs_branch(
+        create_docs_branch(
             repo_path=state["repo_path"],
             original_branch=original_branch,
             access_token=access_token,
@@ -87,7 +87,7 @@ def commit_and_pr(state: DriftAnalysisState) -> dict[str, Any]:
 
     # Commit and push changed .md files
     push_success = asyncio.run(
-        commit_and_push_docs(
+        commit_and_push_docs_branch(
             repo_path=state["repo_path"],
             pr_number=pr_number,
             access_token=access_token,
