@@ -353,7 +353,7 @@ async def _handle_pr_synchronize(db: Session, payload: dict):
                         repo_full_name,
                         new_head_sha,
                         installation_id,
-                        "No Documentation Drift Detected",
+                        "Documentation Drift Resolved",
                         f"Delta's documentation fix (PR #{existing_event.docs_pr_number}) was successfully merged. No drift detected.",
                     )
                     return
