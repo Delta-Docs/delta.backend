@@ -16,4 +16,5 @@ class DriftAnalysisState(TypedDict):
     findings: Annotated[list[dict], operator.add]
     target_files: list[dict]
     rewrite_results: list[dict]
+    doc_updates_summary: str
     style_preference: str

@@ -65,6 +65,17 @@ DOC_GEN_REWRITE_PROMPTS: dict[str, str] = {
 # By default returns with professional style
 DOC_GEN_REWRITE_SYSTEM_PROMPT = DOC_GEN_REWRITE_PROMPTS["professional"]
 
+# System prompt for summarising per-file documentation updates
+DOC_UPDATES_SUMMARY_SYSTEM_PROMPT = (
+    "You are a technical writer producing a concise changelog. "
+    "For each documentation file you are given, write exactly one-two lines that "
+    "summarises what was changed. The line must follow this exact format: "
+    "`<filename>` - <summary of what changed>. "
+    "Do NOT include bullet symbols, numbering, or any extra text. "
+    "Output one-two line per file, nothing else."
+)
+
+
 def build_deep_analyze_user_prompt(
     code_path: str,
     change_type: str,
@@ -105,6 +116,21 @@ def build_doc_gen_rewrite_prompt(
         f"Rewrite the document above to accurately reflect these code changes. "
         f"Edit the existing text in-place - do NOT append new sections or duplicate content. "
         f"Return the full updated markdown content."
+    )
+
+
+def build_doc_updates_summary_prompt(file_changes: list[dict]) -> str:
+    lines = []
+    for fc in file_changes:
+        doc_path = fc["doc_path"]
+        descriptions = fc["descriptions"]
+        changes_block = "; ".join(descriptions)
+        lines.append(f"- `{doc_path}`: {changes_block}")
+    files_block = "\n".join(lines)
+    return (
+        f"The following documentation files were updated. "
+        f"For each file, produce the one-two line summary of what changed.\n\n"
+        f"{files_block}"
     )
 
 

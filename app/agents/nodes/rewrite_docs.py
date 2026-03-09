@@ -6,6 +6,8 @@ from app.agents.state import DriftAnalysisState
 from app.agents.prompts import (
     get_rewrite_system_prompt,
     build_doc_gen_rewrite_prompt,
+    DOC_UPDATES_SUMMARY_SYSTEM_PROMPT,
+    build_doc_updates_summary_prompt,
 )
 
 
@@ -88,4 +90,34 @@ def rewrite_docs(state: DriftAnalysisState) -> dict[str, Any]:
             print(f"LLM error rewriting {doc_path}: {exc}")
             continue
 
-    return {"rewrite_results": rewrite_results}
+    # Build a simple summary of what changes were made
+    doc_updates_summary = ""
+    if rewrite_results:
+        file_changes = [
+            {
+                "doc_path": doc_path,
+                "descriptions": grouped.get(doc_path, ["documentation updated"]),
+            }
+            for doc_path in (r["doc_path"] for r in rewrite_results)
+        ]
+        summary_prompt = build_doc_updates_summary_prompt(file_changes)
+        try:
+            summary_llm = get_llm(temperature=0.1)
+            summary_result = summary_llm.invoke(
+                [
+                    {"role": "system", "content": DOC_UPDATES_SUMMARY_SYSTEM_PROMPT},
+                    {"role": "user", "content": summary_prompt},
+                ]
+            )
+            doc_updates_summary = (
+                str(summary_result.content)
+                if hasattr(summary_result, "content")
+                else str(summary_result)
+            ).strip()
+        except Exception as exc:
+            print(f"rewrite_docs: summary LLM error: {exc}")
+            doc_updates_summary = "\n".join(
+                f"`{r['doc_path']}` - documentation updated" for r in rewrite_results
+            )
+
+    return {"rewrite_results": rewrite_results, "doc_updates_summary": doc_updates_summary}
