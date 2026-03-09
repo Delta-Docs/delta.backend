@@ -394,6 +394,144 @@ def test_extract_and_save_code_changes_wildcard_pattern():
     assert is_ignored_flags["src/service.py"] is False
 
 
+# =========== _extract_and_save_code_changes Branch Pull Tests ===========
+
+
+def _make_drift_event_with_branches(
+    base_branch="feature",
+    head_branch="feature",
+    target_branch="main",
+    repo_name="owner/repo",
+    installation_id=99,
+):
+    """Creates a mock drift event with branch and repository target_branch configured."""
+    drift_event = MagicMock()
+    drift_event.id = uuid4()
+    drift_event.base_sha = "base123"
+    drift_event.head_sha = "head456"
+    drift_event.base_branch = base_branch
+    drift_event.head_branch = head_branch
+    drift_event.repository.repo_name = repo_name
+    drift_event.repository.installation_id = installation_id
+    drift_event.repository.target_branch = target_branch
+    drift_event.repository.file_ignore_patterns = []
+    return drift_event
+
+
+# Test that pull_branches is called when base_branch matches the target_branch
+def test_extract_and_save_code_changes_pulls_when_base_matches_target():
+    drift_event = _make_drift_event_with_branches(base_branch="main", target_branch="main")
+    session = MagicMock()
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = ""
+
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch(
+            "app.services.drift_analysis.get_installation_access_token",
+            new_callable=MagicMock,
+            return_value="tok",
+        ),
+        patch(
+            "app.services.drift_analysis.pull_branches",
+            new_callable=MagicMock,
+            return_value=True,
+        ) as mock_pull,
+        patch("asyncio.run", side_effect=lambda coro: coro),
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+        _extract_and_save_code_changes(session, drift_event)
+
+    mock_pull.assert_called_once_with("owner/repo", "tok", ["main", "feature"])
+
+
+# Test that pull_branches is NOT called when base_branch does not match target_branch
+def test_extract_and_save_code_changes_skips_pull_when_base_not_target():
+    drift_event = _make_drift_event_with_branches(base_branch="develop", target_branch="main")
+    session = MagicMock()
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = ""
+
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch("app.services.drift_analysis.pull_branches", new_callable=MagicMock) as mock_pull,
+        patch("app.services.drift_analysis.get_installation_access_token", new_callable=MagicMock),
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+        _extract_and_save_code_changes(session, drift_event)
+
+    mock_pull.assert_not_called()
+
+
+# Test that plain fetch is used as fallback when authenticated pull fails
+def test_extract_and_save_code_changes_falls_back_to_plain_fetch():
+    drift_event = _make_drift_event_with_branches(base_branch="main", target_branch="main")
+    session = MagicMock()
+
+    diff_result = MagicMock()
+    diff_result.returncode = 0
+    diff_result.stdout = ""
+
+    call_count = [0]
+
+    def subprocess_side_effect(*args, **kwargs):
+        call_count[0] += 1
+        # First subprocess.run call is the plain fetch fallback
+        if call_count[0] == 1:
+            return MagicMock(returncode=0)
+        # Second is the git diff
+        return diff_result
+
+    with (
+        patch("subprocess.run", side_effect=subprocess_side_effect) as mock_run,
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch(
+            "app.services.drift_analysis.get_installation_access_token",
+            new_callable=MagicMock,
+            side_effect=Exception("auth failed"),
+        ),
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+        _extract_and_save_code_changes(session, drift_event)
+
+    # First subprocess call should be the plain fetch fallback
+    first_call_args = mock_run.call_args_list[0][0][0]
+    assert "fetch" in first_call_args
+    assert "origin" in first_call_args
+
+
+# Test that git diff still runs and saves changes even when pull fails with fallback
+def test_extract_and_save_code_changes_continues_after_pull_failure():
+    drift_event = _make_drift_event_with_branches(base_branch="main", target_branch="main")
+    session = MagicMock()
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = "A\tsrc/app.py\n"
+
+    with (
+        patch("subprocess.run", return_value=mock_result),
+        patch("app.services.drift_analysis.get_local_repo_path") as mock_path,
+        patch(
+            "app.services.drift_analysis.get_installation_access_token",
+            new_callable=MagicMock,
+            side_effect=Exception("auth failed"),
+        ),
+    ):
+        mock_path.return_value = MagicMock(spec=Path, exists=MagicMock(return_value=True))
+        _extract_and_save_code_changes(session, drift_event)
+
+    # Code change should still be saved despite pull failure
+    assert session.add.call_count == 1
+    session.commit.assert_called_once()
+
+
 # =========== run_drift_analysis Event/Session Tests ===========
 
 
