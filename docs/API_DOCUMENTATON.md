@@ -138,7 +138,8 @@ Update repository configuration.
   "docs_root_path": "/docs",
   "target_branch": "main",
   "style_preference": "technical",
-  "file_ignore_patterns": ["*.test.js", "*.spec.ts"]
+  "file_ignore_patterns": ["*.test.js", "*.spec.ts"],
+  "reviewer": "github-username"
 }
 ```
 
@@ -154,6 +155,7 @@ Update repository configuration.
   "target_branch": "main",
   "style_preference": "technical",
   "file_ignore_patterns": ["*.test.js", "*.spec.ts"],
+  "reviewer": "github-username",
   "last_synced_at": null,
 }
 ```
