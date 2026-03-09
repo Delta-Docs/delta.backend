@@ -4,6 +4,7 @@ from app.services.github_api import get_repo_details, get_installation_access_to
 
 # =========== Fixtures ===========
 
+
 # Auto mock settings (.env)
 @pytest.fixture(autouse=True)
 def mock_settings():
@@ -28,7 +29,9 @@ def mock_jwt():
         mock.return_value = "dummy_jwt"
         yield mock
 
+
 # =========== get_installation_access_token Tests ===========
+
 
 # Test that we can get an installation token successfully
 @pytest.mark.asyncio
@@ -69,6 +72,7 @@ async def test_get_installation_access_token_error():
 
 
 # =========== get_repo_details Tests ===========
+
 
 # Test fetching repo details from GH API
 @pytest.mark.asyncio

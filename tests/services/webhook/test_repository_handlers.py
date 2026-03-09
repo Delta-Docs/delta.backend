@@ -6,6 +6,7 @@ from app.models.repository import Repository
 
 # =========== handle_repos Tests ===========
 
+
 # Test adding repos to an installation
 @pytest.mark.asyncio
 async def test_handle_repos_added(mock_db_session):
@@ -33,6 +34,7 @@ async def test_handle_repos_removed(mock_db_session):
 
     mock_db_session.query.assert_called_with(Repository)
     mock_db_session.query.return_value.filter.return_value.delete.assert_called_once()
+
 
 # =========== Notification Tests ===========
 

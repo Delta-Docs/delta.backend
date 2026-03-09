@@ -171,6 +171,7 @@ async def test_pr_opened_for_docs_fix_branch_creates_skipped_check_run():
 
 # =========== RQ Integration Tests ===========
 
+
 # Test that drift event ID is passed as string to the task
 @pytest.mark.asyncio
 async def test_drift_event_id_passed_as_string():
@@ -220,6 +221,7 @@ async def test_drift_event_id_passed_as_string():
         args, _ = mock_task_queue.enqueue.call_args
         assert args[1] == str(drift_id)
         assert isinstance(args[1], str)
+
 
 # Test that task is enqueued when PR is opened
 @pytest.mark.asyncio
@@ -278,7 +280,6 @@ async def test_pr_opened_enqueues_task():
         # The drift event ID is passed as a string
         assert args[1] == str(drift_id)
         assert isinstance(args[1], str)
-
 
 
 # Test that task is not enqueued for unsupported PR actions
@@ -382,6 +383,7 @@ async def test_pr_no_task_when_repo_deactivated():
 
 # =========== GH Check Run Integration Tests ===========
 
+
 # Test that a skipped check run is created on GitHub when repo is deactivated
 @pytest.mark.asyncio
 async def test_pr_skipped_check_run_when_repo_deactivated():
@@ -417,6 +419,7 @@ async def test_pr_skipped_check_run_when_repo_deactivated():
 
 
 # =========== handle_pr_synchronize Tests ===========
+
 
 # Test that an existing drift event is reset and re-enqueued with updated SHAs
 @pytest.mark.asyncio
@@ -760,8 +763,8 @@ async def test_pr_synchronize_docs_fix_merge_wrong_pr_number_falls_through():
     mock_queue.enqueue.assert_called_once()
 
 
-
 # =========== Notification Tests ===========
+
 
 # Test notification is sent when a PR is queued for drift analysis
 @pytest.mark.asyncio

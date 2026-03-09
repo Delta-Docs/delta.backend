@@ -575,6 +575,7 @@ def test_run_drift_analysis_in_progress_failure_doesnt_abort():
 
 # =========== run_drift_analysis Failure Tests ===========
 
+
 # Test that failure marks the drift event phase, result and error message
 def test_run_drift_analysis_failure_marks_event_as_failed():
     session, drift_event, drift_event_id = _setup_failure_mocks()

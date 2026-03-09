@@ -398,7 +398,8 @@ async def test_create_success_check_run_api_failure():
             # Should not raise
             await create_success_check_run("owner/repo", "sha", 100, "Title", "Summary")
 
- # =========== get_commit Tests ===========
+
+# =========== get_commit Tests ===========
 
 
 # Test that get_commit returns commit data on success

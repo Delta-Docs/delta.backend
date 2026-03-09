@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import MagicMock
 
- # =========== Fixtures ===========
+# =========== Fixtures ===========
+
 
 # Test fixture for mocking DB session
 @pytest.fixture

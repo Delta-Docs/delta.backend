@@ -8,6 +8,7 @@ from app.models.repository import Repository
 
 # =========== handle_installation Tests ===========
 
+
 # Test that GH app installation creates installation and repo records
 @pytest.mark.asyncio
 async def test_handle_installation_created(mock_db_session):

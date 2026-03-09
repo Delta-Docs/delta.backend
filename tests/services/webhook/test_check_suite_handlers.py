@@ -188,6 +188,7 @@ async def test_check_suite_non_rerequested_action_ignored():
 
 # =========== Notification Tests ===========
 
+
 # Test notification is sent when drift analysis is re-queued via check suite re-request
 @pytest.mark.asyncio
 async def test_notification_on_check_suite_rerequested():
