@@ -1,3 +1,4 @@
+import pytest
 from typing import Literal
 from unittest.mock import patch, MagicMock
 
@@ -185,7 +186,7 @@ def test_multiple_payloads(mock_llm_class, mock_get_diff):
     assert result["findings"][0]["code_path"] == "src/api.py"
 
 
-# Tests that when the LLM raises an exception, the payload is skipped without crashing.
+# Tests that when the LLM raises an exception, the exception propagates out of deep_analyze.
 @patch("app.agents.nodes.deep_analyze._get_git_diff")
 @patch("app.agents.nodes.deep_analyze.ChatGoogleGenerativeAI")
 def test_llm_exception_handled(mock_llm_class, mock_get_diff):
@@ -209,6 +210,5 @@ def test_llm_exception_handled(mock_llm_class, mock_get_diff):
         ],
     )
 
-    result = deep_analyze(state)
-
-    assert result["findings"] == []
+    with pytest.raises(Exception, match="API rate limit exceeded"):
+        deep_analyze(state)

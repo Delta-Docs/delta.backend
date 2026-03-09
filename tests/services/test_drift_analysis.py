@@ -520,7 +520,7 @@ def test_run_drift_analysis_failure_updates_check_run():
         status="completed",
         conclusion="failure",
         title="Delta Drift Analysis",
-        summary="Drift analysis failed due to an internal error.",
+        summary="Drift analysis could not be completed due to an internal error. Please try again after some time by clicking **Re-run all checks**.",
     )
     assert mock_asyncio_run.call_count >= 1
 
