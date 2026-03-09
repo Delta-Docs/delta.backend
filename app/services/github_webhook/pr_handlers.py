@@ -8,9 +8,7 @@ from app.services.github_api import (
     create_skipped_check_run,
     create_success_check_run,
     get_commit,
-    get_installation_access_token,
 )
-from app.services.git_service import pull_branches
 from app.core.queue import task_queue
 from app.services.drift_analysis import run_drift_analysis
 from app.services.notification_service import create_notification
@@ -63,18 +61,6 @@ async def _handle_pr_opened(db: Session, payload: dict):
 
     base_branch = payload["pull_request"]["base"]["ref"]
     head_branch = payload["pull_request"]["head"]["ref"]
-
-    if base_branch == repo.target_branch:
-        try:
-            access_token = await get_installation_access_token(installation_id)
-            branches_to_pull = [base_branch]
-
-            if not payload["pull_request"]["head"].get("repo", {}).get("fork"):
-                branches_to_pull.append(head_branch)
-
-            await pull_branches(repo_full_name, access_token, branches_to_pull)
-        except Exception as e:
-            print(f"Error pulling branches for {repo_full_name}: {str(e)}")
 
     # Create a drift event for the PR
     new_event = DriftEvent(
@@ -187,19 +173,6 @@ async def _handle_pr_synchronize(db: Session, payload: dict):
                     return
         except Exception as e:
             print(f"Error detecting docs-fix merge for PR #{pr_number}: {str(e)}")
-
-    # Pull the latest commits
-    if base_branch == repo.target_branch:
-        try:
-            access_token = await get_installation_access_token(installation_id)
-            branches_to_pull = [base_branch]
-
-            if not payload["pull_request"]["head"].get("repo", {}).get("fork"):
-                branches_to_pull.append(head_branch)
-
-            await pull_branches(repo_full_name, access_token, branches_to_pull)
-        except Exception as e:
-            print(f"Error pulling branches for {repo_full_name}: {str(e)}")
 
     # Find the existing drift event for this PR and reset it for re-analysis
     drift_event = (
