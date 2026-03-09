@@ -26,7 +26,7 @@ async def test_create_check_run_success():
     installation_id = 12345
 
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.check_runs.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -71,7 +71,7 @@ async def test_create_check_run_api_failure():
     installation_id = 12345
 
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.check_runs.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -106,7 +106,7 @@ async def test_update_check_run_in_progress_success():
     installation_id = 12345
 
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.check_runs.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -154,7 +154,7 @@ async def test_update_check_run_completed_success():
     installation_id = 12345
 
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.check_runs.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -203,7 +203,7 @@ async def test_update_check_run_completed_failure():
     installation_id = 12345
 
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.check_runs.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -246,7 +246,7 @@ async def test_update_check_run_api_failure():
     installation_id = 12345
 
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.check_runs.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -279,7 +279,7 @@ async def test_update_check_run_api_failure():
 @pytest.mark.asyncio
 async def test_create_skipped_check_run_success():
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.check_runs.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -311,7 +311,7 @@ async def test_create_skipped_check_run_success():
 @pytest.mark.asyncio
 async def test_create_skipped_check_run_api_failure():
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.check_runs.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -333,7 +333,7 @@ async def test_create_skipped_check_run_api_failure():
 @pytest.mark.asyncio
 async def test_create_skipped_check_run_exception():
     with patch(
-        "app.services.github_api.get_installation_access_token",
+        "app.services.github_api.check_runs.get_installation_access_token",
         new_callable=AsyncMock,
         side_effect=Exception("Network error"),
     ):
@@ -348,7 +348,7 @@ async def test_create_skipped_check_run_exception():
 @pytest.mark.asyncio
 async def test_create_success_check_run_success():
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.check_runs.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -381,7 +381,7 @@ async def test_create_success_check_run_success():
 @pytest.mark.asyncio
 async def test_create_success_check_run_api_failure():
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.check_runs.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -408,7 +408,7 @@ async def test_get_commit_success():
     commit_data = {"sha": "abc123", "commit": {"message": "feat: add endpoint"}, "parents": [{}]}
 
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.repos.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -433,7 +433,7 @@ async def test_get_commit_success():
 @pytest.mark.asyncio
 async def test_get_commit_not_found():
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.repos.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -456,7 +456,7 @@ async def test_get_commit_not_found():
 @pytest.mark.asyncio
 async def test_get_commit_exception():
     with patch(
-        "app.services.github_api.get_installation_access_token",
+        "app.services.github_api.repos.get_installation_access_token",
         new_callable=AsyncMock,
         side_effect=Exception("Network error"),
     ):
@@ -472,7 +472,7 @@ async def test_get_commit_exception():
 @pytest.mark.asyncio
 async def test_request_pr_review_success():
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.repos.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -496,7 +496,7 @@ async def test_request_pr_review_success():
 @pytest.mark.asyncio
 async def test_request_pr_review_failure():
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.repos.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -519,7 +519,7 @@ async def test_request_pr_review_failure():
 @pytest.mark.asyncio
 async def test_request_pr_review_exception():
     with patch(
-        "app.services.github_api.get_installation_access_token",
+        "app.services.github_api.repos.get_installation_access_token",
         new_callable=AsyncMock,
         side_effect=Exception("Network error"),
     ):
@@ -535,7 +535,7 @@ async def test_request_pr_review_exception():
 @pytest.mark.asyncio
 async def test_create_docs_pull_request_success():
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.repos.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -570,7 +570,7 @@ async def test_create_docs_pull_request_success():
 @pytest.mark.asyncio
 async def test_create_docs_pull_request_already_exists():
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.repos.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -593,7 +593,7 @@ async def test_create_docs_pull_request_already_exists():
 @pytest.mark.asyncio
 async def test_create_docs_pull_request_api_error():
     with patch(
-        "app.services.github_api.get_installation_access_token", new_callable=AsyncMock
+        "app.services.github_api.repos.get_installation_access_token", new_callable=AsyncMock
     ) as mock_get_token:
         mock_get_token.return_value = "mock_token"
 
@@ -616,7 +616,7 @@ async def test_create_docs_pull_request_api_error():
 @pytest.mark.asyncio
 async def test_create_docs_pull_request_exception():
     with patch(
-        "app.services.github_api.get_installation_access_token",
+        "app.services.github_api.repos.get_installation_access_token",
         new_callable=AsyncMock,
         side_effect=Exception("Network error"),
     ):
