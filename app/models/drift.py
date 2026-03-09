@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Any
 from sqlalchemy import (
     String,
     Integer,
@@ -13,7 +12,7 @@ from sqlalchemy import (
     Index,
     Boolean,
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from app.db.base_class import Base
 
@@ -42,7 +41,6 @@ class DriftEvent(Base):
 
     overall_drift_score: Mapped[float | None] = mapped_column(Float)
     summary: Mapped[str | None] = mapped_column(String)
-    agent_logs: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     error_message: Mapped[str | None] = mapped_column(String)
 
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -55,7 +53,7 @@ class DriftEvent(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "processing_phase IN ('queued', 'scouting', 'analyzing', 'generating', 'verifying', 'completed', 'failed')",
+            "processing_phase IN ('queued', 'scouting', 'analyzing', 'generating', 'verifying', 'completed', 'failed', 'fix_pr_raised', 'fix_pr_merged')",
             name="check_processing_phase",
         ),
         CheckConstraint(

@@ -1,6 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+import os
 
 from app.deps import get_db_connection, get_current_user
 from app.models.drift import DriftEvent, DriftFinding, CodeChange
@@ -14,6 +15,7 @@ from app.schemas.drift import (
     CodeChangeResponse,
 )
 from app.schemas.repository import RepositorySettings, RepositoryActivation, RepositoryResponse
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -88,7 +90,7 @@ def toggle_repo_activation(
     return repo
 
 
-# Endpoint to get all drift events for a repo (minimal data for list view)
+# Endpoint to get basic details of all drift events for a repo
 @router.get("/{repo_id}/drift-events", response_model=list[DriftEventListResponse])
 def get_drift_events(
     repo_id: UUID,
@@ -116,7 +118,7 @@ def get_drift_events(
     return events
 
 
-# Endpoint to get a single drift event with full details, findings, and code changes
+# Endpoint to get a single drift event with all details, drift findings, and code changes
 @router.get("/{repo_id}/drift-events/{event_id}", response_model=DriftEventDetailResponse)
 def get_drift_event_detail(
     repo_id: UUID,
@@ -135,7 +137,7 @@ def get_drift_event_detail(
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
 
-    # Get the drift event
+    # Get drift event
     event = (
         db.query(DriftEvent)
         .filter(DriftEvent.id == event_id, DriftEvent.repo_id == repo_id)
@@ -145,23 +147,33 @@ def get_drift_event_detail(
     if not event:
         raise HTTPException(status_code=404, detail="Drift event not found")
 
-    # Get findings and code changes
-    findings = (
+    # Get drift findings and code changes
+    drift_findings = (
         db.query(DriftFinding)
         .filter(DriftFinding.drift_event_id == event_id)
         .order_by(DriftFinding.created_at.desc())
         .all()
     )
 
-    code_changes = (
-        db.query(CodeChange)
-        .filter(CodeChange.drift_event_id == event_id)
-        .all()
-    )
+    code_changes = db.query(CodeChange).filter(CodeChange.drift_event_id == event_id).all()
+
+    # Strip the full repo clone base path from doc_file_path
+    repo_clone_base = os.path.join(settings.REPOS_BASE_PATH, repo.repo_name)
+
+    def strip_repo_clone_base(doc_path):
+        if doc_path and doc_path.startswith(repo_clone_base):
+            return doc_path[len(repo_clone_base) :].lstrip("/")
+        return doc_path
+
+    findings_response = []
+    for f in drift_findings:
+        finding_dict = f.__dict__.copy()
+        finding_dict["doc_file_path"] = strip_repo_clone_base(finding_dict.get("doc_file_path"))
+        findings_response.append(DriftFindingResponse(**finding_dict))
 
     # Build response with nested data
     return DriftEventDetailResponse(
         **event.__dict__,
-        findings=[DriftFindingResponse(**f.__dict__) for f in findings],
-        code_changes=[CodeChangeResponse(**c.__dict__) for c in code_changes]
+        findings=findings_response,
+        code_changes=[CodeChangeResponse(**c.__dict__) for c in code_changes],
     )

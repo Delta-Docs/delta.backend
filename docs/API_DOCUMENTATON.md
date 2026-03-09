@@ -138,7 +138,8 @@ Update repository configuration.
   "docs_root_path": "/docs",
   "target_branch": "main",
   "style_preference": "technical",
-  "file_ignore_patterns": ["*.test.js", "*.spec.ts"]
+  "file_ignore_patterns": ["*.test.js", "*.spec.ts"],
+  "reviewer": "github-username"
 }
 ```
 
@@ -154,12 +155,13 @@ Update repository configuration.
   "target_branch": "main",
   "style_preference": "technical",
   "file_ignore_patterns": ["*.test.js", "*.spec.ts"],
+  "reviewer": "github-username",
   "last_synced_at": null,
 }
 ```
 
 ### GET `/repos/{repo_id}/drift-events`
-Get all drift events for a repository, ordered by most recent first. Returns minimal data optimized for list views.
+Get basic details for all drift events in a repository, ordered by most recent first.
 
 **Response:**
 ```json
@@ -179,7 +181,7 @@ Get all drift events for a repository, ordered by most recent first. Returns min
 ```
 
 ### GET `/repos/{repo_id}/drift-events/{event_id}`
-Get detailed information for a specific drift event, including all findings and code changes.
+Get all information for a specific drift event, including all drift findings and code changes.
 
 **Response:**
 ```json
@@ -200,7 +202,7 @@ Get detailed information for a specific drift event, including all findings and 
     {
       "id": "b1c2d3e4-5f6a-7b8c-9d0e-1f2a3b4c5d6e",
       "code_path": "src/auth/login.py",
-      "doc_file_path": "docs/authentication.md",
+      "doc_file_path": "docs/auth/login.md",
       "change_type": "modified",
       "drift_type": "outdated_docs",
       "drift_score": 0.85,
