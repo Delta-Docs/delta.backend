@@ -2,7 +2,7 @@
 
 ## Authentication Endpoints (`/api/auth`)
 
-### POST `/auth/signup`
+### POST `/api/auth/signup`
 Create a new user account.
 
 **Request Body:**
@@ -23,7 +23,7 @@ Create a new user account.
 }
 ```
 
-### POST `/auth/login`
+### POST `/api/auth/login`
 Login with email and password.
 
 **Request Body:**
@@ -43,7 +43,7 @@ Login with email and password.
 }
 ```
 
-### POST `/auth/logout`
+### POST `/api/auth/logout`
 Logout and invalidate tokens.
 
 **Response:**
@@ -54,7 +54,7 @@ Logout and invalidate tokens.
 }
 ```
 
-### GET `/auth/github/callback`
+### GET `/api/auth/github/callback`
 GitHub OAuth callback handler.
 
 **Query Params:**
@@ -63,7 +63,7 @@ GitHub OAuth callback handler.
 
 ## Webhook Endpoints (`/api/webhook`)
 
-### POST `/webhook/github`
+### POST `/api/webhook/github`
 Receives GitHub webhook events.
 
 **Headers:**
@@ -82,7 +82,7 @@ GitHub Webhook Payload
 
 ## Repository Endpoints (`/api/repos`)
 
-### GET `/repos`
+### GET `/api/repos`
 List all repositories for the authenticated user.
 
 **Response:**
@@ -105,7 +105,7 @@ List all repositories for the authenticated user.
 ]
 ```
 
-### PUT `/repos/{repo_id}/activate`
+### PATCH `/api/repos/{repo_id}/activate`
 Activate or deactivate drift monitoring for a repository.
 
 **Request Body:**
@@ -133,7 +133,7 @@ Activate or deactivate drift monitoring for a repository.
 }
 ```
 
-### PUT `/repos/{repo_id}/settings`
+### PUT `/api/repos/{repo_id}/settings`
 Update repository configuration.
 
 **Request Body:**
@@ -166,7 +166,7 @@ Update repository configuration.
 }
 ```
 
-### GET `/repos/{repo_id}/drift-events`
+### GET `/api/repos/{repo_id}/drift-events`
 Get basic details for all drift events in a repository, ordered by most recent first.
 
 **Response:**
@@ -186,7 +186,7 @@ Get basic details for all drift events in a repository, ordered by most recent f
 ]
 ```
 
-### GET `/repos/{repo_id}/drift-events/{event_id}`
+### GET `/api/repos/{repo_id}/drift-events/{event_id}`
 Get all information for a specific drift event, including all drift findings and code changes.
 
 **Response:**
@@ -231,7 +231,7 @@ Get all information for a specific drift event, including all drift findings and
 
 ## Dashboard Endpoints (`/api/dashboard`)
 
-### GET `/dashboard/stats`
+### GET `/api/dashboard/stats`
 Get dashboard statistics for the authenticated user.
 
 **Response:**
@@ -244,7 +244,7 @@ Get dashboard statistics for the authenticated user.
 }
 ```
 
-### GET `/dashboard/repos`
+### GET `/api/dashboard/repos`
 Get basic repository information for the 5 most recently linked repositories:
 
 **Response:**
@@ -263,7 +263,7 @@ Get basic repository information for the 5 most recently linked repositories:
 
 ## Notification Endpoints (`/api/notifications`)
 
-### GET `/notifications`
+### GET `/api/notifications`
 Get all notifications for the user, ordered by most recent first.
 
 **Response:**
@@ -278,7 +278,7 @@ Get all notifications for the user, ordered by most recent first.
 ]
 ```
 
-### PATCH `/notifications/{notification_id}/read`
+### PATCH `/api/notifications/{notification_id}/read`
 Mark a single notification as read.
 
 **Response:**
@@ -291,7 +291,7 @@ Mark a single notification as read.
 }
 ```
 
-### PATCH `/notifications/read-all`
+### PATCH `/api/notifications/read-all`
 Mark all notifications for the authenticated user as read.
 
 **Response:**
@@ -301,7 +301,7 @@ Mark all notifications for the authenticated user as read.
 }
 ```
 
-### DELETE `/notifications/{notification_id}`
+### DELETE `/api/notifications/{notification_id}`
 Delete a single notification.
 
 **Response:**
@@ -311,7 +311,7 @@ Delete a single notification.
 }
 ```
 
-### DELETE `/notifications`
+### DELETE `/api/notifications`
 Delete all notifications for the authenticated user.
 
 **Response:**
