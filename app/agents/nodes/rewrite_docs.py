@@ -10,12 +10,12 @@ from app.agents.prompts import (
     build_doc_updates_summary_prompt,
 )
 
+
 # Extracts the text from the LLM response, handling both plain string and list of blocks formats
 def _extract_text(content: Any) -> str:
     if isinstance(content, list):
         return "".join(
-            block.get("text", "") if isinstance(block, dict) else str(block)
-            for block in content
+            block.get("text", "") if isinstance(block, dict) else str(block) for block in content
         )
     return str(content)
 
@@ -83,7 +83,9 @@ def rewrite_docs(state: DriftAnalysisState) -> dict[str, Any]:
                     {"role": "user", "content": user_prompt},
                 ]
             )
-            new_content: str = _extract_text(result.content) if hasattr(result, "content") else str(result)
+            new_content: str = (
+                _extract_text(result.content) if hasattr(result, "content") else str(result)
+            )
 
             # Strip markdown code fences if the LLM wrapped the output
             if new_content.startswith("```markdown"):
