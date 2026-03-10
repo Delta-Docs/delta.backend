@@ -1,5 +1,9 @@
 import sys
 import os
+
+# Add the current directory to sys.path to resolve the 'app' module
+sys.path.append(os.getcwd())
+
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models.user import User
@@ -29,6 +33,4 @@ def seed_db():
         db.close()
 
 if __name__ == "__main__":
-    # Add app directory to sys.path to allow imports
-    sys.path.append(os.getcwd())
     seed_db()
