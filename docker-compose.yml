@@ -36,6 +36,29 @@ services:
     volumes:
       - drizzle_gateway_data:/app
 
+  api:
+    build: .
+    container_name: delta-api
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+
+  worker:
+    build: .
+    container_name: delta-worker
+    restart: always
+    command: python workers.py
+    depends_on:
+      - redis
+      - postgres
+    env_file:
+      - .env
+
 volumes:
   postgres_data:
   redis_data:
