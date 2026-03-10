@@ -1,4 +1,4 @@
-# delta.backend [WIP]
+# delta.backend
 
 
 ## Table of Contents
@@ -9,7 +9,7 @@
    - [The GitHub App](#the-github-app)
    - [GitHub Webhook Events](#github-webhook-events)
    - [Redis Queue and RQ Workers](#redis-queue-and-rq-workers)
-   - [Multi Agent Workflow](#multi-agent-workflow)
+   - [LangGraph Workflow](#langgraph-workflow)
 - [Project Structure](#project-structure)
 - [Testing](#testing)
 - [Contributing](#contributing)
@@ -152,6 +152,7 @@ It allows the user to interact and set up Delta. It is a React + Vite applicatio
  - Sign Up and access Delta
  - Link new repositories
  - Manage settings for linked repositories (file_ignore_patterns, target branch, etc.)
+- See details and status of Pull Requests
 
 [See delta.frontend code.](https://github.com/Delta-Docs/delta.frontend)
 
@@ -161,13 +162,13 @@ The **heart** of the system. On linking a repository, The **Delta-Docs** GitHub 
 - All GitHub API calls that access data from a private GitHub repository, require an access token. These access tokens however expire 8 hours after creation (during initial GitHub OAuth). This means we need to renew the access token. Hence, we use the GitHub App's private key to sign a JWT and get a valid access token.
 
 ### GitHub Webhook Events
-Delta completely relies on GitHub webhook events to operate. Currently, it is set up to track 3 kinds of webhook events:
+Delta completely relies on GitHub webhook events to operate. Currently, it is set up to track 4 kinds of webhook events:
 - `installation`: It is received when the user performs some action related to the installation of the GitHub App. It is triggered with the installation (which also includes the linking of at least 1 repository), uninstallation, suspension or unsuspension of the GitHub App.
 - `installation_repository`: It is received when a repository is added or removed from an existing installation.
 - `pull_request`: We handle two types of actions - `opened` for when a new pull request is raised in any of the linked repositories and `synchronize` for when new commits are pushed to an already existing PR.
 - `check_suite`: We handle only the `rerequested` action which we receive when the `Re-Run all checks` button is clicked in the PR.
 
-The `github_webhook_service.py` handles the payload from these types of webhook events and updates the DB and starts workflows accordingly.
+`github_webhook/router.py` routes the webhook event payload to its appropriate handler which updates the DB and starts workflows accordingly.
 
 ### Redis Queue and RQ Workers
 Upon receiving a `pull_request` webhook event, a record in the `DriftEvent` table is created. Every PR raised has to be analysed. Due to the amount of time processing a PR may take and considering the timeout limits of REST APIs, this analysis and workflow has to be done asynchronously. 
@@ -178,14 +179,25 @@ When a `DriftEvent` record is created, its ID is enqueued for processing. Any fr
 
 Whenever a drift event analysis job has to be re-run, its state in the DB is cleared and it is re-enqueued into RQ for a free worker to pick it up.
 
-### Multi Agent Workflow
-This part of the architecture is still in the design phase and hasn't really been implemented yet, its a work in progress :)
+### LangGraph Workflow
+Once an RQ worker picks up a drift event, it runs the 7 node LangGraph pipeline. We originally thought of implementing a more complex graph structure, but as it evolved, we settled on a linear pipeline. While LangChain would have been sufficient, LangGraph gives us the flexibility for future upgrades, if any.
 
-The plan is a 4 agent workflow with `LangGraph` as the orchestrator:
-- **The Scouting Agent:** It has direct access to the cloned repository which it uses to extract code changes, relations and code-doc mappings. It updates the DB with its findings.
-- **The Analyzer Agent:** It takes the code changes and the code-doc mappings that were output from the previous agent and any other input from the codebase to semantically analyse the changes in code and check if these changes are reflected in the documentation. It also updates the DB with its findings.
-- **The Generator Agent:** It receives instructions from the analyzer agent with what parts of the documentation requires updates. Based on the `style_preference` for the repository, it generates updates to the documentation and sends it to the next agent.
-- **The Reviewer Agent:** It receives the proposed changes from the generator agent and checks it against instructions from the analyzer agent. If any corrections/changes are required, the generator agent is instructed to implement the fixes. The updates then go back to the reviewer agent and the cycle continues. Once the proposed updates are approved, it is written to the cloned repository, committed via git and a PR is automatically raised (most probably with `gh-cli`) with a request for review.
+The pipeline is split into two phases. The first phase analyses the PR for drift. If drift is detected, the second phase is also run to generate documentation updates.
+
+**Phase 1: Drift Analysis**
+
+- **Scout Changes:** It extracts code changes from the PR by analysing git diffs and uses Python's AST parser to identify modified functions, classes, and API routes.
+- **Retrieve Docs:** It recursively loads all `.md` files from the repo's docs directory. For each code change detected in the previous node, it does keyword based searches to find relevant documentation sections.
+- **Deep Analyze:** This is where the LLM comes in. For each code change, it compares the git diff with the relevant documentation snippets. The LLM performs semantic analysis to check if the documentation is up to date with the code changes.
+- **Aggregate Results:** It aggregates all the findings from the previous nodes, calculates an overall drift score, and updates the  GitHub Check Run. 
+
+If drift is detected in Phase 1, the workflow conditionally proceeds to the second phase. Otherwise, it ends here.
+
+**Phase 2: Documentation Generation**
+
+- **Plan Updates:** It analyses all the drift findings and creates a documentation update strategy, that specifies exactly which files need changes and what sections to update. It also creates a new branch off the original PR branch where the documentation fixes will be committed.
+- **Rewrite Docs:** The LLM generates updated documentation content for each target file. It keeps in mind the repo's configured `style_preference` (like professional, casual, etc.) and follows any custom `docs_policies` that were set. The generated content is written to the documentation files in the cloned repository.
+- **Apply Changes:** It commits all the documentation changes to the `docs/delta-fix` branch, pushes them to GitHub, and raises a Pull Request with the updated documentation. It also requests review from the configured reviewer.
 
 
 ## Project Structure
@@ -201,6 +213,8 @@ delta.backend/
    │   ├── agents/                          # LangGraph multi-agent workflow
    │   │   ├── nodes/                       # Agent nodes
    │   │   ├── graph.py                     # LangGraph workflow graph
+   │   │   ├── llm.py                       # LLM configuration
+   │   │   ├── policy_guard.py              # Policy validation
    │   │   ├── prompts.py                   # Agent prompts
    │   │   └── state.py                     # Workflow state definitions
    │   │
@@ -224,6 +238,7 @@ delta.backend/
    │   ├── auth/                            # Auth request collection
    │   ├── dashboard/                       # Dashboard request collection
    │   ├── environments/                    # Bruno environments
+   │   ├── notifications/                   # Notification request collection
    │   └── repos/                           # Repos request collection
    │
    ├── docs/                                # Markdown files for documentation
@@ -234,6 +249,7 @@ delta.backend/
    ├── .gitignore                           # Git ignore rules
    ├── alembic.ini                          # Alembic configuration
    ├── docker-compose.yml                   # Docker services definition
+   ├── Dockerfile                           # Docker image definition
    ├── LICENSE                              # MIT License
    ├── Makefile                             # Development commands
    ├── pyrefly.toml                         # Pyrefly configuration
@@ -288,8 +304,8 @@ The people working to make ▲ a possibility:
 
 | Name                   | Roll Number      | GitHub ID                                                   |
 |------------------------|------------------|-------------------------------------------------------------|
+| A Jahnavi              | CB.SC.U4CSE23503 | [jahnavialladasetti](https://github.com/jahnavialladasetti) |
 | Adithya Menon R        | CB.SC.U4CSE23506 | [adithya-menon-r](https://github.com/adithya-menon-r)       |
 | Dheeraj KB             | CB.SC.U4CSE23510 | [Dheeraj-74](https://github.com/Dheeraj-74)                 |
 | Midhunan V Prabhaharan | CB.SC.U4CSE23532 | [midhunann](https://github.com/midhunann)                   |
 | Yogini Aishwaryaa      | CB.SC.U4CSE23557 | [yoginiaishwaryaa](https://github.com/yoginiaishwaryaa)     |
-| A Jahnavi              | CB.SC.U4CSE23503 | [jahnavialladasetti](https://github.com/jahnavialladasetti) |
