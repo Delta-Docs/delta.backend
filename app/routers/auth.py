@@ -55,6 +55,8 @@ def create_user(
         key="access_token",
         value=access_token,
         httponly=True,
+        samesite="none",
+        secure=True,
         max_age=int(access_token_expires.total_seconds()),
         expires=int(access_token_expires.total_seconds()),
     )
@@ -63,6 +65,8 @@ def create_user(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
+        samesite="none",
+        secure=True,
         max_age=int(refresh_token_expires.total_seconds()),
         expires=int(refresh_token_expires.total_seconds()),
     )
