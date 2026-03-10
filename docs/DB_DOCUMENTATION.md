@@ -77,7 +77,7 @@ CREATE TABLE drift_events (
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now(),
-    CONSTRAINT check_processing_phase CHECK (processing_phase IN ('queued', 'scouting', 'analyzing', 'generating', 'verifying', 'completed', 'failed')),
+    CONSTRAINT check_processing_phase CHECK (processing_phase IN ('queued', 'scouting', 'analyzing', 'generating', 'verifying', 'completed', 'failed', 'fix_pr_raised', 'fix_pr_merged')),
     CONSTRAINT check_drift_result CHECK (drift_result IN ('pending', 'clean', 'drift_detected', 'missing_docs', 'error'))
 );
 
