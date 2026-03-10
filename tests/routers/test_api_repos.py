@@ -9,11 +9,11 @@ from uuid import uuid4
 sys.modules['rq'] = MagicMock()
 sys.modules['redis'] = MagicMock()
 
-from app.main import app
-from app.deps import get_db_connection, get_current_user
-from app.models.user import User
-from app.models.repository import Repository
-from app.models.drift import DriftEvent
+from app.main import app  # noqa: E402
+from app.deps import get_db_connection, get_current_user  # noqa: E402
+from app.models.user import User  # noqa: E402
+from app.models.repository import Repository  # noqa: E402
+from app.models.drift import DriftEvent  # noqa: E402
 
 # Setup test client
 client = TestClient(app)
@@ -176,7 +176,7 @@ def test_toggle_repo_activation_success(mock_db_session):
     response = client.patch(f"/api/repos/{repo_id}/activate", json=activation_payload)
 
     assert response.status_code == 200
-    assert response.json()["is_active"] == True
+    assert response.json()["is_active"] is True
     mock_db_session.commit.assert_called_once()
 
 
