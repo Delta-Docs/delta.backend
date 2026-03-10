@@ -1,19 +1,13 @@
 import pytest
-import sys
 from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 from uuid import uuid4
 
-# Windows local testing workaround: Mock 'rq' and 'redis' before app is imported
-# This prevents the "cannot find context for 'fork'" error on Windows without modifying source code.
-sys.modules['rq'] = MagicMock()
-sys.modules['redis'] = MagicMock()
-
-from app.main import app  # noqa: E402
-from app.deps import get_db_connection, get_current_user  # noqa: E402
-from app.models.user import User  # noqa: E402
-from app.models.repository import Repository  # noqa: E402
-from app.models.drift import DriftEvent  # noqa: E402
+from app.main import app
+from app.deps import get_db_connection, get_current_user
+from app.models.user import User
+from app.models.repository import Repository
+from app.models.drift import DriftEvent
 
 # Setup test client
 client = TestClient(app)
