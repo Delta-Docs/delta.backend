@@ -16,7 +16,7 @@ jobs:
         key: ${{ secrets.VPS_SSH_KEY }}
         script: |
           # 1. Enter the project folder
-          cd dd-backend
+          cd delta.backend
 
           # 2. Pull the latest code (this updates the Python code without touching your .env)
           git pull origin main
