@@ -102,6 +102,8 @@ def login(response: Response, user_in: schemas.UserLogin, db: Session = Depends(
         key="access_token",
         value=access_token,
         httponly=True,
+        samesite="none",
+        secure=True,
         max_age=int(access_token_expires.total_seconds()),
         expires=int(access_token_expires.total_seconds()),
     )
@@ -110,6 +112,8 @@ def login(response: Response, user_in: schemas.UserLogin, db: Session = Depends(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
+        samesite="none",
+        secure=True,
         max_age=int(refresh_token_expires.total_seconds()),
         expires=int(refresh_token_expires.total_seconds()),
     )
@@ -144,8 +148,8 @@ def logout(response: Response, request: Request, db: Session = Depends(get_db_co
             db.commit()
 
     # Delete the cookies on user end
-    response.delete_cookie(key="access_token")
-    response.delete_cookie(key="refresh_token")
+    response.delete_cookie(key="access_token", samesite="none", secure=True)
+    response.delete_cookie(key="refresh_token", samesite="none", secure=True)
 
     return {"message": "Logout successful"}
 
