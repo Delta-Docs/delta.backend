@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
@@ -8,13 +9,20 @@ from app.main import app
 from app.deps import get_db_connection, get_current_user
 from app.models.user import User
 
-# =========== Setup ===========
-
 @pytest.fixture
 def client():
     """Provides a fresh TestClient for each test."""
     with TestClient(app) as c:
         yield c
+
+
+# =========== Diagnostic Test ===========
+
+def test_api_root(client):
+    """Diagnostic test to ensure GET /api works."""
+    response = client.get("/api")
+    assert response.status_code == 200
+    assert "Delta" in response.json()["message"]
 
 
 @pytest.fixture
@@ -199,7 +207,8 @@ def test_logout_without_token(client, mock_db_session):
 
 # =========== GET /auth/github/callback Tests ===========
 
-def test_github_callback_success(client, mock_db_session, mock_current_user):
+@pytest.mark.asyncio
+async def test_github_callback_success(mock_db_session, mock_current_user):
     """Test successful GitHub OAuth callback linking user and installation."""
     mock_token_resp = MagicMock()
     mock_token_resp.json.return_value = {"access_token": "gh_access_token"}
@@ -207,14 +216,15 @@ def test_github_callback_success(client, mock_db_session, mock_current_user):
     mock_user_resp = MagicMock()
     mock_user_resp.json.return_value = {"id": 12345, "login": "github_user"}
 
-    # Mock the AsyncClient class as used in the router
+    # Mock matching the way it's used in the router
     with patch("app.routers.auth.httpx.AsyncClient") as MockClient:
         mock_instance = MockClient.return_value
         mock_instance.__aenter__.return_value = mock_instance
         mock_instance.post.return_value = mock_token_resp
         mock_instance.get.return_value = mock_user_resp
         
-        response = client.get("/api/auth/github/callback?code=mock_code&installation_id=67890")
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.get("/api/auth/github/callback?code=mock_code&installation_id=67890")
 
     assert response.status_code == 303
     assert "dashboard" in response.headers["location"]
@@ -224,14 +234,17 @@ def test_github_callback_success(client, mock_db_session, mock_current_user):
     mock_db_session.commit.assert_called()
 
 
-def test_github_callback_missing_code(client, mock_db_session, mock_current_user):
+@pytest.mark.asyncio
+async def test_github_callback_missing_code(mock_db_session, mock_current_user):
     """Test that missing authorization code returns 400."""
-    response = client.get("/api/auth/github/callback?installation_id=67890")
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.get("/api/auth/github/callback?installation_id=67890")
     assert response.status_code == 400
     assert "code missing" in response.json()["detail"].lower()
 
 
-def test_github_callback_github_error(client, mock_db_session, mock_current_user):
+@pytest.mark.asyncio
+async def test_github_callback_github_error(mock_db_session, mock_current_user):
     """Test handling of error returned by GitHub during token exchange."""
     mock_token_resp = MagicMock()
     mock_token_resp.json.return_value = {
@@ -244,7 +257,8 @@ def test_github_callback_github_error(client, mock_db_session, mock_current_user
         mock_instance.__aenter__.return_value = mock_instance
         mock_instance.post.return_value = mock_token_resp
         
-        response = client.get("/api/auth/github/callback?code=wrong_code")
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.get("/api/auth/github/callback?code=wrong_code")
 
     assert response.status_code == 400
     assert "GitHub Error" in response.json()["detail"]
