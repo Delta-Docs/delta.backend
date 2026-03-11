@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 from uuid import uuid4
+from datetime import datetime, timezone
 
 from app.main import app
 from app.deps import get_db_connection, get_current_user
@@ -36,13 +37,14 @@ def mock_db_session():
 
 
 def make_mock_notification(is_read=False):
-    """Helper to create a mock Notification instance."""
-    notif = MagicMock(spec=Notification)
-    notif.id = uuid4()
-    notif.user_id = mock_user_id
-    notif.message = "New drift event detected in delta/backend"
-    notif.is_read = is_read
-    notif.created_at = "2026-03-11T06:00:00Z"
+    """Helper to create a real Notification model instance with proper typed fields."""
+    notif = Notification(
+        id=uuid4(),
+        user_id=mock_user_id,
+        content="New drift event detected in delta/backend",
+        is_read=is_read,
+        created_at=datetime.now(timezone.utc),
+    )
     return notif
 
 
