@@ -54,11 +54,23 @@ Logout and invalidate tokens.
 }
 ```
 
-### GET `/api/auth/github/callback`
+### POST `/api/auth/github/callback`
 GitHub OAuth callback handler.
 
-**Query Params:**
-- `code`: Authorization code from GitHub
+**Request Body:**
+```json
+{
+  "code": "authorization_code_from_github",
+  "installation_id": "12345678"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "GitHub account linked successfully"
+}
+```
 
 
 ## Webhook Endpoints (`/api/webhook`)

@@ -1,6 +1,5 @@
 import httpx
 from datetime import timedelta
-from fastapi.responses import RedirectResponse
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.orm import Session
 
@@ -152,14 +151,15 @@ def logout(response: Response, request: Request, db: Session = Depends(get_db_co
 
 
 # Endpoint to handle GitHub OAuth callback after user authorises the GitHub app
-@router.get("/github/callback")
+@router.post("/github/callback")
 async def github_callback(
     request: Request,
     db: Session = Depends(get_db_connection),
     current_user: User = Depends(get_current_user),
 ):
-    code = request.query_params.get("code")
-    installation_id = request.query_params.get("installation_id")
+    body = await request.json()
+    code = body.get("code")
+    installation_id = body.get("installation_id")
 
     GITHUB_CLIENT_ID = settings.GITHUB_CLIENT_ID
     GITHUB_CLIENT_SECRET = settings.GITHUB_CLIENT_SECRET
@@ -168,7 +168,7 @@ async def github_callback(
         raise HTTPException(status_code=400, detail="Authorization code missing")
 
     async with httpx.AsyncClient() as client:
-        # Get Access Token from GitHub
+        # Exchange code for GitHub access token
         token_response = await client.post(
             "https://github.com/login/oauth/access_token",
             headers={"Accept": "application/json"},
@@ -221,4 +221,4 @@ async def github_callback(
 
     db.commit()
 
-    return RedirectResponse(url=f"{settings.FRONTEND_URL}/dashboard", status_code=303)
+    return {"message": "GitHub account linked successfully"}
