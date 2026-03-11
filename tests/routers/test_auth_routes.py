@@ -160,10 +160,9 @@ def test_logout_with_valid_token(mock_db_session):
     mock_db_session.query.return_value.filter.return_value.first.return_value = mock_user
 
     with patch("app.routers.auth.security.verify_token", return_value={"sub": str(mock_user.id)}):
-        response = client.post(
-            "/api/auth/logout",
-            cookies={"access_token": "valid_access_token"}
-        )
+        client.cookies.set("access_token", "valid_access_token")
+        response = client.post("/api/auth/logout")
+        client.cookies.clear()
 
     assert response.status_code == 200
     assert response.json()["message"] == "Logout successful"
