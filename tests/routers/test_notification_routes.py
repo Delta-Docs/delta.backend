@@ -56,8 +56,10 @@ def test_get_notifications_success(mock_db_session):
     notif1 = make_mock_notification()
     notif2 = make_mock_notification(is_read=True)
 
-    mock_db_session.query.return_value.filter.return_value \
-        .order_by.return_value.all.return_value = [notif1, notif2]
+    mock_db_session.query.return_value.filter.return_value.order_by.return_value.all.return_value = [
+        notif1,
+        notif2,
+    ]
 
     response = client.get("/api/notifications/")
 
@@ -68,8 +70,7 @@ def test_get_notifications_success(mock_db_session):
 
 def test_get_notifications_empty(mock_db_session):
     """Test that an empty list is returned when user has no notifications."""
-    mock_db_session.query.return_value.filter.return_value \
-        .order_by.return_value.all.return_value = []
+    mock_db_session.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
 
     response = client.get("/api/notifications/")
 

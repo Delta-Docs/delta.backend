@@ -91,8 +91,9 @@ def test_get_dashboard_repos_success(mock_db_session):
     mock_repo.repo_name = "owner/delta-docs"
     mock_repo.installation_id = 101
 
-    mock_db_session.query.return_value.join.return_value.filter.return_value \
-        .order_by.return_value.limit.return_value.all.return_value = [mock_repo]
+    mock_db_session.query.return_value.join.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [
+        mock_repo
+    ]
 
     with patch("app.routers.dashboard.get_repo_details", new_callable=AsyncMock) as mock_details:
         mock_details.return_value = {
@@ -115,8 +116,7 @@ def test_get_dashboard_repos_success(mock_db_session):
 
 def test_get_dashboard_repos_empty(mock_db_session):
     """Test that dashboard repos returns empty list when user has no repos."""
-    mock_db_session.query.return_value.join.return_value.filter.return_value \
-        .order_by.return_value.limit.return_value.all.return_value = []
+    mock_db_session.query.return_value.join.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = []
 
     response = client.get("/api/dashboard/repos")
 
@@ -130,8 +130,9 @@ def test_get_dashboard_repos_github_api_failure(mock_db_session):
     mock_repo.repo_name = "owner/delta-docs"
     mock_repo.installation_id = 101
 
-    mock_db_session.query.return_value.join.return_value.filter.return_value \
-        .order_by.return_value.limit.return_value.all.return_value = [mock_repo]
+    mock_db_session.query.return_value.join.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [
+        mock_repo
+    ]
 
     with patch("app.routers.dashboard.get_repo_details", side_effect=Exception("GitHub API down")):
         response = client.get("/api/dashboard/repos")

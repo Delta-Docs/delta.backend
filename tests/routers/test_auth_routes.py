@@ -41,18 +41,22 @@ def test_signup_success(mock_db_session):
 
     mock_user = make_mock_user()
 
-    with patch("app.routers.auth.security.get_hash", return_value="hashed_pw"), \
-         patch("app.routers.auth.security.create_access_token", return_value="mock_access_token"), \
-         patch("app.routers.auth.security.create_refresh_token", return_value="mock_refresh_token"), \
-         patch("app.routers.auth.User") as MockUser:
-
+    with (
+        patch("app.routers.auth.security.get_hash", return_value="hashed_pw"),
+        patch("app.routers.auth.security.create_access_token", return_value="mock_access_token"),
+        patch("app.routers.auth.security.create_refresh_token", return_value="mock_refresh_token"),
+        patch("app.routers.auth.User") as MockUser,
+    ):
         MockUser.return_value = mock_user
 
-        response = client.post("/api/auth/signup", json={
-            "email": "test@example.com",
-            "full_name": "Test User",
-            "password": "securepassword123"
-        })
+        response = client.post(
+            "/api/auth/signup",
+            json={
+                "email": "test@example.com",
+                "full_name": "Test User",
+                "password": "securepassword123",
+            },
+        )
 
     assert response.status_code == 200
     data = response.json()
@@ -67,11 +71,14 @@ def test_signup_duplicate_email(mock_db_session):
     existing_user = make_mock_user()
     mock_db_session.query.return_value.filter.return_value.first.return_value = existing_user
 
-    response = client.post("/api/auth/signup", json={
-        "email": "test@example.com",
-        "full_name": "Test User",
-        "password": "securepassword123"
-    })
+    response = client.post(
+        "/api/auth/signup",
+        json={
+            "email": "test@example.com",
+            "full_name": "Test User",
+            "password": "securepassword123",
+        },
+    )
 
     assert response.status_code == 400
     assert "already exists" in response.json()["detail"]
@@ -80,11 +87,14 @@ def test_signup_duplicate_email(mock_db_session):
 
 def test_signup_invalid_email(mock_db_session):
     """Test that signup fails with 422 when email format is invalid."""
-    response = client.post("/api/auth/signup", json={
-        "email": "not-a-valid-email",
-        "full_name": "Test User",
-        "password": "securepassword123"
-    })
+    response = client.post(
+        "/api/auth/signup",
+        json={
+            "email": "not-a-valid-email",
+            "full_name": "Test User",
+            "password": "securepassword123",
+        },
+    )
 
     assert response.status_code == 422
 
@@ -97,15 +107,15 @@ def test_login_success(mock_db_session):
     mock_user = make_mock_user()
     mock_db_session.query.return_value.filter.return_value.first.return_value = mock_user
 
-    with patch("app.routers.auth.security.verify_hash", return_value=True), \
-         patch("app.routers.auth.security.create_access_token", return_value="access_tok"), \
-         patch("app.routers.auth.security.create_refresh_token", return_value="refresh_tok"), \
-         patch("app.routers.auth.security.get_hash", return_value="hashed_refresh"):
-
-        response = client.post("/api/auth/login", json={
-            "email": "test@example.com",
-            "password": "correctpassword"
-        })
+    with (
+        patch("app.routers.auth.security.verify_hash", return_value=True),
+        patch("app.routers.auth.security.create_access_token", return_value="access_tok"),
+        patch("app.routers.auth.security.create_refresh_token", return_value="refresh_tok"),
+        patch("app.routers.auth.security.get_hash", return_value="hashed_refresh"),
+    ):
+        response = client.post(
+            "/api/auth/login", json={"email": "test@example.com", "password": "correctpassword"}
+        )
 
     assert response.status_code == 200
     data = response.json()
@@ -120,10 +130,9 @@ def test_login_wrong_password(mock_db_session):
     mock_db_session.query.return_value.filter.return_value.first.return_value = mock_user
 
     with patch("app.routers.auth.security.verify_hash", return_value=False):
-        response = client.post("/api/auth/login", json={
-            "email": "test@example.com",
-            "password": "wrongpassword"
-        })
+        response = client.post(
+            "/api/auth/login", json={"email": "test@example.com", "password": "wrongpassword"}
+        )
 
     assert response.status_code == 401
     assert "Incorrect credentials" in response.json()["detail"]
@@ -133,20 +142,22 @@ def test_login_user_not_found(mock_db_session):
     """Test that login fails with 401 when user does not exist."""
     mock_db_session.query.return_value.filter.return_value.first.return_value = None
 
-    response = client.post("/api/auth/login", json={
-        "email": "nobody@example.com",
-        "password": "anypassword"
-    })
+    response = client.post(
+        "/api/auth/login", json={"email": "nobody@example.com", "password": "anypassword"}
+    )
 
     assert response.status_code == 401
 
 
 def test_login_missing_fields(mock_db_session):
     """Test that login fails with 422 when required fields are missing."""
-    response = client.post("/api/auth/login", json={
-        "email": "test@example.com"
-        # missing password
-    })
+    response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "test@example.com"
+            # missing password
+        },
+    )
 
     assert response.status_code == 422
 

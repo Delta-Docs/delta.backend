@@ -19,14 +19,17 @@ mock_user = User(
     email="tester@delta.com",
     full_name="Jahnavi Tester",
     github_user_id=123456789,
-    github_username="jahnavitest"
+    github_username="jahnavitest",
 )
+
 
 # Global override for authentication dependency
 def override_get_current_user():
     return mock_user
 
+
 app.dependency_overrides[get_current_user] = override_get_current_user
+
 
 # Fixture to provide a completely fresh mockup of the PostgreSQL database per test
 @pytest.fixture
@@ -40,11 +43,12 @@ def mock_db_session():
 
 # =========== GET /repos/ Tests ===========
 
+
 def test_get_linked_repos_success(mock_db_session):
     # Setup test data (2 repositories linked to the user)
     repo1_id = uuid4()
     repo2_id = uuid4()
-    
+
     mock_repo_1 = Repository(
         id=repo1_id,
         installation_id=1,
@@ -53,9 +57,9 @@ def test_get_linked_repos_success(mock_db_session):
         is_suspended=False,
         style_preference="professional",
         docs_root_path="/docs",
-        file_ignore_patterns=["/node_modules"]
+        file_ignore_patterns=["/node_modules"],
     )
-    
+
     mock_repo_2 = Repository(
         id=repo2_id,
         installation_id=1,
@@ -64,13 +68,13 @@ def test_get_linked_repos_success(mock_db_session):
         is_suspended=False,
         style_preference="casual",
         docs_root_path="/readme.md",
-        file_ignore_patterns=[]
+        file_ignore_patterns=[],
     )
 
     # Tell the mock database to return our test data when query().join().filter().all() is called
     mock_db_session.query.return_value.join.return_value.filter.return_value.all.return_value = [
-        mock_repo_1, 
-        mock_repo_2
+        mock_repo_1,
+        mock_repo_2,
     ]
 
     # Perform the API request using FastAPI TestClient
@@ -87,9 +91,10 @@ def test_get_linked_repos_success(mock_db_session):
 
 # =========== PUT /repos/{id}/settings Tests ===========
 
+
 def test_update_repo_settings_success(mock_db_session):
     repo_id = uuid4()
-    
+
     # Initial repository state
     mock_repo = Repository(
         id=repo_id,
@@ -99,17 +104,19 @@ def test_update_repo_settings_success(mock_db_session):
         is_suspended=False,
         style_preference="professional",
         docs_root_path="/docs",
-        file_ignore_patterns=[]
+        file_ignore_patterns=[],
     )
 
     # Have the mock database return this repository when queried by ID
-    mock_db_session.query.return_value.join.return_value.filter.return_value.first.return_value = mock_repo
+    mock_db_session.query.return_value.join.return_value.filter.return_value.first.return_value = (
+        mock_repo
+    )
 
     # The payload simulating what the React frontend would send
     update_payload = {
         "style_preference": "casual",
         "docs_root_path": "/new-docs-dir",
-        "file_ignore_patterns": ["/dist", "/build"]
+        "file_ignore_patterns": ["/dist", "/build"],
     }
 
     # Perform the API request
@@ -118,7 +125,7 @@ def test_update_repo_settings_success(mock_db_session):
     # Assertions
     assert response.status_code == 200
     data = response.json()
-    
+
     # Verify the API response matches what we requested
     assert data["style_preference"] == "casual"
     assert data["docs_root_path"] == "/new-docs-dir"
@@ -131,13 +138,13 @@ def test_update_repo_settings_success(mock_db_session):
 
 def test_update_repo_settings_not_found(mock_db_session):
     repo_id = uuid4()
-    
-    # Simulate DB finding nothing
-    mock_db_session.query.return_value.join.return_value.filter.return_value.first.return_value = None
 
-    update_payload = {
-        "style_preference": "casual"
-    }
+    # Simulate DB finding nothing
+    mock_db_session.query.return_value.join.return_value.filter.return_value.first.return_value = (
+        None
+    )
+
+    update_payload = {"style_preference": "casual"}
 
     # Perform the API request
     response = client.put(f"/api/repos/{repo_id}/settings", json=update_payload)
@@ -145,25 +152,24 @@ def test_update_repo_settings_not_found(mock_db_session):
     # Ensure we get the correct 404 error
     assert response.status_code == 404
     assert response.json()["detail"] == "Repository not found"
-    
+
     # Ensure no commit was performed on failure
     mock_db_session.commit.assert_not_called()
 
 
 # =========== PATCH /repos/{id}/activate Tests ===========
 
+
 def test_toggle_repo_activation_success(mock_db_session):
     repo_id = uuid4()
-    
+
     mock_repo = Repository(
-        id=repo_id,
-        installation_id=3,
-        repo_name="delta/api",
-        is_active=False,
-        is_suspended=False
+        id=repo_id, installation_id=3, repo_name="delta/api", is_active=False, is_suspended=False
     )
 
-    mock_db_session.query.return_value.join.return_value.filter.return_value.first.return_value = mock_repo
+    mock_db_session.query.return_value.join.return_value.filter.return_value.first.return_value = (
+        mock_repo
+    )
 
     activation_payload = {"is_active": True}
 
@@ -176,7 +182,9 @@ def test_toggle_repo_activation_success(mock_db_session):
 
 def test_toggle_repo_activation_not_found(mock_db_session):
     repo_id = uuid4()
-    mock_db_session.query.return_value.join.return_value.filter.return_value.first.return_value = None
+    mock_db_session.query.return_value.join.return_value.filter.return_value.first.return_value = (
+        None
+    )
 
     response = client.patch(f"/api/repos/{repo_id}/activate", json={"is_active": True})
 
@@ -186,21 +194,19 @@ def test_toggle_repo_activation_not_found(mock_db_session):
 
 # =========== GET /repos/{id}/drift-events Tests ===========
 
+
 def test_get_drift_events_success(mock_db_session):
     repo_id = uuid4()
-    
+
     # Mock finding the repository
     mock_repo = Repository(
-        id=repo_id,
-        installation_id=1,
-        repo_name="delta/events",
-        is_active=True,
-        is_suspended=False
+        id=repo_id, installation_id=1, repo_name="delta/events", is_active=True, is_suspended=False
     )
 
     # Mock finding the drift events
     event1_id = uuid4()
     from datetime import datetime, UTC
+
     mock_event = DriftEvent(
         id=event1_id,
         repo_id=repo_id,
@@ -211,16 +217,32 @@ def test_get_drift_events_success(mock_db_session):
         head_sha="def5678",
         processing_phase="queued",
         drift_result="pending",
-        created_at=datetime.now(UTC)
+        created_at=datetime.now(UTC),
     )
 
     # Setup database mocks
     # We first join+filter for the repo, then filter+order_by for events
     mock_db_session.query.side_effect = [
         # First query: repo
-        MagicMock(join=MagicMock(return_value=MagicMock(filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_repo)))))),
+        MagicMock(
+            join=MagicMock(
+                return_value=MagicMock(
+                    filter=MagicMock(
+                        return_value=MagicMock(first=MagicMock(return_value=mock_repo))
+                    )
+                )
+            )
+        ),
         # Second query: events
-        MagicMock(filter=MagicMock(return_value=MagicMock(order_by=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[mock_event]))))))
+        MagicMock(
+            filter=MagicMock(
+                return_value=MagicMock(
+                    order_by=MagicMock(
+                        return_value=MagicMock(all=MagicMock(return_value=[mock_event]))
+                    )
+                )
+            )
+        ),
     ]
 
     response = client.get(f"/api/repos/{repo_id}/drift-events")
@@ -234,10 +256,16 @@ def test_get_drift_events_success(mock_db_session):
 
 def test_get_drift_events_repo_not_found(mock_db_session):
     repo_id = uuid4()
-    
+
     # First query returns None (repo not found)
     mock_db_session.query.side_effect = [
-        MagicMock(join=MagicMock(return_value=MagicMock(filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=None))))))
+        MagicMock(
+            join=MagicMock(
+                return_value=MagicMock(
+                    filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=None)))
+                )
+            )
+        )
     ]
 
     response = client.get(f"/api/repos/{repo_id}/drift-events")
@@ -262,7 +290,7 @@ def test_get_drift_event_detail_success(mock_db_session):
         repo_name="delta/events",
         is_active=True,
         is_suspended=False,
-        docs_root_path="/docs"
+        docs_root_path="/docs",
     )
 
     mock_event = DriftEvent(
@@ -292,7 +320,7 @@ def test_get_drift_event_detail_success(mock_db_session):
         drift_score=0.85,
         explanation="Function signature changed",
         confidence=0.9,
-        created_at=datetime.now(UTC)
+        created_at=datetime.now(UTC),
     )
 
     mock_code_change = CodeChange(
@@ -301,19 +329,35 @@ def test_get_drift_event_detail_success(mock_db_session):
         file_path="src/agent.py",
         change_type="modified",
         is_code=True,
-        is_ignored=False
+        is_ignored=False,
     )
 
     # 4 sequential DB queries: repo → event → findings → code changes
     mock_db_session.query.side_effect = [
-        MagicMock(join=MagicMock(return_value=MagicMock(
-            filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_repo)))
-        ))),
-        MagicMock(filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_event)))),
-        MagicMock(filter=MagicMock(return_value=MagicMock(
-            order_by=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[mock_finding])))
-        ))),
-        MagicMock(filter=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[mock_code_change])))),
+        MagicMock(
+            join=MagicMock(
+                return_value=MagicMock(
+                    filter=MagicMock(
+                        return_value=MagicMock(first=MagicMock(return_value=mock_repo))
+                    )
+                )
+            )
+        ),
+        MagicMock(
+            filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_event)))
+        ),
+        MagicMock(
+            filter=MagicMock(
+                return_value=MagicMock(
+                    order_by=MagicMock(
+                        return_value=MagicMock(all=MagicMock(return_value=[mock_finding]))
+                    )
+                )
+            )
+        ),
+        MagicMock(
+            filter=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[mock_code_change])))
+        ),
     ]
 
     response = client.get(f"/api/repos/{repo_id}/drift-events/{event_id}")
@@ -333,9 +377,13 @@ def test_get_drift_event_detail_success(mock_db_session):
 def test_get_drift_event_detail_repo_not_found(mock_db_session):
     """Test that 404 is returned when repo does not belong to the user."""
     mock_db_session.query.side_effect = [
-        MagicMock(join=MagicMock(return_value=MagicMock(
-            filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=None)))
-        ))),
+        MagicMock(
+            join=MagicMock(
+                return_value=MagicMock(
+                    filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=None)))
+                )
+            )
+        ),
     ]
 
     response = client.get(f"/api/repos/{uuid4()}/drift-events/{uuid4()}")
@@ -353,13 +401,19 @@ def test_get_drift_event_detail_event_not_found(mock_db_session):
         repo_name="delta/events",
         is_active=True,
         is_suspended=False,
-        docs_root_path="/docs"
+        docs_root_path="/docs",
     )
 
     mock_db_session.query.side_effect = [
-        MagicMock(join=MagicMock(return_value=MagicMock(
-            filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_repo)))
-        ))),
+        MagicMock(
+            join=MagicMock(
+                return_value=MagicMock(
+                    filter=MagicMock(
+                        return_value=MagicMock(first=MagicMock(return_value=mock_repo))
+                    )
+                )
+            )
+        ),
         MagicMock(filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=None)))),
     ]
 
@@ -367,4 +421,3 @@ def test_get_drift_event_detail_event_not_found(mock_db_session):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Drift event not found"
-
