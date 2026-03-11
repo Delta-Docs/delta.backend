@@ -243,3 +243,126 @@ def test_get_drift_events_repo_not_found(mock_db_session):
     response = client.get(f"/api/repos/{repo_id}/drift-events")
 
     assert response.status_code == 404
+
+
+# =========== GET /repos/{id}/drift-events/{event_id} Tests ===========
+
+
+def test_get_drift_event_detail_success(mock_db_session):
+    """Test that a single drift event with its findings and code changes is returned."""
+    from datetime import datetime, UTC
+    from app.models.drift import DriftFinding, CodeChange
+
+    repo_id = uuid4()
+    event_id = uuid4()
+
+    mock_repo = Repository(
+        id=repo_id,
+        installation_id=1,
+        repo_name="delta/events",
+        is_active=True,
+        is_suspended=False,
+        docs_root_path="/docs"
+    )
+
+    mock_event = DriftEvent(
+        id=event_id,
+        repo_id=repo_id,
+        pr_number=99,
+        base_branch="main",
+        head_branch="feature-ai",
+        base_sha="aaa111",
+        head_sha="bbb222",
+        processing_phase="completed",
+        drift_result="drift_found",
+        created_at=datetime.now(UTC)
+    )
+
+    mock_finding = DriftFinding(
+        id=uuid4(),
+        drift_event_id=event_id,
+        code_path="src/agent.py",
+        doc_file_path="/docs/agent.md",
+        change_type="modified",
+        drift_type="outdated_description",
+        drift_score=0.85,
+        explanation="Function signature changed",
+        confidence=0.9,
+        created_at=datetime.now(UTC)
+    )
+
+    mock_code_change = CodeChange(
+        id=uuid4(),
+        drift_event_id=event_id,
+        file_path="src/agent.py",
+        change_type="modified",
+        is_code=True,
+        is_ignored=False
+    )
+
+    # 4 sequential DB queries: repo → event → findings → code changes
+    mock_db_session.query.side_effect = [
+        MagicMock(join=MagicMock(return_value=MagicMock(
+            filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_repo)))
+        ))),
+        MagicMock(filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_event)))),
+        MagicMock(filter=MagicMock(return_value=MagicMock(
+            order_by=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[mock_finding])))
+        ))),
+        MagicMock(filter=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[mock_code_change])))),
+    ]
+
+    response = client.get(f"/api/repos/{repo_id}/drift-events/{event_id}")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["pr_number"] == 99
+    assert data["drift_result"] == "drift_found"
+    assert data["processing_phase"] == "completed"
+    assert len(data["findings"]) == 1
+    assert data["findings"][0]["code_path"] == "src/agent.py"
+    assert data["findings"][0]["drift_score"] == 0.85
+    assert len(data["code_changes"]) == 1
+    assert data["code_changes"][0]["file_path"] == "src/agent.py"
+
+
+def test_get_drift_event_detail_repo_not_found(mock_db_session):
+    """Test that 404 is returned when repo does not belong to the user."""
+    mock_db_session.query.side_effect = [
+        MagicMock(join=MagicMock(return_value=MagicMock(
+            filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=None)))
+        ))),
+    ]
+
+    response = client.get(f"/api/repos/{uuid4()}/drift-events/{uuid4()}")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Repository not found"
+
+
+def test_get_drift_event_detail_event_not_found(mock_db_session):
+    """Test that 404 is returned when the drift event ID does not exist."""
+    from datetime import datetime, UTC
+
+    repo_id = uuid4()
+    mock_repo = Repository(
+        id=repo_id,
+        installation_id=1,
+        repo_name="delta/events",
+        is_active=True,
+        is_suspended=False,
+        docs_root_path="/docs"
+    )
+
+    mock_db_session.query.side_effect = [
+        MagicMock(join=MagicMock(return_value=MagicMock(
+            filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=mock_repo)))
+        ))),
+        MagicMock(filter=MagicMock(return_value=MagicMock(first=MagicMock(return_value=None)))),
+    ]
+
+    response = client.get(f"/api/repos/{repo_id}/drift-events/{uuid4()}")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Drift event not found"
+
