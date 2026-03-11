@@ -275,7 +275,11 @@ def test_get_drift_event_detail_success(mock_db_session):
         head_sha="bbb222",
         processing_phase="completed",
         drift_result="drift_found",
-        created_at=datetime.now(UTC)
+        created_at=datetime.now(UTC),
+        overall_drift_score=None,
+        error_message=None,
+        started_at=None,
+        completed_at=None,
     )
 
     mock_finding = DriftFinding(
@@ -342,8 +346,6 @@ def test_get_drift_event_detail_repo_not_found(mock_db_session):
 
 def test_get_drift_event_detail_event_not_found(mock_db_session):
     """Test that 404 is returned when the drift event ID does not exist."""
-    from datetime import datetime, UTC
-
     repo_id = uuid4()
     mock_repo = Repository(
         id=repo_id,
