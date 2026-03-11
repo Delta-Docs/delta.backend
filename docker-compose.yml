@@ -47,6 +47,8 @@ services:
       - redis
     env_file:
       - .env
+    volumes:
+      - repos_data:/repos
 
   worker:
     build: .
@@ -58,8 +60,11 @@ services:
       - postgres
     env_file:
       - .env
+    volumes:
+      - repos_data:/repos
 
 volumes:
   postgres_data:
   redis_data:
   drizzle_gateway_data:
+  repos_data:
