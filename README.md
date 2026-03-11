@@ -78,6 +78,10 @@ Delta is a continuous documentation platform that treats documentation as a livi
    # LLM Config
    GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
    LLM_MODEL="gemini-2.5-flash"
+
+   # Git config for commits
+   GIT_AUTHOR_NAME="YOUR_GIT_AUTHOR_NAME"
+   GIT_AUTHOR_EMAIL="YOUR_GIT_AUTHOR_EMAIL"
    ```
 
 4. **Run setup command**

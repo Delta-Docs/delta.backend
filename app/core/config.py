@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     LLM_MODEL: str
 
+    # Git config for commits
+    GIT_AUTHOR_NAME: str
+    GIT_AUTHOR_EMAIL: str
+
     # Load values from .env file
     model_config = SettingsConfigDict(
         case_sensitive=True,

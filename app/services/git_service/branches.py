@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 from app.services.git_service.utils import get_local_repo_path
+from app.core.config import settings
 
 
 # Pulls the specified branches from the remote repository
@@ -194,7 +195,18 @@ async def commit_and_push_docs_branch(
         # Commit with the standardised message
         commit_message = f"docs: resolve drift findings for #{pr_number}"
         result = subprocess.run(
-            ["git", "-C", repo_path, "commit", "-m", commit_message],
+            [
+                "git",
+                "-C",
+                repo_path,
+                "-c",
+                f"user.name={settings.GIT_AUTHOR_NAME}",
+                "-c",
+                f"user.email={settings.GIT_AUTHOR_EMAIL}",
+                "commit",
+                "-m",
+                commit_message,
+            ],
             capture_output=True,
             text=True,
             timeout=60,
