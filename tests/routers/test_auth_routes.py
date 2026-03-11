@@ -21,6 +21,16 @@ def mock_db_session():
     app.dependency_overrides.pop(get_db_connection, None)
 
 
+@pytest.fixture
+def mock_current_user():
+    """Fixture to mock the currently authenticated user for dependency injection."""
+    from app.deps import get_current_user
+    user = make_mock_user()
+    app.dependency_overrides[get_current_user] = lambda: user
+    yield user
+    app.dependency_overrides.pop(get_current_user, None)
+
+
 def make_mock_user(email="test@example.com", full_name="Test User"):
     """Helper to create a mock User model instance."""
     user = MagicMock(spec=User)
@@ -160,10 +170,9 @@ def test_logout_with_valid_token(mock_db_session):
     mock_db_session.query.return_value.filter.return_value.first.return_value = mock_user
 
     with patch("app.routers.auth.security.verify_token", return_value={"sub": str(mock_user.id)}):
-        response = client.post(
-            "/api/auth/logout",
-            cookies={"access_token": "valid_access_token"}
-        )
+        client.cookies.set("access_token", "valid_access_token")
+        response = client.post("/api/auth/logout")
+        client.cookies.delete("access_token")
 
     assert response.status_code == 200
     assert response.json()["message"] == "Logout successful"
@@ -176,3 +185,53 @@ def test_logout_without_token(mock_db_session):
 
     assert response.status_code == 200
     assert response.json()["message"] == "Logout successful"
+
+
+# =========== GET /auth/github/callback Tests ===========
+
+@pytest.mark.asyncio
+async def test_github_callback_success(mock_db_session, mock_current_user):
+    """Test successful GitHub OAuth callback linking user and installation."""
+    from app.models.installation import Installation
+
+    mock_token_resp = MagicMock()
+    mock_token_resp.json.return_value = {"access_token": "gh_access_token"}
+    
+    mock_user_resp = MagicMock()
+    mock_user_resp.json.return_value = {"id": 12345, "login": "github_user"}
+
+    with patch("httpx.AsyncClient.post", return_value=mock_token_resp), \
+         patch("httpx.AsyncClient.get", return_value=mock_user_resp):
+        
+        response = client.get("/api/auth/github/callback?code=mock_code&installation_id=67890")
+
+    assert response.status_code == 303
+    assert "dashboard" in response.headers["location"]
+    
+    assert mock_current_user.github_user_id == 12345
+    assert mock_current_user.github_username == "github_user"
+    mock_db_session.commit.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_github_callback_missing_code(mock_db_session, mock_current_user):
+    """Test that missing authorization code returns 400."""
+    response = client.get("/api/auth/github/callback?installation_id=67890")
+    assert response.status_code == 400
+    assert "code missing" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_github_callback_github_error(mock_db_session, mock_current_user):
+    """Test handling of error returned by GitHub during token exchange."""
+    mock_token_resp = MagicMock()
+    mock_token_resp.json.return_value = {
+        "error": "bad_verification_code",
+        "error_description": "The code passed is incorrect or expired."
+    }
+
+    with patch("httpx.AsyncClient.post", return_value=mock_token_resp):
+        response = client.get("/api/auth/github/callback?code=wrong_code")
+
+    assert response.status_code == 400
+    assert "GitHub Error" in response.json()["detail"]
