@@ -6,7 +6,7 @@ A comprehensive technical overview of the DevOps lifecycle, architectural compon
 
 ## 1. System Architecture & Orchestration
 
-Project Delta is built on a microservices-oriented architecture, fully containerized using **Docker**. This ensures a consistent runtime environment across all development and production stages.
+Project Delta is built on a monolithic-backend architecture, fully containerized using **Docker**. This ensures a consistent runtime environment across all development and production stages.
 
 ### Infrastructure Overview (Docker Compose)
 
@@ -88,7 +88,7 @@ volumes:
 
 ### Service Breakdown:
 1.  **API (FastAPI)**: The primary application server handling HTTP traffic. It relies on `postgres` for data and `redis` for caching.
-2.  **Worker**: A Celery/standalone background processor that executes long-running tasks asynchronously.
+2.  **RQ Worker**: A Celery/standalone background processor that executes long-running tasks asynchronously.
 3.  **PostgreSQL**: A relational database for persistent storage, using the `18-alpine` image for a minimal footprint.
 4.  **Redis**: Handles message brokering and session management with `appendonly` persistence enabled.
 
@@ -228,7 +228,7 @@ The React/TypeScript application is hosted on **Vercel**.
 - **Edge Deployment**: Static assets are distributed globally.
 - **Vercel Rewrites**: Configured in `vercel.json` to route all traffic to `index.html`, enabling client-side navigation.
 
-### Backend (VPS)
+### Backend (VPS-Amazon EC2)
 Hosted on a dedicated **Ubuntu/Linux VPS**.
 - **Orchestration**: Docker Compose manages container life-cycles.
 - **Security**: SSH Key authentication is required for all deployment triggers.
