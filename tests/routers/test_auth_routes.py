@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from uuid import uuid4
 
 from app.main import app
-from app.deps import get_db_connection, get_current_user
+from app.deps import get_db_connection
 from app.models.user import User
 
 # =========== Setup ===========
@@ -37,7 +37,6 @@ def make_mock_user(email="test@example.com", full_name="Test User"):
 
 def test_signup_success(mock_db_session):
     """Test that a new user can register with valid credentials."""
-    # No existing user found in DB
     mock_db_session.query.return_value.filter.return_value.first.return_value = None
 
     mock_user = make_mock_user()
