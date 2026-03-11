@@ -10,7 +10,11 @@ from app.models.user import User
 
 # =========== Setup ===========
 
-client = TestClient(app)
+@pytest.fixture
+def client():
+    """Provides a fresh TestClient for each test."""
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture
@@ -51,7 +55,7 @@ mock_user = make_mock_user()
 # =========== POST /auth/signup Tests ===========
 
 
-def test_signup_success(mock_db_session):
+def test_signup_success(client, mock_db_session):
     """Test that a new user can register with valid credentials."""
     mock_db_session.query.return_value.filter.return_value.first.return_value = None
 
@@ -78,7 +82,7 @@ def test_signup_success(mock_db_session):
     mock_db_session.commit.assert_called()
 
 
-def test_signup_duplicate_email(mock_db_session):
+def test_signup_duplicate_email(client, mock_db_session):
     """Test that signup fails with 400 when email already exists."""
     existing_user = make_mock_user()
     mock_db_session.query.return_value.filter.return_value.first.return_value = existing_user
@@ -94,7 +98,7 @@ def test_signup_duplicate_email(mock_db_session):
     mock_db_session.add.assert_not_called()
 
 
-def test_signup_invalid_email(mock_db_session):
+def test_signup_invalid_email(client, mock_db_session):
     """Test that signup fails with 422 when email format is invalid."""
     response = client.post("/api/auth/signup", json={
         "email": "not-a-valid-email",
@@ -108,7 +112,7 @@ def test_signup_invalid_email(mock_db_session):
 # =========== POST /auth/login Tests ===========
 
 
-def test_login_success(mock_db_session):
+def test_login_success(client, mock_db_session):
     """Test that a user with correct credentials receives a successful response."""
     mock_user = make_mock_user()
     mock_db_session.query.return_value.filter.return_value.first.return_value = mock_user
@@ -130,7 +134,7 @@ def test_login_success(mock_db_session):
     mock_db_session.commit.assert_called()
 
 
-def test_login_wrong_password(mock_db_session):
+def test_login_wrong_password(client, mock_db_session):
     """Test that login fails with 401 when password is incorrect."""
     mock_user = make_mock_user()
     mock_db_session.query.return_value.filter.return_value.first.return_value = mock_user
@@ -145,7 +149,7 @@ def test_login_wrong_password(mock_db_session):
     assert "Incorrect credentials" in response.json()["detail"]
 
 
-def test_login_user_not_found(mock_db_session):
+def test_login_user_not_found(client, mock_db_session):
     """Test that login fails with 401 when user does not exist."""
     mock_db_session.query.return_value.filter.return_value.first.return_value = None
 
@@ -157,7 +161,7 @@ def test_login_user_not_found(mock_db_session):
     assert response.status_code == 401
 
 
-def test_login_missing_fields(mock_db_session):
+def test_login_missing_fields(client, mock_db_session):
     """Test that login fails with 422 when required fields are missing."""
     response = client.post("/api/auth/login", json={
         "email": "test@example.com"
@@ -170,7 +174,7 @@ def test_login_missing_fields(mock_db_session):
 # =========== POST /auth/logout Tests ===========
 
 
-def test_logout_with_valid_token(mock_db_session):
+def test_logout_with_valid_token(client, mock_db_session):
     """Test that logout clears cookies and nullifies the refresh token hash."""
     mock_user = make_mock_user()
     mock_db_session.query.return_value.filter.return_value.first.return_value = mock_user
@@ -185,7 +189,7 @@ def test_logout_with_valid_token(mock_db_session):
     mock_db_session.commit.assert_called()
 
 
-def test_logout_without_token(mock_db_session):
+def test_logout_without_token(client, mock_db_session):
     """Test that logout succeeds gracefully even with no cookies."""
     response = client.post("/api/auth/logout")
 
@@ -195,7 +199,7 @@ def test_logout_without_token(mock_db_session):
 
 # =========== GET /auth/github/callback Tests ===========
 
-def test_github_callback_success(mock_db_session, mock_current_user):
+def test_github_callback_success(client, mock_db_session, mock_current_user):
     """Test successful GitHub OAuth callback linking user and installation."""
     mock_token_resp = MagicMock()
     mock_token_resp.json.return_value = {"access_token": "gh_access_token"}
@@ -203,9 +207,9 @@ def test_github_callback_success(mock_db_session, mock_current_user):
     mock_user_resp = MagicMock()
     mock_user_resp.json.return_value = {"id": 12345, "login": "github_user"}
 
-    # Mock the AsyncClient context manager correctly
-    with patch("app.routers.auth.httpx.AsyncClient") as mock_client_class:
-        mock_instance = mock_client_class.return_value
+    # Mock the AsyncClient class as used in the router
+    with patch("app.routers.auth.httpx.AsyncClient") as MockClient:
+        mock_instance = MockClient.return_value
         mock_instance.__aenter__.return_value = mock_instance
         mock_instance.post.return_value = mock_token_resp
         mock_instance.get.return_value = mock_user_resp
@@ -220,14 +224,14 @@ def test_github_callback_success(mock_db_session, mock_current_user):
     mock_db_session.commit.assert_called()
 
 
-def test_github_callback_missing_code(mock_db_session, mock_current_user):
+def test_github_callback_missing_code(client, mock_db_session, mock_current_user):
     """Test that missing authorization code returns 400."""
     response = client.get("/api/auth/github/callback?installation_id=67890")
     assert response.status_code == 400
     assert "code missing" in response.json()["detail"].lower()
 
 
-def test_github_callback_github_error(mock_db_session, mock_current_user):
+def test_github_callback_github_error(client, mock_db_session, mock_current_user):
     """Test handling of error returned by GitHub during token exchange."""
     mock_token_resp = MagicMock()
     mock_token_resp.json.return_value = {
@@ -235,8 +239,8 @@ def test_github_callback_github_error(mock_db_session, mock_current_user):
         "error_description": "The code passed is incorrect or expired."
     }
 
-    with patch("app.routers.auth.httpx.AsyncClient") as mock_client_class:
-        mock_instance = mock_client_class.return_value
+    with patch("app.routers.auth.httpx.AsyncClient") as MockClient:
+        mock_instance = MockClient.return_value
         mock_instance.__aenter__.return_value = mock_instance
         mock_instance.post.return_value = mock_token_resp
         
