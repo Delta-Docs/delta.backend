@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 from uuid import uuid4
 
@@ -13,30 +13,22 @@ from app.models.user import User
 client = TestClient(app)
 
 
-@pytest.fixture(autouse=True)
-def setup_overrides():
-    """Preserves and restores dependency_overrides after each test."""
-    old_overrides = app.dependency_overrides.copy()
-    yield
-    app.dependency_overrides = old_overrides
-
-
 @pytest.fixture
 def mock_db_session():
     """Provides a fresh mock database session and sets it in overrides."""
     mock_db = MagicMock(spec=Session)
     # Default behavior for query chain
     mock_db.query.return_value.filter.return_value.first.return_value = None
-    app.dependency_overrides[get_db_connection] = lambda: mock_db
-    return mock_db
+    with patch.dict(app.dependency_overrides, {get_db_connection: lambda: mock_db}):
+        yield mock_db
 
 
 @pytest.fixture
 def mock_current_user():
     """Fixture to provide a mock user and set it in overrides."""
     user = make_mock_user()
-    app.dependency_overrides[get_current_user] = lambda: user
-    return user
+    with patch.dict(app.dependency_overrides, {get_current_user: lambda: user}):
+        yield user
 
 
 def make_mock_user(email="test@example.com", full_name="Test User"):
@@ -205,18 +197,18 @@ def test_logout_without_token(mock_db_session):
 
 def test_github_callback_success(mock_db_session, mock_current_user):
     """Test successful GitHub OAuth callback linking user and installation."""
-    # Patch the httpx module reference in the router to avoid breaking TestClient
-    with patch("app.routers.auth.httpx") as mock_httpx:
-        # Configure AsyncMock for the post/get calls
-        mock_client = mock_httpx.AsyncClient.return_value.__aenter__.return_value
-        
-        mock_token_resp = MagicMock()
-        mock_token_resp.json.return_value = {"access_token": "gh_access_token"}
-        mock_client.post.return_value = mock_token_resp
-        
-        mock_user_resp = MagicMock()
-        mock_user_resp.json.return_value = {"id": 12345, "login": "github_user"}
-        mock_client.get.return_value = mock_user_resp
+    mock_token_resp = MagicMock()
+    mock_token_resp.json.return_value = {"access_token": "gh_access_token"}
+    
+    mock_user_resp = MagicMock()
+    mock_user_resp.json.return_value = {"id": 12345, "login": "github_user"}
+
+    # Mock the AsyncClient context manager correctly
+    with patch("app.routers.auth.httpx.AsyncClient") as mock_client_class:
+        mock_instance = mock_client_class.return_value
+        mock_instance.__aenter__.return_value = mock_instance
+        mock_instance.post.return_value = mock_token_resp
+        mock_instance.get.return_value = mock_user_resp
         
         response = client.get("/api/auth/github/callback?code=mock_code&installation_id=67890")
 
@@ -237,15 +229,16 @@ def test_github_callback_missing_code(mock_db_session, mock_current_user):
 
 def test_github_callback_github_error(mock_db_session, mock_current_user):
     """Test handling of error returned by GitHub during token exchange."""
-    with patch("app.routers.auth.httpx") as mock_httpx:
-        mock_client = mock_httpx.AsyncClient.return_value.__aenter__.return_value
-        
-        mock_token_resp = MagicMock()
-        mock_token_resp.json.return_value = {
-            "error": "bad_verification_code",
-            "error_description": "The code passed is incorrect or expired."
-        }
-        mock_client.post.return_value = mock_token_resp
+    mock_token_resp = MagicMock()
+    mock_token_resp.json.return_value = {
+        "error": "bad_verification_code",
+        "error_description": "The code passed is incorrect or expired."
+    }
+
+    with patch("app.routers.auth.httpx.AsyncClient") as mock_client_class:
+        mock_instance = mock_client_class.return_value
+        mock_instance.__aenter__.return_value = mock_instance
+        mock_instance.post.return_value = mock_token_resp
         
         response = client.get("/api/auth/github/callback?code=wrong_code")
 
