@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from uuid import uuid4
 
 from app.main import app
-from app.deps import get_db_connection
+from app.deps import get_db_connection, get_current_user
 from app.models.user import User
 
 # =========== Setup ===========
@@ -47,6 +47,10 @@ def make_mock_user(email="test@example.com", full_name="Test User"):
     user.password_hash = "hashed_password"
     user.current_refresh_token_hash = None
     return user
+
+
+# Create a mock authenticated user for global use in this file
+mock_user = make_mock_user()
 
 
 # =========== POST /auth/signup Tests ===========
