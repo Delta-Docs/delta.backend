@@ -14,21 +14,23 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def setup_auth_overrides():
-    """Sets up default authentication overrides for all tests in this file."""
+    """Sets up authentication overrides and resets them after each test."""
+    # Store original overrides to restore them later
+    original_overrides = app.dependency_overrides.copy()
+    
     app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[get_db_connection] = lambda: MagicMock()
+    
     yield
-    # We keep it to avoid breaking other files
-    pass
+    
+    # Restore original overrides
+    app.dependency_overrides = original_overrides
 
 
 @pytest.fixture
 def mock_db_session():
-    """Provides a fresh mock database session and injects it as the FastAPI dependency."""
-    mock_db = MagicMock()
-    app.dependency_overrides[get_db_connection] = lambda: mock_db
-    yield mock_db
-    # We don't pop to avoid breaking other files relying on side effects
-    pass
+    """Provides the active mock database session."""
+    return app.dependency_overrides[get_db_connection]()
 
 
 @pytest.fixture
@@ -208,8 +210,9 @@ def test_github_callback_success(mock_db_session, mock_current_user):
     mock_user_resp = AsyncMock()
     mock_user_resp.json.return_value = {"id": 12345, "login": "github_user"}
 
-    with patch("httpx.AsyncClient.post", return_value=mock_token_resp), \
-         patch("httpx.AsyncClient.get", return_value=mock_user_resp):
+    # Patch ONLY inside the router module to avoid breaking TestClient
+    with patch("app.routers.auth.httpx.AsyncClient.post", return_value=mock_token_resp), \
+         patch("app.routers.auth.httpx.AsyncClient.get", return_value=mock_user_resp):
         
         response = client.get("/api/auth/github/callback?code=mock_code&installation_id=67890")
 
@@ -236,7 +239,7 @@ def test_github_callback_github_error(mock_db_session, mock_current_user):
         "error_description": "The code passed is incorrect or expired."
     }
 
-    with patch("httpx.AsyncClient.post", return_value=mock_token_resp):
+    with patch("app.routers.auth.httpx.AsyncClient.post", return_value=mock_token_resp):
         response = client.get("/api/auth/github/callback?code=wrong_code")
 
     assert response.status_code == 400
