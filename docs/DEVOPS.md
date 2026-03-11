@@ -21,7 +21,7 @@ services:
     restart: on-failure
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_PASSWORD: 1234
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"
@@ -38,6 +38,20 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes
 
+  drizzle-gateway:
+    image: ghcr.io/drizzle-team/gateway:latest
+    container_name: delta-drizzle-gateway
+    environment:
+      DATABASE_URL: postgresql://postgres:1234@postgres:5432/postgres
+      STORE_PATH: /app
+    restart: on-failure
+    depends_on:
+      - postgres
+    ports:
+      - "4983:4983"
+    volumes:
+      - drizzle_gateway_data:/app
+
   api:
     build: .
     container_name: delta-api
@@ -49,6 +63,8 @@ services:
       - redis
     env_file:
       - .env
+    volumes:
+      - repos_data:/repos
 
   worker:
     build: .
@@ -60,10 +76,14 @@ services:
       - postgres
     env_file:
       - .env
+    volumes:
+      - repos_data:/repos
 
 volumes:
   postgres_data:
   redis_data:
+  drizzle_gateway_data:
+  repos_data:
 ```
 
 ### Service Breakdown:
@@ -92,7 +112,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  lint-and-test:
+  ruff-lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -100,27 +120,49 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.12"
-    
-    # 1. Enforcement of coding standards
-    # Uses Ruff for extremely fast linting and code transformation.
+    - name: Install ruff
+      run: pip install ruff
     - name: Run ruff check
-      run: |
-        pip install ruff
-        ruff check .
+      run: ruff check
 
-    # 2. Static Type Analysis
-    # Detailed type checking ensures that data flows through the application as expected.
+  pyrefly-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Install pyrefly
+      run: pip install pyrefly
     - name: Run pyrefly
-      run: |
-        pip install -r requirements.txt pyrefly
-        pyrefly check
+      run: pyrefly check
 
-    # 3. Automated Testing
-    # Runs the full pytest suite to verify business logic and API endpoints.
-    - name: Run pytest
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        cache: 'pip'
+
+    - name: Install dependencies
       run: |
-        cp .env.example .env
-        python -m pytest
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Set up environment
+      run: cp .env.example .env
+
+    - name: Run tests
+      run: python -m pytest
 ```
 
 ---
@@ -144,27 +186,33 @@ Once the CI pipeline passes, the CD pipeline automates the rollout to our produc
 
 ```yaml
 name: Deploy to VPS
-
 on:
   push:
     branches: [ "main" ]
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
-    - name: SSH Remote Deployment
+    - name: Deploy via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VPS_IP }}
         username: ${{ secrets.VPS_USERNAME }}
         key: ${{ secrets.VPS_SSH_KEY }}
         script: |
+          # 1. Enter the project folder
           cd delta.backend
+
+          # 2. Pull the latest code 
           git pull origin main
+
+          # 3. Build and run updated containers
           sudo docker-compose up --build -d
+
+          # 4. Migrate the DB
+          sudo docker-compose exec -T api alembic upgrade head
 ```
 
 #### Deployment Mechanisms:
