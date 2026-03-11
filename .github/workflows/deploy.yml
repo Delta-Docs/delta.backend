@@ -25,4 +25,4 @@ jobs:
           sudo docker-compose up --build -d
 
           # 4. Migrate the DB
-          alembic upgrade head
+          sudo docker-compose exec -T app alembic upgrade head
