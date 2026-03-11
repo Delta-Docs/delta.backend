@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from fastapi.testclient import TestClient
 from uuid import uuid4
 
+from sqlalchemy.orm import Session
 from app.main import app
 from app.deps import get_db_connection, get_current_user
 from app.models.user import User
@@ -13,45 +14,45 @@ client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def setup_auth_overrides():
-    """Sets up authentication overrides and resets them after each test."""
-    # Store original overrides to restore them later
-    original_overrides = app.dependency_overrides.copy()
-    
-    app.dependency_overrides[get_current_user] = lambda: mock_user
-    app.dependency_overrides[get_db_connection] = lambda: MagicMock()
-    
+def setup_overrides():
+    """Preserves and restores dependency_overrides after each test."""
+    old_overrides = app.dependency_overrides.copy()
     yield
-    
-    # Restore original overrides
-    app.dependency_overrides = original_overrides
+    app.dependency_overrides = old_overrides
 
 
 @pytest.fixture
 def mock_db_session():
-    """Provides the active mock database session."""
-    return app.dependency_overrides[get_db_connection]()
+    """Provides a fresh mock database session and sets it in overrides."""
+    mock_db = MagicMock(spec=Session)
+    # Default behavior for query chain
+    mock_db.query.return_value.filter.return_value.first.return_value = None
+    app.dependency_overrides[get_db_connection] = lambda: mock_db
+    return mock_db
 
 
 @pytest.fixture
 def mock_current_user():
-    """Fixture to provide the mock user and ensure it's set in overrides."""
-    app.dependency_overrides[get_current_user] = lambda: mock_user
-    return mock_user
-
-
-def make_mock_user(email="test@example.com", full_name="Test User"):
-    """Helper to create a mock User model instance."""
-    user = MagicMock(spec=User)
-    user.id = uuid4()
-    user.email = email
-    user.full_name = full_name
-    user.password_hash = "hashed_password"
-    user.current_refresh_token_hash = None
+    """Fixture to provide a mock user and set it in overrides."""
+    user = make_mock_user()
+    app.dependency_overrides[get_current_user] = lambda: user
     return user
 
 
-# Create a mock authenticated user for global use in this file
+def make_mock_user(email="test@example.com", full_name="Test User"):
+    """Helper to create a mock User model instance with valid string attributes."""
+    user = MagicMock(spec=User)
+    user.id = uuid4()
+    user.email = str(email)
+    user.full_name = str(full_name)
+    user.password_hash = "hashed_pw"
+    user.current_refresh_token_hash = None
+    user.github_user_id = None
+    user.github_username = None
+    return user
+
+
+# Create a default mock user for general use
 mock_user = make_mock_user()
 
 
@@ -204,15 +205,18 @@ def test_logout_without_token(mock_db_session):
 
 def test_github_callback_success(mock_db_session, mock_current_user):
     """Test successful GitHub OAuth callback linking user and installation."""
-    mock_token_resp = AsyncMock()
-    mock_token_resp.json.return_value = {"access_token": "gh_access_token"}
-    
-    mock_user_resp = AsyncMock()
-    mock_user_resp.json.return_value = {"id": 12345, "login": "github_user"}
-
-    # Patch ONLY inside the router module to avoid breaking TestClient
-    with patch("app.routers.auth.httpx.AsyncClient.post", return_value=mock_token_resp), \
-         patch("app.routers.auth.httpx.AsyncClient.get", return_value=mock_user_resp):
+    # Patch the httpx module reference in the router to avoid breaking TestClient
+    with patch("app.routers.auth.httpx") as mock_httpx:
+        # Configure AsyncMock for the post/get calls
+        mock_client = mock_httpx.AsyncClient.return_value.__aenter__.return_value
+        
+        mock_token_resp = MagicMock()
+        mock_token_resp.json.return_value = {"access_token": "gh_access_token"}
+        mock_client.post.return_value = mock_token_resp
+        
+        mock_user_resp = MagicMock()
+        mock_user_resp.json.return_value = {"id": 12345, "login": "github_user"}
+        mock_client.get.return_value = mock_user_resp
         
         response = client.get("/api/auth/github/callback?code=mock_code&installation_id=67890")
 
@@ -233,13 +237,16 @@ def test_github_callback_missing_code(mock_db_session, mock_current_user):
 
 def test_github_callback_github_error(mock_db_session, mock_current_user):
     """Test handling of error returned by GitHub during token exchange."""
-    mock_token_resp = AsyncMock()
-    mock_token_resp.json.return_value = {
-        "error": "bad_verification_code",
-        "error_description": "The code passed is incorrect or expired."
-    }
-
-    with patch("app.routers.auth.httpx.AsyncClient.post", return_value=mock_token_resp):
+    with patch("app.routers.auth.httpx") as mock_httpx:
+        mock_client = mock_httpx.AsyncClient.return_value.__aenter__.return_value
+        
+        mock_token_resp = MagicMock()
+        mock_token_resp.json.return_value = {
+            "error": "bad_verification_code",
+            "error_description": "The code passed is incorrect or expired."
+        }
+        mock_client.post.return_value = mock_token_resp
+        
         response = client.get("/api/auth/github/callback?code=wrong_code")
 
     assert response.status_code == 400
