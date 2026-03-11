@@ -1,5 +1,9 @@
 import operator
-from typing import Annotated, Any, NotRequired, TypedDict
+from typing import Annotated, Any, TypedDict
+try:
+    from typing import NotRequired
+except ImportError:
+    from typing_extensions import NotRequired
 
 
 # Shared state passed between each node of the workflow

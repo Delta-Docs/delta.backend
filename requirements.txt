@@ -15,6 +15,7 @@ redis
 rq
 langgraph
 langchain-google-genai
+typing_extensions>=4.0
 
 # Dev
 ruff
