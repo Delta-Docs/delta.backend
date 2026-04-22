@@ -1,4 +1,4 @@
-# delta.backend
+# Delta
 
 
 ## Table of Contents
@@ -297,19 +297,19 @@ ruff format .
 ```
 
 
-## LICENSE
-
-This project is licensed under the [MIT LICENSE](LICENSE).
-
-
 ## Team
 
 The people working to make ▲ a possibility:
 
 | Name                   | Roll Number      | GitHub ID                                                   |
-|------------------------|------------------|-------------------------------------------------------------|
+| ---------------------- | ---------------- | ----------------------------------------------------------- |
 | A Jahnavi              | CB.SC.U4CSE23503 | [jahnavialladasetti](https://github.com/jahnavialladasetti) |
 | Adithya Menon R        | CB.SC.U4CSE23506 | [adithya-menon-r](https://github.com/adithya-menon-r)       |
 | Dheeraj KB             | CB.SC.U4CSE23510 | [Dheeraj-74](https://github.com/Dheeraj-74)                 |
 | Midhunan V Prabhaharan | CB.SC.U4CSE23532 | [midhunann](https://github.com/midhunann)                   |
 | Yogini Aishwaryaa      | CB.SC.U4CSE23557 | [yoginiaishwaryaa](https://github.com/yoginiaishwaryaa)     |
+
+
+## LICENSE
+
+This project is licensed under the [MIT LICENSE](LICENSE).
